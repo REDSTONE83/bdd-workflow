@@ -1,0 +1,70 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.5'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+sourceSets {
+    harness {
+        java {
+            srcDir 'src/harness/java'
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+    implementation 'org.springframework.security:spring-security-crypto'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    harnessImplementation 'com.github.javaparser:javaparser-core:3.26.4'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+tasks.register('generateHarnessSourceIndex', JavaExec) {
+    group = 'verification'
+    description = 'Generate JavaParser-based API/test source index for the BDD harness.'
+    classpath = sourceSets.harness.runtimeClasspath
+    mainClass = 'com.example.bddworkflow.harness.SourceIndexGenerator'
+    args rootProject.projectDir.parentFile.absolutePath,
+            file('src/main/java').absolutePath,
+            file('src/test/java').absolutePath,
+            layout.buildDirectory.file('harness/source-index.json').get().asFile.absolutePath
+}
+
+tasks.register('traceRequirements', Exec) {
+    group = 'verification'
+    description = 'Generate requirement/API/test trace report from cards and JavaParser source index.'
+    dependsOn tasks.named('generateHarnessSourceIndex')
+    commandLine 'node', 'tools/trace-requirements.mjs'
+}
+
+tasks.register('validateHarness', Exec) {
+    group = 'verification'
+    description = 'Run the requirement trace and fail when any requirement remains RED.'
+    dependsOn tasks.named('test'), tasks.named('generateHarnessSourceIndex')
+    commandLine 'node', 'tools/trace-requirements.mjs', '--check'
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('validateHarness')
+}

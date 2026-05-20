@@ -1,0 +1,7 @@
+.DS_Store
+
+back-end/.gradle/
+back-end/build/
+back-end/out/
+
+*.class

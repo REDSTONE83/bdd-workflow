@@ -1,0 +1,10 @@
+{
+  "name": "bdd-workflow-harness-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "trace": "./gradlew traceRequirements",
+    "validate": "./gradlew validateHarness",
+    "trace:report": "node tools/trace-requirements.mjs"
+  }
+}

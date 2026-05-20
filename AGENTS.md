@@ -1,0 +1,251 @@
+# BDD Workflow Harness Agent Guide
+
+이 저장소는 Spring Boot API 개발을 코드 중심 BDD 방식으로 진행하기 위한 하네스 예제다. 별도 시나리오 ID와 API ID는 만들지 않고, 사람이 관리하는 ID는 `REQ-001` 같은 요건 ID만 둔다.
+
+## 핵심 원칙
+
+- 요건 카드는 `/docs/requirements`에 둔다.
+- API 명세는 Spring Boot 컨트롤러와 DTO 애너테이션에 둔다.
+- BDD 시나리오는 별도 `.feature` 파일이 아니라 Acceptance Test 코드로 표현한다.
+- 수용 기준 커버리지는 테스트 메서드의 `@Covers` 값으로 판단한다.
+- API와 테스트는 `@Requirement("REQ-001")`로 요건에 연결한다.
+- 추적표와 검증 리포트는 사람이 직접 관리하지 않고 하네스가 생성한다.
+
+## 직접 관리하는 산출물
+
+사람이 직접 관리하는 산출물은 최소화한다.
+
+```text
+docs/requirements/*.md
+src/main/java/**/*
+src/test/java/**/*AcceptanceTest.java
+```
+
+`back-end/build/harness/*` 리포트는 생성 산출물이다.
+
+## 프로젝트 폴더 구조
+
+전체 폴더 구조와 파일 배치 기준은 `docs/harness/project-structure.md`를 따른다.
+
+핵심 배치는 다음과 같다.
+
+```text
+docs/requirements/
+  요건 카드
+
+docs/harness/
+  하네스 운영 문서
+
+back-end/src/main/java/com/example/bddworkflow/{domain}/
+  Spring Boot API, 서비스, DTO, 예외, 도메인 모델
+
+back-end/src/test/java/com/example/bddworkflow/{domain}/
+  BDD Acceptance Test
+
+back-end/tools/
+  하네스 리포터
+
+back-end/src/harness/java/
+  JavaParser 기반 source index 생성기
+
+back-end/gradlew
+  프로젝트 고정 Gradle Wrapper
+
+back-end/build/harness/
+  자동 생성 추적 리포트
+```
+
+새 기능은 요건 카드, 도메인 패키지, Acceptance Test를 같은 도메인명 기준으로 추가한다.
+
+## 요건 카드 규칙
+
+요건 카드는 사람이 5-15분 안에 검토할 수 있는 크기로 작성한다.
+
+요건 카드를 작성할 때 불명확한 부분이 있으면 바로 구현하지 않는다. 먼저 사용자에게 짧고 구체적인 질문을 하고, 답변으로 확정된 내용은 `확인 질문 로그`와 `의사결정 로그`에 남긴다.
+
+필수 항목:
+
+- `요건 ID`
+- `제목`
+- `우선순위`
+- `상태`
+- `사용자/목적`
+- `범위`
+- `제외 범위`
+- `확인 질문 로그`
+- `수용 기준`
+- `의사결정 로그`
+- `BDD 테스트 리뷰`
+- `열린 질문`
+
+`수용 기준`의 각 문장은 Acceptance Test의 `@Covers` 값과 정확히 일치해야 한다.
+
+요건 카드에는 API 목록이나 테스트 메서드 목록을 직접 관리하지 않는다. API와 테스트 연결은 코드의 `@Requirement`, `@Covers`를 스캔해 생성 리포트에서 확인한다.
+
+초안 단계에서는 `BDD 테스트 리뷰` 결과를 `미완료`로 둘 수 있다. 수용 기준과 Acceptance Test가 리뷰되기 전에는 요건 카드 상태를 `승인`으로 바꾸지 않는다.
+
+## 질문 기반 요건 작성 절차
+
+요건 작성은 다음 순서로 진행한다.
+
+```text
+1. 사용자 요청을 요건 카드 초안으로 정리한다.
+2. 모호한 범위, 예외, 정책, 권한, 상태 변화를 질문한다.
+3. 사용자 답변을 확인 질문 로그에 기록한다.
+4. 확정된 선택은 의사결정 로그에 남긴다.
+5. 수용 기준을 검증 가능한 문장으로 정리한다.
+6. 수용 기준과 동일한 문장을 @Covers로 사용해 Acceptance Test를 먼저 작성한다.
+7. 테스트 코드가 요건을 충분히 커버하는지 리뷰한다.
+8. 구현 후 ./gradlew validateHarness로 RED/GREEN/BLUE 상태를 확인한다.
+```
+
+사용자에게 질문해야 하는 대표 상황:
+
+- 포함 범위와 제외 범위가 구분되지 않는다.
+- 정상 흐름은 알지만 실패/예외 조건이 비어 있다.
+- 권한, 인증, 상태 전이, 중복 처리 정책이 불명확하다.
+- HTTP 상태 코드나 오류 코드 정책이 정해지지 않았다.
+- 수용 기준을 테스트 코드로 옮겼을 때 하나 이상의 해석이 가능하다.
+
+질문은 한 번에 1-3개만 한다. 답변 없이 임의로 결정해야 하는 경우에는 가정을 명시하고, 그 가정을 의사결정 로그에 남긴다.
+
+## 의사결정 로그 규칙
+
+의사결정 로그는 구현 이유를 추적하기 위한 최소 기록이다.
+
+각 항목은 다음을 포함한다.
+
+- 결정일
+- 결정
+- 이유
+- 결정자
+- 영향
+
+결정이 수용 기준을 바꾸면 Acceptance Test의 `@Covers`와 `@DisplayName`도 함께 갱신한다.
+
+## API 작성 규칙
+
+컨트롤러 메서드는 관련 요건을 명시한다.
+
+```java
+@Requirement("REQ-001")
+@PostMapping("/signup")
+public ResponseEntity<SignupResponse> signup(...) {
+    ...
+}
+```
+
+OpenAPI 설명은 컨트롤러와 DTO에 둔다.
+
+- 컨트롤러: `@Operation`, `@ApiResponse`
+- DTO: `@Schema`, Bean Validation
+
+메서드 레벨 `@RequestMapping`을 사용할 때는 `method = RequestMethod.GET`처럼 HTTP method를 반드시 지정한다. 가능하면 `@GetMapping`, `@PostMapping`, `@PutMapping`, `@PatchMapping`, `@DeleteMapping`을 우선 사용한다.
+
+전역 API 오류 응답과 검증 예외 처리는 `common` 패키지에 둔다. 도메인 전용 예외를 별도 정책으로 매핑해야 할 때만 해당 도메인 패키지에 전용 handler를 둔다.
+
+## Acceptance Test 작성 규칙
+
+테스트 클래스는 사용자 목적 또는 API 행위 단위로 작성한다.
+
+```java
+@AcceptanceTest
+@Requirement("REQ-001")
+class SignupApiAcceptanceTest {
+
+    @Test
+    @Covers("유효한 정보이면 계정이 생성된다")
+    @DisplayName("유효한 정보이면 계정이 생성된다")
+    void signupWithValidRequestReturnsCreated() {
+        // Given
+        // When
+        // Then
+    }
+}
+```
+
+시나리오 식별자는 별도로 만들지 않는다. 테스트 식별자는 `TestClass.testMethod`로 본다.
+
+테스트 리뷰 시 확인할 항목:
+
+- 모든 수용 기준이 하나 이상의 `@Covers`로 연결되어 있다.
+- `@Covers` 문장이 요건 카드의 수용 기준 문장과 정확히 일치한다.
+- 테스트명과 `@DisplayName`이 사용자가 이해할 수 있는 결과 중심 문장이다.
+- Given/When/Then 구역이 드러난다.
+- 정상, 예외, 경계 조건이 빠지지 않았다.
+- HTTP 상태, 응답 본문, 저장 상태나 부수 효과를 필요한 만큼 검증한다.
+- 테스트가 구현 세부사항보다 API 계약과 업무 결과를 검증한다.
+
+## RED / GREEN / BLUE
+
+하네스는 요건별 상태를 다음처럼 계산한다.
+
+```text
+RED
+- 관련 API가 없음
+- 수용 기준을 커버하는 테스트가 없음
+- 테스트가 실행되지 않음
+- 테스트가 실패 또는 스킵됨
+
+GREEN
+- 관련 API가 있음
+- 모든 수용 기준이 테스트로 커버됨
+- 연결된 테스트가 모두 PASS
+- 단, 요건 카드가 아직 승인되지 않았거나 열린 질문이 남아 있음
+
+BLUE
+- GREEN 조건을 만족함
+- 요건 카드 상태가 승인
+- 열린 질문이 없음
+```
+
+## 검증 명령
+
+Spring Boot 테스트:
+
+```bash
+cd back-end
+./gradlew test
+```
+
+추적 리포트 생성:
+
+```bash
+cd back-end
+./gradlew traceRequirements
+```
+
+JavaParser source index만 생성:
+
+```bash
+cd back-end
+./gradlew generateHarnessSourceIndex
+```
+
+테스트 실행 후 RED 여부까지 검증:
+
+```bash
+cd back-end
+./gradlew validateHarness
+```
+
+전체 확인:
+
+```bash
+cd back-end
+./gradlew check
+```
+
+## 변경 절차
+
+1. 요건 카드를 초안으로 작성하거나 수정한다.
+2. 불명확한 부분을 사용자에게 질문한다.
+3. 답변과 결정을 요건 카드에 기록한다.
+4. 수용 기준을 확정한다.
+5. Acceptance Test에 `@Requirement`, `@Covers`, `@DisplayName`을 작성한다.
+6. BDD 테스트 코드가 요건을 충분히 커버하는지 리뷰한다.
+7. 컨트롤러/DTO에 API 계약과 `@Requirement`를 명시한다.
+8. 구현한다.
+9. `./gradlew validateHarness`로 요건, API, 테스트, 결과 연결을 확인한다.
+
+요건 카드의 구현 완료 여부는 카드 전체 자연어가 아니라 `수용 기준` 커버리지로 판단한다.
