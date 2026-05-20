@@ -31,6 +31,7 @@ bdd-workflow/
     package.json
     tools/
       trace-requirements.mjs
+      preview-schema.mjs
     src/
       harness/
         java/
@@ -68,6 +69,7 @@ bdd-workflow/
         source-index.json
         trace-report.md
         trace-report.json
+        schema-preview.sql
 ```
 
 ## 루트
@@ -126,7 +128,7 @@ back-end/settings.gradle
 back-end/gradle.properties
 ```
 
-Spring Boot Gradle 프로젝트 설정이다. `validateHarness`와 `traceRequirements` 태스크도 여기서 정의한다.
+Spring Boot Gradle 프로젝트 설정이다. `validateHarness`, `traceRequirements`, `previewSchema` 태스크도 여기서 정의한다.
 
 ```text
 back-end/gradlew
@@ -149,10 +151,16 @@ back-end/tools/trace-requirements.mjs
 요건 카드, JavaParser source index, Gradle 테스트 결과를 병합해 추적 리포트를 생성한다.
 
 ```text
+back-end/tools/preview-schema.mjs
+```
+
+JavaParser source index의 `entities[]`를 읽어 검토용 DDL(`build/harness/schema-preview.sql`)을 생성한다. 구현 전 사용자에게 스키마 확인을 받는 용도이며, 실제 마이그레이션 산출물은 아니다.
+
+```text
 back-end/src/harness/java/com/example/bddworkflow/harness/SourceIndexGenerator.java
 ```
 
-JavaParser로 컨트롤러와 Acceptance Test 소스를 파싱해 `build/harness/source-index.json`을 생성한다. Java 코드 내용은 Node 정규식이 아니라 이 인덱서가 구조적으로 읽는다.
+JavaParser로 컨트롤러, JPA `@Entity` 클래스, Acceptance Test 소스를 파싱해 `build/harness/source-index.json`을 생성한다. Java 코드 내용은 Node 정규식이 아니라 이 인덱서가 구조적으로 읽는다. `@Requirement`는 클래스/메서드/필드 어디에 붙어 있어도 인덱싱되며, 단일값과 배열값(`{"REQ-001","REQ-002"}`)을 모두 지원한다.
 
 ## Spring Boot 소스 구조
 
@@ -195,7 +203,7 @@ harness/
 - `*Request.java`: 요청 DTO, Bean Validation, `@Schema`
 - `*Response.java`: 응답 DTO, `@Schema`
 - `*Exception.java`: 도메인 예외
-- 도메인 모델: `UserAccount.java` 같은 업무 객체
+- 도메인 모델 / JPA Entity: `UserAccount.java` 같은 업무 객체. DB 테이블에 매핑되는 경우 `@Entity`, `@Table`, `@Column`과 함께 클래스/필드 레벨 `@Requirement`를 부여한다.
 
 ## 테스트 구조
 
@@ -240,9 +248,10 @@ Gradle 빌드와 하네스 리포트 생성물이다. 사람이 직접 수정하
 back-end/build/harness/trace-report.md
 back-end/build/harness/trace-report.json
 back-end/build/harness/source-index.json
+back-end/build/harness/schema-preview.sql
 ```
 
-요건, API, 테스트, 테스트 결과를 연결한 자동 생성 산출물이다.
+요건, API, Entity, 테스트, 테스트 결과를 연결한 자동 생성 산출물이다. `schema-preview.sql`은 구현 전 사용자 검토용 DDL 미리보기다.
 
 ## 새 기능 추가 위치
 
@@ -254,14 +263,16 @@ back-end/src/main/java/com/example/bddworkflow/{domain}/SomeController.java
 back-end/src/main/java/com/example/bddworkflow/{domain}/SomeService.java
 back-end/src/main/java/com/example/bddworkflow/{domain}/SomeRequest.java
 back-end/src/main/java/com/example/bddworkflow/{domain}/SomeResponse.java
+back-end/src/main/java/com/example/bddworkflow/{domain}/SomeEntity.java   # 필요 시
 back-end/src/test/java/com/example/bddworkflow/{domain}/SomeApiAcceptanceTest.java
 ```
 
-구현 전에는 요건 카드와 Acceptance Test를 먼저 작성하고 리뷰한다.
+구현 전에는 요건 카드와 Acceptance Test를 먼저 작성하고 리뷰한다. DB 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과를 사용자에게 확인 받는다.
 
 ## 금지 사항
 
-- 요건 카드에 API 목록과 테스트 목록을 수기로 유지하지 않는다.
-- 별도 시나리오 ID와 API ID를 만들지 않는다.
+- 요건 카드에 API 목록, Entity 목록, 테스트 목록을 수기로 유지하지 않는다.
+- 별도 시나리오 ID, API ID, 테이블 ID를 만들지 않는다.
 - `build/` 아래 생성물을 직접 편집하지 않는다.
 - 수용 기준 문장과 `@Covers` 값을 다르게 쓰지 않는다.
+- `@Requirement`에 카드에 없는 요건 ID를 남기지 않는다. (validateHarness가 실패한다)

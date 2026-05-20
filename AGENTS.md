@@ -6,9 +6,10 @@
 
 - 요건 카드는 `/docs/requirements`에 둔다.
 - API 명세는 Spring Boot 컨트롤러와 DTO 애너테이션에 둔다.
+- DB 스키마는 JPA `@Entity` 클래스에 둔다. 컬럼 단위 추적이 필요하면 필드에도 `@Requirement`를 붙인다.
 - BDD 시나리오는 별도 `.feature` 파일이 아니라 Acceptance Test 코드로 표현한다.
 - 수용 기준 커버리지는 테스트 메서드의 `@Covers` 값으로 판단한다.
-- API와 테스트는 `@Requirement("REQ-001")`로 요건에 연결한다.
+- API, Entity, 테스트는 `@Requirement("REQ-001")` 또는 `@Requirement({"REQ-001","REQ-002"})`로 하나 이상의 요건에 연결한다.
 - 추적표와 검증 리포트는 사람이 직접 관리하지 않고 하네스가 생성한다.
 
 ## 직접 관리하는 산출물
@@ -144,6 +145,38 @@ OpenAPI 설명은 컨트롤러와 DTO에 둔다.
 
 전역 API 오류 응답과 검증 예외 처리는 `common` 패키지에 둔다. 도메인 전용 예외를 별도 정책으로 매핑해야 할 때만 해당 도메인 패키지에 전용 handler를 둔다.
 
+## Entity / DB 스키마 작성 규칙
+
+DB 스키마는 JPA `@Entity` 클래스로 정의한다. 별도 ERD나 DDL 문서를 사람이 직접 유지하지 않는다.
+
+```java
+@Entity
+@Table(name = "user_account")
+@Requirement({"REQ-001"})
+public class UserAccount {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Requirement("REQ-001")
+    @Column(nullable = false, length = 100)
+    private String name;
+
+    @Requirement("REQ-005") // 나중에 추가된 컬럼은 해당 요건만 표기
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+}
+```
+
+작성 규칙:
+
+- 클래스 레벨 `@Requirement`는 이 Entity에 손댄 모든 요건 ID를 합집합으로 적는다.
+- 필드 레벨 `@Requirement`가 있으면 컬럼 단위 추적에 사용된다. 없으면 클래스 레벨 값으로 폴백한다.
+- `@Column`의 `name`, `nullable`, `unique`, `length`는 schema preview가 그대로 읽는다. 정확하게 적는다.
+- 구현 전에 `./gradlew previewSchema`로 생성될 DDL을 검토하고 사용자에게 확인을 받는다.
+- Entity 변경이 수용 기준에 영향을 주면 요건 카드의 `의사결정 로그`에 남긴다.
+
 ## Acceptance Test 작성 규칙
 
 테스트 클래스는 사용자 목적 또는 API 행위 단위로 작성한다.
@@ -222,6 +255,13 @@ cd back-end
 ./gradlew generateHarnessSourceIndex
 ```
 
+Entity 기반 DDL 미리보기 생성 (`back-end/build/harness/schema-preview.sql`):
+
+```bash
+cd back-end
+./gradlew previewSchema
+```
+
 테스트 실행 후 RED 여부까지 검증:
 
 ```bash
@@ -245,7 +285,8 @@ cd back-end
 5. Acceptance Test에 `@Requirement`, `@Covers`, `@DisplayName`을 작성한다.
 6. BDD 테스트 코드가 요건을 충분히 커버하는지 리뷰한다.
 7. 컨트롤러/DTO에 API 계약과 `@Requirement`를 명시한다.
-8. 구현한다.
-9. `./gradlew validateHarness`로 요건, API, 테스트, 결과 연결을 확인한다.
+8. JPA `@Entity` / 필드에 `@Requirement`를 명시하고, `./gradlew previewSchema` 결과로 사용자에게 스키마 확인을 받는다.
+9. 구현한다.
+10. `./gradlew validateHarness`로 요건, API, Entity, 테스트, 결과 연결을 확인한다.
 
 요건 카드의 구현 완료 여부는 카드 전체 자연어가 아니라 `수용 기준` 커버리지로 판단한다.

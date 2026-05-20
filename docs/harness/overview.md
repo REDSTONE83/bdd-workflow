@@ -2,7 +2,9 @@
 
 ## 목표
 
-요건 카드, Spring Boot API, Acceptance Test, 테스트 결과를 `REQ ID` 하나로 연결한다. 사람이 관리하는 ID는 요건 ID만 유지하고, API ID와 시나리오 ID는 코드 식별자로 대체한다.
+요건 카드, Spring Boot API, JPA Entity, Acceptance Test, 테스트 결과를 `REQ ID` 하나로 연결한다. 사람이 관리하는 ID는 요건 ID만 유지하고, API ID, 테이블 ID, 시나리오 ID는 코드 식별자로 대체한다.
+
+요건 ID는 하나 또는 여러 개를 동시에 부여할 수 있다 (`@Requirement({"REQ-001","REQ-005"})`). 컬럼 단위 추적이 필요한 Entity에서는 필드에도 `@Requirement`를 붙인다.
 
 ## 추적 구조
 
@@ -16,13 +18,18 @@
   POST /users/signup
   UserController.signup
 
+JPA Entity
+  @Entity @Table @Requirement("REQ-001")
+  UserAccount → user_account
+  필드 레벨 @Requirement로 컬럼 단위 추적
+
 Acceptance Test
   @Requirement("REQ-001")
   @Covers("수용 기준 문장")
   SignupApiAcceptanceTest.signupWithValidRequestReturnsCreated
 
 검증 리포트
-  REQ-001 -> API -> 테스트 -> PASS/FAIL -> RED/GREEN/BLUE
+  REQ-001 -> API -> Entity -> 테스트 -> PASS/FAIL -> RED/GREEN/BLUE
 ```
 
 ## 하네스 구성 요소
@@ -41,19 +48,22 @@ docs/requirements
   사람이 관리하는 요건 카드
 
 back-end/src/main/java
-  Spring Boot API, 컨트롤러 기반 API 명세
+  Spring Boot API, 컨트롤러 기반 API 명세, JPA @Entity 기반 DB 스키마
 
 back-end/src/test/java
   BDD 시나리오 역할을 하는 Acceptance Test
 
 back-end/src/harness/java
-  JavaParser 기반 API/test source index 생성기
+  JavaParser 기반 API/Entity/test source index 생성기
 
 back-end/tools/trace-requirements.mjs
   요건 카드, JavaParser source index, 테스트 결과 병합
 
+back-end/tools/preview-schema.mjs
+  Entity 인덱스로부터 DDL 미리보기 생성
+
 back-end/build/harness
-  자동 생성 source index와 추적 리포트
+  자동 생성 source index, 추적 리포트, schema preview
 ```
 
 ## 상태 판정
@@ -64,6 +74,7 @@ back-end/build/harness
 - 수용 기준 커버 테스트 없음
 - 테스트 미실행
 - 테스트 실패 또는 스킵
+- 알려지지 않은 요건 ID가 코드에 남아 있음 (`@Requirement`에 카드에 없는 ID가 하나라도 포함)
 
 `GREEN`은 구현 검증 통과 상태다.
 
@@ -86,7 +97,16 @@ cd back-end
 ./gradlew validateHarness
 ```
 
-이 명령은 테스트를 먼저 실행한 뒤, 요건 카드와 코드의 연결 상태를 검사한다.
+이 명령은 테스트를 먼저 실행한 뒤, 요건 카드와 코드(API, Entity, Acceptance Test) 연결 상태를 검사한다. 알려지지 않은 요건 ID가 하나라도 섞여 있으면 실패한다.
+
+구현 전 스키마 검토용:
+
+```bash
+cd back-end
+./gradlew previewSchema
+```
+
+`back-end/build/harness/schema-preview.sql`에 JPA `@Entity` 정의로부터 생성된 DDL 미리보기가 떨어진다. 컬럼마다 어느 요건에서 도입됐는지 주석으로 남는다. 사용자에게 확인을 받은 뒤에 실제 마이그레이션을 작성한다.
 
 ## 요건 작성과 리뷰 흐름
 

@@ -4,17 +4,22 @@ import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.ArrayInitializerExpr;
+import com.github.javaparser.ast.expr.BooleanLiteralExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
+import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.MemberValuePair;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.nodeTypes.NodeWithAnnotations;
+import com.github.javaparser.ast.type.Type;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -28,16 +33,38 @@ import java.util.stream.Stream;
 
 public class SourceIndexGenerator {
 
-    private record ApiEntry(String requirement, String http, String controller, String file) {
+    private record ApiEntry(List<String> requirements, String http, String controller, String file) {
     }
 
     private record TestEntry(
-            String requirement,
+            List<String> requirements,
             String className,
             String method,
             String identity,
             String displayName,
             List<String> covers,
+            String file
+    ) {
+    }
+
+    private record ColumnEntry(
+            List<String> requirements,
+            String fieldName,
+            String columnName,
+            String javaType,
+            boolean primaryKey,
+            String generation,
+            Boolean nullable,
+            Boolean unique,
+            Integer length
+    ) {
+    }
+
+    private record EntityEntry(
+            List<String> requirements,
+            String className,
+            String table,
+            List<ColumnEntry> columns,
             String file
     ) {
     }
@@ -59,20 +86,31 @@ public class SourceIndexGenerator {
 
         StaticJavaParser.getParserConfiguration().setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17);
 
-        List<ApiEntry> apis = readApis(workspaceRoot, mainJavaRoot);
+        List<ApiEntry> apis = new ArrayList<>();
+        List<EntityEntry> entities = new ArrayList<>();
+        readMain(workspaceRoot, mainJavaRoot, apis, entities);
         List<TestEntry> tests = readTests(workspaceRoot, testJavaRoot);
 
         Files.createDirectories(outputFile.getParent());
-        Files.writeString(outputFile, toJson(apis, tests), StandardCharsets.UTF_8);
+        Files.writeString(outputFile, toJson(apis, tests, entities), StandardCharsets.UTF_8);
     }
 
-    private static List<ApiEntry> readApis(Path workspaceRoot, Path mainJavaRoot) throws IOException {
-        List<ApiEntry> apis = new ArrayList<>();
+    private static void readMain(
+            Path workspaceRoot,
+            Path mainJavaRoot,
+            List<ApiEntry> apis,
+            List<EntityEntry> entities
+    ) throws IOException {
         for (Path file : javaFiles(mainJavaRoot)) {
             CompilationUnit unit = StaticJavaParser.parse(file);
             for (ClassOrInterfaceDeclaration type : unit.findAll(ClassOrInterfaceDeclaration.class)) {
                 String className = type.getNameAsString();
-                String classRequirement = annotationString(type, "Requirement").orElse("");
+                List<String> classRequirements = requirementValues(type);
+
+                if (hasAnnotation(type, "Entity")) {
+                    entities.add(buildEntity(type, className, classRequirements, relative(workspaceRoot, file)));
+                }
+
                 String basePath = annotation(type, "RequestMapping")
                         .map(SourceIndexGenerator::annotationPath)
                         .orElse("");
@@ -90,13 +128,13 @@ public class SourceIndexGenerator {
                         continue;
                     }
 
-                    String requirement = annotationString(method, "Requirement").orElse(classRequirement);
-                    if (requirement.isBlank()) {
+                    List<String> requirements = resolveRequirements(method, classRequirements);
+                    if (requirements.isEmpty()) {
                         continue;
                     }
 
                     apis.add(new ApiEntry(
-                            requirement,
+                            requirements,
                             mapping.get().method() + " " + joinPaths(basePath, mapping.get().path()),
                             className + "." + method.getNameAsString(),
                             relative(workspaceRoot, file)
@@ -104,7 +142,71 @@ public class SourceIndexGenerator {
                 }
             }
         }
-        return apis;
+    }
+
+    private static EntityEntry buildEntity(
+            ClassOrInterfaceDeclaration type,
+            String className,
+            List<String> classRequirements,
+            String file
+    ) {
+        String table = annotation(type, "Table")
+                .flatMap(annotation -> memberValue(annotation, "name")
+                        .or(() -> memberValue(annotation, "value")))
+                .map(SourceIndexGenerator::stringValues)
+                .flatMap(values -> values.stream().findFirst())
+                .filter(value -> !value.isBlank())
+                .orElse(toSnakeCase(className));
+
+        List<ColumnEntry> columns = new ArrayList<>();
+        for (FieldDeclaration field : type.getFields()) {
+            if (field.isStatic()) {
+                continue;
+            }
+            if (hasAnnotation(field, "Transient")) {
+                continue;
+            }
+
+            List<String> fieldRequirements = resolveRequirements(field, classRequirements);
+            boolean primaryKey = hasAnnotation(field, "Id");
+            Optional<AnnotationExpr> column = annotation(field, "Column");
+            Boolean nullable = column.flatMap(c -> booleanMember(c, "nullable")).orElse(null);
+            Boolean unique = column.flatMap(c -> booleanMember(c, "unique")).orElse(null);
+            Integer length = column.flatMap(c -> integerMember(c, "length")).orElse(null);
+            String generation = annotation(field, "GeneratedValue")
+                    .map(annotation -> memberValue(annotation, "strategy")
+                            .flatMap(expression -> methodNames(expression).stream().findFirst())
+                            .orElse("AUTO"))
+                    .orElse(null);
+
+            for (VariableDeclarator variable : field.getVariables()) {
+                String fieldName = variable.getNameAsString();
+                String columnName = column
+                        .flatMap(c -> memberValue(c, "name"))
+                        .map(SourceIndexGenerator::stringValues)
+                        .flatMap(values -> values.stream().findFirst())
+                        .filter(value -> !value.isBlank())
+                        .orElse(toSnakeCase(fieldName));
+                Type fieldType = variable.getType();
+                String javaType = fieldType.isClassOrInterfaceType()
+                        ? fieldType.asClassOrInterfaceType().getNameAsString()
+                        : fieldType.asString();
+
+                columns.add(new ColumnEntry(
+                        fieldRequirements,
+                        fieldName,
+                        columnName,
+                        javaType,
+                        primaryKey,
+                        generation,
+                        nullable,
+                        unique,
+                        length
+                ));
+            }
+        }
+
+        return new EntityEntry(classRequirements, className, table, columns, file);
     }
 
     private static List<TestEntry> readTests(Path workspaceRoot, Path testJavaRoot) throws IOException {
@@ -113,11 +215,11 @@ public class SourceIndexGenerator {
             CompilationUnit unit = StaticJavaParser.parse(file);
             for (ClassOrInterfaceDeclaration type : unit.findAll(ClassOrInterfaceDeclaration.class)) {
                 String className = type.getNameAsString();
-                String classRequirement = annotationString(type, "Requirement").orElse("");
+                List<String> classRequirements = requirementValues(type);
 
                 for (MethodDeclaration method : type.getMethods()) {
-                    String requirement = annotationString(method, "Requirement").orElse(classRequirement);
-                    if (requirement.isBlank()) {
+                    List<String> requirements = resolveRequirements(method, classRequirements);
+                    if (requirements.isEmpty()) {
                         continue;
                     }
 
@@ -126,14 +228,17 @@ public class SourceIndexGenerator {
                             .map(SourceIndexGenerator::stringValues)
                             .ifPresent(covers::addAll);
 
-                    String displayName = annotationString(method, "DisplayName").orElse("");
+                    String displayName = annotation(method, "DisplayName")
+                            .map(SourceIndexGenerator::stringValues)
+                            .flatMap(values -> values.stream().findFirst())
+                            .orElse("");
                     if (covers.isEmpty() && displayName.isBlank()) {
                         continue;
                     }
 
                     String methodName = method.getNameAsString();
                     tests.add(new TestEntry(
-                            requirement,
+                            requirements,
                             className,
                             methodName,
                             className + "." + methodName,
@@ -166,9 +271,19 @@ public class SourceIndexGenerator {
                 .findFirst();
     }
 
-    private static Optional<String> annotationString(NodeWithAnnotations<?> node, String name) {
-        return annotation(node, name)
-                .flatMap(annotation -> stringValues(annotation).stream().findFirst());
+    private static boolean hasAnnotation(NodeWithAnnotations<?> node, String name) {
+        return annotation(node, name).isPresent();
+    }
+
+    private static List<String> requirementValues(NodeWithAnnotations<?> node) {
+        return annotation(node, "Requirement")
+                .map(SourceIndexGenerator::stringValues)
+                .orElseGet(List::of);
+    }
+
+    private static List<String> resolveRequirements(NodeWithAnnotations<?> node, List<String> fallback) {
+        List<String> own = requirementValues(node);
+        return own.isEmpty() ? fallback : own;
     }
 
     private static Optional<Mapping> mapping(MethodDeclaration method) {
@@ -248,6 +363,18 @@ public class SourceIndexGenerator {
         return Optional.empty();
     }
 
+    private static Optional<Boolean> booleanMember(AnnotationExpr annotation, String memberName) {
+        return memberValue(annotation, memberName)
+                .filter(Expression::isBooleanLiteralExpr)
+                .map(expression -> ((BooleanLiteralExpr) expression).getValue());
+    }
+
+    private static Optional<Integer> integerMember(AnnotationExpr annotation, String memberName) {
+        return memberValue(annotation, memberName)
+                .filter(Expression::isIntegerLiteralExpr)
+                .map(expression -> ((IntegerLiteralExpr) expression).asNumber().intValue());
+    }
+
     private static List<String> stringValues(AnnotationExpr annotation) {
         if (annotation instanceof SingleMemberAnnotationExpr singleMember) {
             return stringValues(singleMember.getMemberValue());
@@ -302,14 +429,30 @@ public class SourceIndexGenerator {
         return root.relativize(file).toString().replace('\\', '/');
     }
 
-    private static String toJson(List<ApiEntry> apis, List<TestEntry> tests) {
+    private static String toSnakeCase(String value) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char current = value.charAt(i);
+            if (Character.isUpperCase(current)) {
+                if (i > 0) {
+                    builder.append('_');
+                }
+                builder.append(Character.toLowerCase(current));
+            } else {
+                builder.append(current);
+            }
+        }
+        return builder.toString();
+    }
+
+    private static String toJson(List<ApiEntry> apis, List<TestEntry> tests, List<EntityEntry> entities) {
         StringBuilder builder = new StringBuilder();
         builder.append("{\n");
         builder.append("  \"apis\": [\n");
         for (int i = 0; i < apis.size(); i++) {
             ApiEntry api = apis.get(i);
             builder.append("    {\n");
-            builder.append("      \"requirement\": ").append(json(api.requirement())).append(",\n");
+            builder.append("      \"requirements\": ").append(jsonArray(api.requirements())).append(",\n");
             builder.append("      \"http\": ").append(json(api.http())).append(",\n");
             builder.append("      \"controller\": ").append(json(api.controller())).append(",\n");
             builder.append("      \"file\": ").append(json(api.file())).append("\n");
@@ -321,7 +464,7 @@ public class SourceIndexGenerator {
         for (int i = 0; i < tests.size(); i++) {
             TestEntry test = tests.get(i);
             builder.append("    {\n");
-            builder.append("      \"requirement\": ").append(json(test.requirement())).append(",\n");
+            builder.append("      \"requirements\": ").append(jsonArray(test.requirements())).append(",\n");
             builder.append("      \"className\": ").append(json(test.className())).append(",\n");
             builder.append("      \"method\": ").append(json(test.method())).append(",\n");
             builder.append("      \"identity\": ").append(json(test.identity())).append(",\n");
@@ -330,6 +473,36 @@ public class SourceIndexGenerator {
             builder.append("      \"file\": ").append(json(test.file())).append("\n");
             builder.append("    }");
             builder.append(i + 1 < tests.size() ? "," : "").append("\n");
+        }
+        builder.append("  ],\n");
+        builder.append("  \"entities\": [\n");
+        for (int i = 0; i < entities.size(); i++) {
+            EntityEntry entity = entities.get(i);
+            builder.append("    {\n");
+            builder.append("      \"requirements\": ").append(jsonArray(entity.requirements())).append(",\n");
+            builder.append("      \"className\": ").append(json(entity.className())).append(",\n");
+            builder.append("      \"table\": ").append(json(entity.table())).append(",\n");
+            builder.append("      \"file\": ").append(json(entity.file())).append(",\n");
+            builder.append("      \"columns\": [\n");
+            List<ColumnEntry> columns = entity.columns();
+            for (int j = 0; j < columns.size(); j++) {
+                ColumnEntry column = columns.get(j);
+                builder.append("        {\n");
+                builder.append("          \"requirements\": ").append(jsonArray(column.requirements())).append(",\n");
+                builder.append("          \"fieldName\": ").append(json(column.fieldName())).append(",\n");
+                builder.append("          \"columnName\": ").append(json(column.columnName())).append(",\n");
+                builder.append("          \"javaType\": ").append(json(column.javaType())).append(",\n");
+                builder.append("          \"primaryKey\": ").append(column.primaryKey()).append(",\n");
+                builder.append("          \"generation\": ").append(column.generation() == null ? "null" : json(column.generation())).append(",\n");
+                builder.append("          \"nullable\": ").append(column.nullable() == null ? "null" : column.nullable()).append(",\n");
+                builder.append("          \"unique\": ").append(column.unique() == null ? "null" : column.unique()).append(",\n");
+                builder.append("          \"length\": ").append(column.length() == null ? "null" : column.length()).append("\n");
+                builder.append("        }");
+                builder.append(j + 1 < columns.size() ? "," : "").append("\n");
+            }
+            builder.append("      ]\n");
+            builder.append("    }");
+            builder.append(i + 1 < entities.size() ? "," : "").append("\n");
         }
         builder.append("  ]\n");
         builder.append("}\n");

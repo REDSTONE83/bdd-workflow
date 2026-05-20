@@ -91,7 +91,8 @@ function readSourceIndex() {
     const sourceIndex = JSON.parse(fs.readFileSync(sourceIndexPath, 'utf8'));
     return {
         apis: sourceIndex.apis ?? [],
-        tests: sourceIndex.tests ?? []
+        tests: sourceIndex.tests ?? [],
+        entities: sourceIndex.entities ?? []
     };
 }
 
@@ -143,9 +144,15 @@ function statusForCriterion(criterion, tests, results) {
     return { status: 'PASS', tests: testStatuses };
 }
 
-function evaluateRequirement(card, apis, tests, results) {
-    const requirementApis = apis.filter((api) => api.requirement === card.id);
-    const requirementTests = tests.filter((test) => test.requirement === card.id);
+function evaluateRequirement(card, apis, tests, entities, results) {
+    const requirementApis = apis.filter((api) => api.requirements.includes(card.id));
+    const requirementTests = tests.filter((test) => test.requirements.includes(card.id));
+    const requirementEntities = entities
+        .map((entity) => ({
+            ...entity,
+            columns: entity.columns.filter((column) => column.requirements.includes(card.id))
+        }))
+        .filter((entity) => entity.requirements.includes(card.id) || entity.columns.length > 0);
     const coverage = card.acceptanceCriteria.map((criterion) => ({
         criterion,
         ...statusForCriterion(criterion, requirementTests, results)
@@ -171,6 +178,7 @@ function evaluateRequirement(card, apis, tests, results) {
             redReasons,
             apis: requirementApis,
             tests: requirementTests,
+            entities: requirementEntities,
             coverage
         };
     }
@@ -190,30 +198,42 @@ function evaluateRequirement(card, apis, tests, results) {
         blueBlockedBy,
         apis: requirementApis,
         tests: requirementTests,
+        entities: requirementEntities,
         coverage
     };
 }
 
-function buildModel(cards, apis, tests, results) {
+function buildModel(cards, apis, tests, entities, results) {
     const knownRequirementIds = new Set(cards.map((card) => card.id));
-    const requirements = cards.map((card) => evaluateRequirement(card, apis, tests, results));
-    const unknownApis = apis.filter((api) => !knownRequirementIds.has(api.requirement));
-    const unknownTests = tests.filter((test) => !knownRequirementIds.has(test.requirement));
+    const requirements = cards.map((card) => evaluateRequirement(card, apis, tests, entities, results));
+    const hasUnknown = (refs) => refs.length === 0 || refs.some((ref) => !knownRequirementIds.has(ref));
+    const unknownApis = apis.filter((api) => hasUnknown(api.requirements));
+    const unknownTests = tests.filter((test) => hasUnknown(test.requirements));
+    const unknownEntities = entities.filter((entity) => {
+        const refs = [
+            ...entity.requirements,
+            ...entity.columns.flatMap((column) => column.requirements)
+        ];
+        return hasUnknown(refs);
+    });
     const summary = {
         total: requirements.length,
         red: requirements.filter((requirement) => requirement.state === 'RED').length,
         green: requirements.filter((requirement) => requirement.state === 'GREEN').length,
         blue: requirements.filter((requirement) => requirement.state === 'BLUE').length,
         unknownApis: unknownApis.length,
-        unknownTests: unknownTests.length
+        unknownTests: unknownTests.length,
+        unknownEntities: unknownEntities.length
     };
 
     return {
         generatedAt: new Date().toISOString(),
         summary,
+        knownRequirementIds: [...knownRequirementIds],
         requirements,
         unknownApis,
-        unknownTests
+        unknownTests,
+        unknownEntities
     };
 }
 
@@ -227,6 +247,7 @@ function buildMarkdown(model) {
     lines.push(`- BLUE: ${model.summary.blue}`);
     lines.push(`- Unknown API references: ${model.summary.unknownApis}`);
     lines.push(`- Unknown test references: ${model.summary.unknownTests}`);
+    lines.push(`- Unknown entity references: ${model.summary.unknownEntities}`);
     lines.push('');
 
     for (const requirement of model.requirements) {
@@ -257,10 +278,25 @@ function buildMarkdown(model) {
             lines.push('- MISSING');
         } else {
             for (const api of requirement.apis) {
-                lines.push(`- ${api.http} / ${api.controller}`);
+                lines.push(`- ${api.http} / ${api.controller} [${api.requirements.join(', ')}]`);
             }
         }
-        lines.push('', '### Acceptance Criteria Coverage', '');
+        lines.push('');
+
+        lines.push('### Entities', '');
+        if (requirement.entities.length === 0) {
+            lines.push('- (없음)');
+        } else {
+            for (const entity of requirement.entities) {
+                lines.push(`- ${entity.className} → ${entity.table} [${entity.requirements.join(', ') || '(class-level 미지정)'}]`);
+                for (const column of entity.columns) {
+                    lines.push(`  - ${column.columnName} (${column.javaType}) [${column.requirements.join(', ') || '(field-level 미지정)'}]`);
+                }
+            }
+        }
+        lines.push('');
+
+        lines.push('### Acceptance Criteria Coverage', '');
         for (const row of requirement.coverage) {
             lines.push(`- ${row.status}: ${row.criterion}`);
             for (const test of row.tests) {
@@ -270,10 +306,17 @@ function buildMarkdown(model) {
         lines.push('');
     }
 
+    const formatUnknownRefs = (refs) => {
+        if (refs.length === 0) {
+            return '미지정';
+        }
+        return refs.map((ref) => model.knownRequirementIds.includes(ref) ? ref : `${ref}(!)`).join(', ');
+    };
+
     if (model.unknownApis.length > 0) {
         lines.push('## Unknown API Requirement References', '');
         for (const api of model.unknownApis) {
-            lines.push(`- ${api.requirement}: ${api.http} / ${api.controller}`);
+            lines.push(`- [${formatUnknownRefs(api.requirements)}] ${api.http} / ${api.controller}`);
         }
         lines.push('');
     }
@@ -281,7 +324,22 @@ function buildMarkdown(model) {
     if (model.unknownTests.length > 0) {
         lines.push('## Unknown Test Requirement References', '');
         for (const test of model.unknownTests) {
-            lines.push(`- ${test.requirement}: ${test.identity}`);
+            lines.push(`- [${formatUnknownRefs(test.requirements)}] ${test.identity}`);
+        }
+        lines.push('');
+    }
+
+    if (model.unknownEntities.length > 0) {
+        lines.push('## Unknown Entity Requirement References', '');
+        for (const entity of model.unknownEntities) {
+            lines.push(`- [${formatUnknownRefs(entity.requirements)}] ${entity.className} → ${entity.table}`);
+            const offendingColumns = entity.columns.filter((column) =>
+                column.requirements.length === 0 ||
+                column.requirements.some((ref) => !model.knownRequirementIds.includes(ref))
+            );
+            for (const column of offendingColumns) {
+                lines.push(`  - [${formatUnknownRefs(column.requirements)}] ${column.columnName} (${column.javaType})`);
+            }
         }
         lines.push('');
     }
@@ -293,8 +351,9 @@ const cards = readRequirementCards();
 const sourceIndex = readSourceIndex();
 const apis = sourceIndex.apis;
 const tests = sourceIndex.tests;
+const entities = sourceIndex.entities;
 const results = readTestResults();
-const model = buildModel(cards, apis, tests, results);
+const model = buildModel(cards, apis, tests, entities, results);
 const markdown = buildMarkdown(model);
 
 fs.mkdirSync(outputDir, { recursive: true });
@@ -303,7 +362,10 @@ fs.writeFileSync(path.join(outputDir, 'trace-report.json'), `${JSON.stringify(mo
 
 console.log(markdown);
 
-const hasUnknownReferences = model.summary.unknownApis > 0 || model.summary.unknownTests > 0;
+const hasUnknownReferences =
+    model.summary.unknownApis > 0 ||
+    model.summary.unknownTests > 0 ||
+    model.summary.unknownEntities > 0;
 if (checkMode && (model.summary.total === 0 || model.summary.red > 0 || hasUnknownReferences)) {
     process.exitCode = 1;
 }

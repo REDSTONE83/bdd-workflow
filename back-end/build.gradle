@@ -24,8 +24,11 @@ sourceSets {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
     implementation 'org.springframework.security:spring-security-crypto'
+
+    runtimeOnly 'com.h2database:h2'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -56,6 +59,13 @@ tasks.register('traceRequirements', Exec) {
     description = 'Generate requirement/API/test trace report from cards and JavaParser source index.'
     dependsOn tasks.named('generateHarnessSourceIndex')
     commandLine 'node', 'tools/trace-requirements.mjs'
+}
+
+tasks.register('previewSchema', Exec) {
+    group = 'verification'
+    description = 'Generate DDL preview from JPA @Entity classes for human review before migration.'
+    dependsOn tasks.named('generateHarnessSourceIndex')
+    commandLine 'node', 'tools/preview-schema.mjs'
 }
 
 tasks.register('validateHarness', Exec) {
