@@ -1,5 +1,7 @@
 package com.example.bddworkflow.category;
 
+import com.example.bddworkflow.category.repository.CategoryRepository;
+
 import com.example.bddworkflow.harness.AcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
@@ -23,15 +25,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Requirement("REQ-003")
 class CategoryCreateApiAcceptanceTest {
 
-    private static final String USER_HEADER = "X-User-Id";
-    private static final long USER_ID = 100L;
-    private static final long OTHER_USER_ID = 200L;
+    private static final String USER_HEADER = "X-Authenticated-User-Id";
+    private static final java.util.UUID USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-000000000064");
+    private static final java.util.UUID OTHER_USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-0000000000c8");
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
-    private InMemoryCategoryRepository categoryRepository;
+    private CategoryRepository categoryRepository;
 
     @BeforeEach
     void resetRepository() {
@@ -64,7 +66,7 @@ class CategoryCreateApiAcceptanceTest {
                 .andExpect(jsonPath("$.description").value("회사 일"))
                 .andExpect(jsonPath("$.displayOrder").value(1024));
 
-        assertThat(categoryRepository.findAllByUserId(USER_ID)).hasSize(1);
+        assertThat(categoryRepository.findAllByUserId(USER_ID, org.springframework.data.domain.Pageable.unpaged()).getContent()).hasSize(1);
     }
 
     @Test
@@ -111,9 +113,9 @@ class CategoryCreateApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.field").value("name"));
+                .andExpect(jsonPath("$.details[0].field").value("name"));
 
-        assertThat(categoryRepository.findAllByUserId(USER_ID)).isEmpty();
+        assertThat(categoryRepository.findAllByUserId(USER_ID, org.springframework.data.domain.Pageable.unpaged()).getContent()).isEmpty();
     }
 
     @Test
@@ -136,7 +138,7 @@ class CategoryCreateApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.field").value("name"));
+                .andExpect(jsonPath("$.details[0].field").value("name"));
     }
 
     @Test
@@ -159,7 +161,7 @@ class CategoryCreateApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.field").value("description"));
+                .andExpect(jsonPath("$.details[0].field").value("description"));
     }
 
     @Test
@@ -181,7 +183,7 @@ class CategoryCreateApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.field").value("color"));
+                .andExpect(jsonPath("$.details[0].field").value("color"));
     }
 
     @Test
@@ -204,7 +206,7 @@ class CategoryCreateApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DUPLICATE_CATEGORY_NAME"))
-                .andExpect(jsonPath("$.field").value("name"));
+                .andExpect(jsonPath("$.details[0].field").value("name"));
 
         // 다른 사용자는 동일 이름을 가질 수 있다
         assertThat(categoryRepository.findByUserIdAndName(OTHER_USER_ID, "업무")).isEmpty();

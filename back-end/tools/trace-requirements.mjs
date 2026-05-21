@@ -175,10 +175,14 @@ function readTestResults() {
     const results = new Map();
     for (const file of testResultRoots.flatMap((root) => walk(root, (candidate) => candidate.endsWith('.xml')))) {
         const content = fs.readFileSync(file, 'utf8');
-        const testcaseRegex = /<testcase\b([^>]*)>([\s\S]*?)<\/testcase>|<testcase\b([^>]*)\/>/g;
+        // self-closing 형태를 먼저 시도해 BODY 패턴이 SELF 태그를 흡수하지 않도록 한다.
+        // (BODY 패턴이 `<testcase ... />` 의 opening을 attrs로 삼키고 다음 `</testcase>`까지 가
+        //  뒤에 오는 BODY 테스트케이스 1건을 통째로 가리는 회귀를 막는다.)
+        const testcaseRegex = /<testcase\b([^>]*)\/>|<testcase\b([^>]*)>([\s\S]*?)<\/testcase>/g;
         for (const match of content.matchAll(testcaseRegex)) {
-            const attrs = match[1] ?? match[3] ?? '';
-            const body = match[2] ?? '';
+            // 그룹 1: self-closing의 attrs. 그룹 2: body 형태의 attrs. 그룹 3: body 본문.
+            const attrs = match[1] ?? match[2] ?? '';
+            const body = match[3] ?? '';
             const className = attrs.match(/\bclassname="([^"]+)"/)?.[1]?.split('.').pop();
             const name = attrs.match(/\bname="([^"]+)"/)?.[1];
             if (!className || !name) {

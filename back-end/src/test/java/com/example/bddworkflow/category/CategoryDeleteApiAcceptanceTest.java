@@ -1,5 +1,8 @@
 package com.example.bddworkflow.category;
 
+import com.example.bddworkflow.category.domain.Category;
+import com.example.bddworkflow.category.repository.CategoryRepository;
+
 import com.example.bddworkflow.harness.AcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
@@ -22,15 +25,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Requirement("REQ-003")
 class CategoryDeleteApiAcceptanceTest {
 
-    private static final String USER_HEADER = "X-User-Id";
-    private static final long USER_ID = 100L;
-    private static final long OTHER_USER_ID = 200L;
+    private static final String USER_HEADER = "X-Authenticated-User-Id";
+    private static final java.util.UUID USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-000000000064");
+    private static final java.util.UUID OTHER_USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-0000000000c8");
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
-    private InMemoryCategoryRepository categoryRepository;
+    private CategoryRepository categoryRepository;
 
     @BeforeEach
     void resetRepository() {
@@ -57,7 +60,7 @@ class CategoryDeleteApiAcceptanceTest {
     @DisplayName("존재하지 않는 카테고리를 삭제하려 하면 거절된다")
     void deleteNonExistingCategoryReturnsNotFound() throws Exception {
         // Given
-        long missingId = 9_999L;
+        java.util.UUID missingId = java.util.UUID.fromString("00000000-0000-0000-0000-00000000270f");
 
         // When / Then
         mockMvc.perform(delete("/categories/{id}", missingId)

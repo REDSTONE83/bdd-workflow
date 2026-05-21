@@ -3,6 +3,7 @@ package com.example.bddworkflow.harness;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
@@ -46,11 +47,23 @@ public class SourceIndexGenerator {
             int operationSummaryLine,
             String operationDescription,
             int operationDescriptionLine,
-            List<ResponseEntry> responses
+            List<ResponseEntry> responses,
+            List<ParameterEntry> parameters,
+            String returnType,
+            int line
     ) {
     }
 
     private record ResponseEntry(String responseCode, String description, int line) {
+    }
+
+    private record ParameterEntry(
+            String name,
+            String javaType,
+            List<String> annotations,
+            String requestHeaderName,
+            boolean springRequestBody
+    ) {
     }
 
     private record TestEntry(
@@ -73,7 +86,9 @@ public class SourceIndexGenerator {
             String generation,
             Boolean nullable,
             Boolean unique,
-            Integer length
+            Boolean updatable,
+            Integer length,
+            List<String> annotations
     ) {
     }
 
@@ -82,11 +97,19 @@ public class SourceIndexGenerator {
             String className,
             String table,
             List<ColumnEntry> columns,
-            String file
+            String file,
+            List<String> listeners
     ) {
     }
 
-    private record DtoField(String name, String javaType, String schemaDescription, int line) {
+    private record DtoField(
+            String name,
+            String javaType,
+            String schemaDescription,
+            int line,
+            String initializer,
+            List<String> annotations
+    ) {
     }
 
     private record DtoEntry(
@@ -95,7 +118,57 @@ public class SourceIndexGenerator {
             String file,
             String schemaDescription,
             int schemaLine,
-            List<DtoField> fields
+            List<DtoField> fields,
+            String kind
+    ) {
+    }
+
+    private record RepositoryEntry(
+            List<String> requirements,
+            String className,
+            String file,
+            String targetEntity,
+            List<RepoMethodEntry> methods
+    ) {
+    }
+
+    private record RepoMethodEntry(
+            String name,
+            String returnType,
+            List<String> parameterTypes
+    ) {
+    }
+
+    private record ServiceEntry(
+            List<String> requirements,
+            String className,
+            String file,
+            boolean classTransactional,
+            Boolean classTransactionalReadOnly,
+            List<ServiceMethodEntry> methods,
+            List<ServiceFieldEntry> fields
+    ) {
+    }
+
+    private record ServiceFieldEntry(String name, String type) {
+    }
+
+    private record BeanEntry(
+            String containerClass,
+            String methodName,
+            String returnType,
+            String body,
+            String file
+    ) {
+    }
+
+    private record ServiceMethodEntry(
+            String name,
+            boolean isPublic,
+            boolean hasMethodTransactional,
+            Boolean methodTransactionalReadOnly,
+            String returnType,
+            List<String> parameterTypes
     ) {
     }
 
@@ -129,12 +202,15 @@ public class SourceIndexGenerator {
         List<ApiEntry> apis = new ArrayList<>();
         List<EntityEntry> entities = new ArrayList<>();
         List<DtoEntry> dtos = new ArrayList<>();
+        List<RepositoryEntry> repositories = new ArrayList<>();
+        List<ServiceEntry> services = new ArrayList<>();
+        List<BeanEntry> beans = new ArrayList<>();
         List<TextChannel> textChannels = new ArrayList<>();
-        readMain(workspaceRoot, mainJavaRoot, apis, entities, dtos, textChannels);
+        readMain(workspaceRoot, mainJavaRoot, apis, entities, dtos, repositories, services, beans, textChannels);
         List<TestEntry> tests = readTests(workspaceRoot, testJavaRoot, textChannels);
 
         Files.createDirectories(outputFile.getParent());
-        Files.writeString(outputFile, toJson(apis, tests, entities, dtos, textChannels), StandardCharsets.UTF_8);
+        Files.writeString(outputFile, toJson(apis, tests, entities, dtos, repositories, services, beans, textChannels), StandardCharsets.UTF_8);
     }
 
     private static void readMain(
@@ -143,6 +219,9 @@ public class SourceIndexGenerator {
             List<ApiEntry> apis,
             List<EntityEntry> entities,
             List<DtoEntry> dtos,
+            List<RepositoryEntry> repositories,
+            List<ServiceEntry> services,
+            List<BeanEntry> beans,
             List<TextChannel> textChannels
     ) throws IOException {
         for (Path file : javaFiles(mainJavaRoot)) {
@@ -157,11 +236,36 @@ public class SourceIndexGenerator {
                     entities.add(buildEntity(type, className, classRequirements, relativeFile));
                 }
 
+                if (type.isInterface() && extendsJpaRepository(type)) {
+                    repositories.add(buildRepository(type, className, classRequirements, relativeFile));
+                }
+
+                if (hasAnnotation(type, "Service")) {
+                    services.add(buildService(type, className, classRequirements, relativeFile));
+                }
+
+                if (!type.isInterface() && (classHasDtoSchema(type) || isDtoPackage(relativeFile))) {
+                    dtos.add(buildClassDto(type, className, classRequirements, relativeFile, textChannels));
+                }
+
                 String basePath = annotation(type, "RequestMapping")
                         .map(SourceIndexGenerator::annotationPath)
                         .orElse("");
 
                 for (MethodDeclaration method : type.getMethods()) {
+                    if (annotation(method, "Bean").isPresent()) {
+                        String body = method.getBody()
+                                .map(Object::toString)
+                                .orElse("");
+                        beans.add(new BeanEntry(
+                                className,
+                                method.getNameAsString(),
+                                typeAsString(method.getType()),
+                                body,
+                                relativeFile
+                        ));
+                    }
+
                     Optional<Mapping> mapping = mapping(method);
                     if (mapping.isEmpty() && annotation(method, "RequestMapping").isPresent()) {
                         throw new IllegalStateException(
@@ -240,6 +344,34 @@ public class SourceIndexGenerator {
                         }
                     }
 
+                    List<ParameterEntry> parameters = new ArrayList<>();
+                    for (Parameter parameter : method.getParameters()) {
+                        List<String> annotationNames = new ArrayList<>();
+                        String requestHeaderName = null;
+                        boolean springRequestBody = false;
+                        for (AnnotationExpr annotation : parameter.getAnnotations()) {
+                            String simpleName = simpleAnnotationName(annotation);
+                            annotationNames.add(simpleName);
+                            if ("RequestHeader".equals(simpleName)) {
+                                requestHeaderName = memberValue(annotation, "value")
+                                        .or(() -> memberValue(annotation, "name"))
+                                        .map(SourceIndexGenerator::firstString)
+                                        .orElse(null);
+                            }
+                            if (isSpringRequestBody(annotation)) {
+                                springRequestBody = true;
+                            }
+                        }
+                        parameters.add(new ParameterEntry(
+                                parameter.getNameAsString(),
+                                typeAsString(parameter.getType()),
+                                annotationNames,
+                                requestHeaderName,
+                                springRequestBody
+                        ));
+                    }
+                    String returnType = typeAsString(method.getType());
+
                     apis.add(new ApiEntry(
                             requirements,
                             mapping.get().method() + " " + joinPaths(basePath, mapping.get().path()),
@@ -249,7 +381,10 @@ public class SourceIndexGenerator {
                             operationSummaryLine,
                             operationDescription,
                             operationDescriptionLine,
-                            responses
+                            responses,
+                            parameters,
+                            returnType,
+                            lineOf(method)
                     ));
                 }
             }
@@ -273,10 +408,7 @@ public class SourceIndexGenerator {
                 boolean anyComponentSchema = false;
                 for (Parameter parameter : record.getParameters()) {
                     String parameterName = parameter.getNameAsString();
-                    Type parameterType = parameter.getType();
-                    String javaType = parameterType.isClassOrInterfaceType()
-                            ? parameterType.asClassOrInterfaceType().getNameAsString()
-                            : parameterType.asString();
+                    String javaType = typeAsString(parameter.getType());
                     Optional<AnnotationExpr> paramSchema = annotation(parameter, "Schema");
                     String fieldSchemaDescription = "";
                     int fieldSchemaLine = lineOf(parameter);
@@ -288,10 +420,21 @@ public class SourceIndexGenerator {
                             fieldSchemaLine = lineOf(descExpr.get());
                         }
                     }
-                    fields.add(new DtoField(parameterName, javaType, fieldSchemaDescription, fieldSchemaLine));
+                    List<String> annotationNames = new ArrayList<>();
+                    for (AnnotationExpr annotation : parameter.getAnnotations()) {
+                        annotationNames.add(simpleAnnotationName(annotation));
+                    }
+                    fields.add(new DtoField(
+                            parameterName,
+                            javaType,
+                            fieldSchemaDescription,
+                            fieldSchemaLine,
+                            null,
+                            annotationNames
+                    ));
                 }
 
-                boolean isDto = classSchema.isPresent() || anyComponentSchema;
+                boolean isDto = classSchema.isPresent() || anyComponentSchema || isDtoPackage(relativeFile);
                 if (!isDto) {
                     continue;
                 }
@@ -325,7 +468,8 @@ public class SourceIndexGenerator {
                         relativeFile,
                         classSchemaDescription,
                         classSchemaLine,
-                        fields
+                        fields,
+                        "record"
                 ));
             }
         }
@@ -359,7 +503,12 @@ public class SourceIndexGenerator {
             Optional<AnnotationExpr> column = annotation(field, "Column");
             Boolean nullable = column.flatMap(c -> booleanMember(c, "nullable")).orElse(null);
             Boolean unique = column.flatMap(c -> booleanMember(c, "unique")).orElse(null);
+            Boolean updatable = column.flatMap(c -> booleanMember(c, "updatable")).orElse(null);
             Integer length = column.flatMap(c -> integerMember(c, "length")).orElse(null);
+            List<String> fieldAnnotations = new ArrayList<>();
+            for (AnnotationExpr annotationExpr : field.getAnnotations()) {
+                fieldAnnotations.add(simpleAnnotationName(annotationExpr));
+            }
             String generation = annotation(field, "GeneratedValue")
                     .map(annotation -> memberValue(annotation, "strategy")
                             .flatMap(expression -> methodNames(expression).stream().findFirst())
@@ -388,12 +537,245 @@ public class SourceIndexGenerator {
                         generation,
                         nullable,
                         unique,
-                        length
+                        updatable,
+                        length,
+                        fieldAnnotations
                 ));
             }
         }
 
-        return new EntityEntry(classRequirements, className, table, columns, file);
+        List<String> listeners = new ArrayList<>();
+        annotation(type, "EntityListeners").ifPresent(annotationExpr ->
+                memberValue(annotationExpr, "value")
+                        .ifPresent(expr -> listeners.addAll(classLiteralNames(expr)))
+        );
+
+        return new EntityEntry(classRequirements, className, table, columns, file, listeners);
+    }
+
+    private static boolean extendsJpaRepository(ClassOrInterfaceDeclaration type) {
+        return type.getExtendedTypes().stream().anyMatch(t -> {
+            String name = t.getNameAsString();
+            return name.equals("JpaRepository")
+                    || name.equals("CrudRepository")
+                    || name.equals("PagingAndSortingRepository")
+                    || name.equals("Repository");
+        });
+    }
+
+    private static RepositoryEntry buildRepository(
+            ClassOrInterfaceDeclaration type,
+            String className,
+            List<String> classRequirements,
+            String file
+    ) {
+        String targetEntity = type.getExtendedTypes().stream()
+                .filter(t -> {
+                    String name = t.getNameAsString();
+                    return name.equals("JpaRepository")
+                            || name.equals("CrudRepository")
+                            || name.equals("PagingAndSortingRepository")
+                            || name.equals("Repository");
+                })
+                .findFirst()
+                .flatMap(t -> t.getTypeArguments()
+                        .filter(args -> !args.isEmpty())
+                        .map(args -> typeAsString(args.get(0))))
+                .orElse(null);
+
+        List<RepoMethodEntry> methods = new ArrayList<>();
+        for (MethodDeclaration method : type.getMethods()) {
+            String returnType = typeAsString(method.getType());
+            List<String> parameterTypes = new ArrayList<>();
+            for (Parameter parameter : method.getParameters()) {
+                parameterTypes.add(typeAsString(parameter.getType()));
+            }
+            methods.add(new RepoMethodEntry(method.getNameAsString(), returnType, parameterTypes));
+        }
+        return new RepositoryEntry(classRequirements, className, file, targetEntity, methods);
+    }
+
+    private static ServiceEntry buildService(
+            ClassOrInterfaceDeclaration type,
+            String className,
+            List<String> classRequirements,
+            String file
+    ) {
+        boolean classTransactional = hasAnnotation(type, "Transactional");
+        Boolean classReadOnly = annotation(type, "Transactional")
+                .flatMap(a -> booleanMember(a, "readOnly"))
+                .orElse(null);
+        List<ServiceMethodEntry> methods = new ArrayList<>();
+        for (MethodDeclaration method : type.getMethods()) {
+            boolean isPublic = method.isPublic();
+            Optional<AnnotationExpr> tx = annotation(method, "Transactional");
+            boolean hasMethodTransactional = tx.isPresent();
+            Boolean methodReadOnly = tx.flatMap(a -> booleanMember(a, "readOnly")).orElse(null);
+            String returnType = typeAsString(method.getType());
+            List<String> parameterTypes = new ArrayList<>();
+            for (Parameter parameter : method.getParameters()) {
+                parameterTypes.add(typeAsString(parameter.getType()));
+            }
+            methods.add(new ServiceMethodEntry(
+                    method.getNameAsString(),
+                    isPublic,
+                    hasMethodTransactional,
+                    methodReadOnly,
+                    returnType,
+                    parameterTypes
+            ));
+        }
+        List<ServiceFieldEntry> fields = new ArrayList<>();
+        for (FieldDeclaration field : type.getFields()) {
+            if (field.isStatic()) continue;
+            String fieldType = typeAsString(field.getCommonType());
+            for (VariableDeclarator variable : field.getVariables()) {
+                fields.add(new ServiceFieldEntry(variable.getNameAsString(), fieldType));
+            }
+        }
+        return new ServiceEntry(classRequirements, className, file, classTransactional, classReadOnly, methods, fields);
+    }
+
+    private static boolean classHasDtoSchema(ClassOrInterfaceDeclaration type) {
+        if (hasAnnotation(type, "Schema")) {
+            return true;
+        }
+        for (FieldDeclaration field : type.getFields()) {
+            if (hasAnnotation(field, "Schema")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isDtoPackage(String relativeFile) {
+        // Per package-structure.md, DTOs live under `dto/` subpackages
+        // (e.g., `category/dto/CreateCategoryRequest.java`). Index them regardless of @Schema
+        // so that @RequestBody-only DTOs without OpenAPI metadata can still be validated.
+        return relativeFile != null && relativeFile.contains("/dto/");
+    }
+
+    private static DtoEntry buildClassDto(
+            ClassOrInterfaceDeclaration type,
+            String className,
+            List<String> classRequirements,
+            String relativeFile,
+            List<TextChannel> textChannels
+    ) {
+        Optional<AnnotationExpr> classSchema = annotation(type, "Schema");
+        String classSchemaDescription = "";
+        int classSchemaLine = 0;
+        if (classSchema.isPresent()) {
+            Optional<Expression> descExpr = memberValue(classSchema.get(), "description");
+            if (descExpr.isPresent()) {
+                classSchemaDescription = firstString(descExpr.get());
+                classSchemaLine = lineOf(descExpr.get());
+            }
+        }
+        if (!classSchemaDescription.isEmpty()) {
+            textChannels.add(new TextChannel(
+                    "@Schema.description",
+                    classSchemaDescription,
+                    relativeFile,
+                    classSchemaLine,
+                    className,
+                    classRequirements
+            ));
+        }
+
+        List<DtoField> fields = new ArrayList<>();
+        for (FieldDeclaration field : type.getFields()) {
+            if (field.isStatic()) {
+                continue;
+            }
+            Optional<AnnotationExpr> fieldSchema = annotation(field, "Schema");
+            String fieldDesc = "";
+            int fieldLine = lineOf(field);
+            if (fieldSchema.isPresent()) {
+                Optional<Expression> descExpr = memberValue(fieldSchema.get(), "description");
+                if (descExpr.isPresent()) {
+                    fieldDesc = firstString(descExpr.get());
+                    fieldLine = lineOf(descExpr.get());
+                }
+            }
+            List<String> annotationNames = new ArrayList<>();
+            for (AnnotationExpr annotation : field.getAnnotations()) {
+                annotationNames.add(simpleAnnotationName(annotation));
+            }
+            for (VariableDeclarator variable : field.getVariables()) {
+                String initializer = variable.getInitializer()
+                        .map(Expression::toString)
+                        .orElse(null);
+                String javaType = typeAsString(variable.getType());
+                String fieldName = variable.getNameAsString();
+                if (!fieldDesc.isEmpty()) {
+                    textChannels.add(new TextChannel(
+                            "@Schema.description",
+                            fieldDesc,
+                            relativeFile,
+                            fieldLine,
+                            className + "." + fieldName,
+                            classRequirements
+                    ));
+                }
+                fields.add(new DtoField(
+                        fieldName,
+                        javaType,
+                        fieldDesc,
+                        fieldLine,
+                        initializer,
+                        annotationNames
+                ));
+            }
+        }
+
+        return new DtoEntry(
+                classRequirements,
+                className,
+                relativeFile,
+                classSchemaDescription,
+                classSchemaLine,
+                fields,
+                "class"
+        );
+    }
+
+    private static String typeAsString(Type type) {
+        if (type.isClassOrInterfaceType()) {
+            var classOrInterface = type.asClassOrInterfaceType();
+            String name = classOrInterface.getNameAsString();
+            if (classOrInterface.getTypeArguments().isPresent()) {
+                var args = classOrInterface.getTypeArguments().get();
+                if (!args.isEmpty()) {
+                    StringBuilder sb = new StringBuilder(name).append("<");
+                    for (int i = 0; i < args.size(); i++) {
+                        if (i > 0) sb.append(", ");
+                        sb.append(typeAsString(args.get(i)));
+                    }
+                    sb.append(">");
+                    return sb.toString();
+                }
+            }
+            return name;
+        }
+        return type.asString();
+    }
+
+    private static List<String> classLiteralNames(Expression expression) {
+        List<String> names = new ArrayList<>();
+        if (expression instanceof ArrayInitializerExpr array) {
+            for (Expression value : array.getValues()) {
+                names.addAll(classLiteralNames(value));
+            }
+            return names;
+        }
+        String text = expression.toString();
+        if (text.endsWith(".class")) {
+            text = text.substring(0, text.length() - ".class".length());
+            int dot = text.lastIndexOf('.');
+            names.add(dot >= 0 ? text.substring(dot + 1) : text);
+        }
+        return names;
     }
 
     private static List<TestEntry> readTests(
@@ -515,6 +897,85 @@ public class SourceIndexGenerator {
         return node.getAnnotations().stream()
                 .filter(annotation -> annotation.getName().getIdentifier().equals(name))
                 .findFirst();
+    }
+
+    /**
+     * Returns the unqualified simple identifier of an annotation, so a downstream consumer
+     * comparing names ("RequestBody" etc.) treats `@RequestBody` and `@org.springframework
+     * .web.bind.annotation.RequestBody` identically.
+     */
+    private static String simpleAnnotationName(AnnotationExpr annotation) {
+        return annotation.getName().getIdentifier();
+    }
+
+    private static final String SPRING_REQUEST_BODY_PKG = "org.springframework.web.bind.annotation";
+    private static final String SWAGGER_REQUEST_BODY_PKG = "io.swagger.v3.oas.annotations.parameters";
+    private static final String SPRING_REQUEST_BODY_FQN = SPRING_REQUEST_BODY_PKG + ".RequestBody";
+    private static final String SWAGGER_REQUEST_BODY_FQN = SWAGGER_REQUEST_BODY_PKG + ".RequestBody";
+
+    /**
+     * Returns true only for Spring's {@code @RequestBody}, not Swagger's
+     * {@code @io.swagger.v3.oas.annotations.parameters.RequestBody}. Resolves through imports
+     * when the annotation is written as a simple name; checks the fully written name when it
+     * is qualified inline. Honors JLS §6.4.1 import precedence (single-type-import outranks
+     * on-demand import) and recognizes wildcard imports of either package.
+     */
+    private static boolean isSpringRequestBody(AnnotationExpr annotation) {
+        String written = annotation.getNameAsString();
+        if (written.contains(".")) {
+            return SPRING_REQUEST_BODY_FQN.equals(written);
+        }
+        if (!"RequestBody".equals(written)) {
+            return false;
+        }
+        Optional<CompilationUnit> cu = annotation.findCompilationUnit();
+        if (cu.isEmpty()) {
+            // No CU context — fall back to assuming Spring (controller params almost always import Spring).
+            return true;
+        }
+        boolean springExplicit = false;
+        boolean swaggerExplicit = false;
+        boolean springWildcard = false;
+        boolean swaggerWildcard = false;
+        for (ImportDeclaration imp : cu.get().getImports()) {
+            if (imp.isStatic()) {
+                continue;
+            }
+            String name = imp.getNameAsString();
+            if (imp.isAsterisk()) {
+                if (SPRING_REQUEST_BODY_PKG.equals(name)) {
+                    springWildcard = true;
+                } else if (SWAGGER_REQUEST_BODY_PKG.equals(name)) {
+                    swaggerWildcard = true;
+                }
+            } else if (SPRING_REQUEST_BODY_FQN.equals(name)) {
+                springExplicit = true;
+            } else if (SWAGGER_REQUEST_BODY_FQN.equals(name)) {
+                swaggerExplicit = true;
+            }
+        }
+        // Single-type imports outrank on-demand imports (JLS §6.4.1).
+        if (springExplicit) {
+            return true;
+        }
+        if (swaggerExplicit) {
+            return false;
+        }
+        if (springWildcard && swaggerWildcard) {
+            // Both packages on-demand-imported. Real Java compiler rejects the bare reference
+            // as ambiguous; treat conservatively as non-Spring so a Swagger doc-only annotation
+            // is never mistaken for a real HTTP body.
+            return false;
+        }
+        if (springWildcard) {
+            return true;
+        }
+        if (swaggerWildcard) {
+            return false;
+        }
+        // Neither imported: in Spring MVC controllers the bare @RequestBody comes from the
+        // Spring side. The Swagger annotation is rarely used without an explicit import.
+        return true;
     }
 
     private static boolean hasAnnotation(NodeWithAnnotations<?> node, String name) {
@@ -709,6 +1170,9 @@ public class SourceIndexGenerator {
             List<TestEntry> tests,
             List<EntityEntry> entities,
             List<DtoEntry> dtos,
+            List<RepositoryEntry> repositories,
+            List<ServiceEntry> services,
+            List<BeanEntry> beans,
             List<TextChannel> textChannels
     ) {
         StringBuilder builder = new StringBuilder();
@@ -721,9 +1185,31 @@ public class SourceIndexGenerator {
         builder.append(",\n");
         appendDtos(builder, dtos);
         builder.append(",\n");
+        appendRepositories(builder, repositories);
+        builder.append(",\n");
+        appendServices(builder, services);
+        builder.append(",\n");
+        appendBeans(builder, beans);
+        builder.append(",\n");
         appendTextChannels(builder, textChannels);
         builder.append("\n}\n");
         return builder.toString();
+    }
+
+    private static void appendBeans(StringBuilder builder, List<BeanEntry> beans) {
+        builder.append("  \"beans\": [\n");
+        for (int i = 0; i < beans.size(); i++) {
+            BeanEntry bean = beans.get(i);
+            builder.append("    {\n");
+            builder.append("      \"containerClass\": ").append(json(bean.containerClass())).append(",\n");
+            builder.append("      \"methodName\": ").append(json(bean.methodName())).append(",\n");
+            builder.append("      \"returnType\": ").append(json(bean.returnType())).append(",\n");
+            builder.append("      \"body\": ").append(json(bean.body())).append(",\n");
+            builder.append("      \"file\": ").append(json(bean.file())).append("\n");
+            builder.append("    }");
+            builder.append(i + 1 < beans.size() ? "," : "").append("\n");
+        }
+        builder.append("  ]");
     }
 
     private static void appendApis(StringBuilder builder, List<ApiEntry> apis) {
@@ -735,10 +1221,26 @@ public class SourceIndexGenerator {
             builder.append("      \"http\": ").append(json(api.http())).append(",\n");
             builder.append("      \"controller\": ").append(json(api.controller())).append(",\n");
             builder.append("      \"file\": ").append(json(api.file())).append(",\n");
+            builder.append("      \"line\": ").append(api.line()).append(",\n");
+            builder.append("      \"returnType\": ").append(json(api.returnType())).append(",\n");
             builder.append("      \"operationSummary\": ").append(json(api.operationSummary())).append(",\n");
             builder.append("      \"operationSummaryLine\": ").append(api.operationSummaryLine()).append(",\n");
             builder.append("      \"operationDescription\": ").append(json(api.operationDescription())).append(",\n");
             builder.append("      \"operationDescriptionLine\": ").append(api.operationDescriptionLine()).append(",\n");
+            builder.append("      \"parameters\": [\n");
+            List<ParameterEntry> params = api.parameters();
+            for (int j = 0; j < params.size(); j++) {
+                ParameterEntry p = params.get(j);
+                builder.append("        {\n");
+                builder.append("          \"name\": ").append(json(p.name())).append(",\n");
+                builder.append("          \"javaType\": ").append(json(p.javaType())).append(",\n");
+                builder.append("          \"annotations\": ").append(jsonArray(p.annotations())).append(",\n");
+                builder.append("          \"requestHeaderName\": ").append(p.requestHeaderName() == null ? "null" : json(p.requestHeaderName())).append(",\n");
+                builder.append("          \"springRequestBody\": ").append(p.springRequestBody() ? "true" : "false").append("\n");
+                builder.append("        }");
+                builder.append(j + 1 < params.size() ? "," : "").append("\n");
+            }
+            builder.append("      ],\n");
             builder.append("      \"responses\": [\n");
             List<ResponseEntry> responses = api.responses();
             for (int j = 0; j < responses.size(); j++) {
@@ -784,6 +1286,7 @@ public class SourceIndexGenerator {
             builder.append("      \"className\": ").append(json(entity.className())).append(",\n");
             builder.append("      \"table\": ").append(json(entity.table())).append(",\n");
             builder.append("      \"file\": ").append(json(entity.file())).append(",\n");
+            builder.append("      \"listeners\": ").append(jsonArray(entity.listeners())).append(",\n");
             builder.append("      \"columns\": [\n");
             List<ColumnEntry> columns = entity.columns();
             for (int j = 0; j < columns.size(); j++) {
@@ -797,7 +1300,9 @@ public class SourceIndexGenerator {
                 builder.append("          \"generation\": ").append(column.generation() == null ? "null" : json(column.generation())).append(",\n");
                 builder.append("          \"nullable\": ").append(column.nullable() == null ? "null" : column.nullable()).append(",\n");
                 builder.append("          \"unique\": ").append(column.unique() == null ? "null" : column.unique()).append(",\n");
-                builder.append("          \"length\": ").append(column.length() == null ? "null" : column.length()).append("\n");
+                builder.append("          \"updatable\": ").append(column.updatable() == null ? "null" : column.updatable()).append(",\n");
+                builder.append("          \"length\": ").append(column.length() == null ? "null" : column.length()).append(",\n");
+                builder.append("          \"annotations\": ").append(jsonArray(column.annotations())).append("\n");
                 builder.append("        }");
                 builder.append(j + 1 < columns.size() ? "," : "").append("\n");
             }
@@ -816,6 +1321,7 @@ public class SourceIndexGenerator {
             builder.append("      \"requirements\": ").append(jsonArray(dto.requirements())).append(",\n");
             builder.append("      \"className\": ").append(json(dto.className())).append(",\n");
             builder.append("      \"file\": ").append(json(dto.file())).append(",\n");
+            builder.append("      \"kind\": ").append(json(dto.kind())).append(",\n");
             builder.append("      \"schemaDescription\": ").append(json(dto.schemaDescription())).append(",\n");
             builder.append("      \"schemaLine\": ").append(dto.schemaLine()).append(",\n");
             builder.append("      \"fields\": [\n");
@@ -826,13 +1332,81 @@ public class SourceIndexGenerator {
                 builder.append("          \"name\": ").append(json(field.name())).append(",\n");
                 builder.append("          \"javaType\": ").append(json(field.javaType())).append(",\n");
                 builder.append("          \"schemaDescription\": ").append(json(field.schemaDescription())).append(",\n");
-                builder.append("          \"line\": ").append(field.line()).append("\n");
+                builder.append("          \"line\": ").append(field.line()).append(",\n");
+                builder.append("          \"initializer\": ").append(field.initializer() == null ? "null" : json(field.initializer())).append(",\n");
+                builder.append("          \"annotations\": ").append(jsonArray(field.annotations())).append("\n");
                 builder.append("        }");
                 builder.append(j + 1 < fields.size() ? "," : "").append("\n");
             }
             builder.append("      ]\n");
             builder.append("    }");
             builder.append(i + 1 < dtos.size() ? "," : "").append("\n");
+        }
+        builder.append("  ]");
+    }
+
+    private static void appendRepositories(StringBuilder builder, List<RepositoryEntry> repositories) {
+        builder.append("  \"repositories\": [\n");
+        for (int i = 0; i < repositories.size(); i++) {
+            RepositoryEntry repo = repositories.get(i);
+            builder.append("    {\n");
+            builder.append("      \"requirements\": ").append(jsonArray(repo.requirements())).append(",\n");
+            builder.append("      \"className\": ").append(json(repo.className())).append(",\n");
+            builder.append("      \"file\": ").append(json(repo.file())).append(",\n");
+            builder.append("      \"targetEntity\": ").append(repo.targetEntity() == null ? "null" : json(repo.targetEntity())).append(",\n");
+            builder.append("      \"methods\": [\n");
+            List<RepoMethodEntry> methods = repo.methods();
+            for (int j = 0; j < methods.size(); j++) {
+                RepoMethodEntry m = methods.get(j);
+                builder.append("        {\n");
+                builder.append("          \"name\": ").append(json(m.name())).append(",\n");
+                builder.append("          \"returnType\": ").append(json(m.returnType())).append(",\n");
+                builder.append("          \"parameterTypes\": ").append(jsonArray(m.parameterTypes())).append("\n");
+                builder.append("        }");
+                builder.append(j + 1 < methods.size() ? "," : "").append("\n");
+            }
+            builder.append("      ]\n");
+            builder.append("    }");
+            builder.append(i + 1 < repositories.size() ? "," : "").append("\n");
+        }
+        builder.append("  ]");
+    }
+
+    private static void appendServices(StringBuilder builder, List<ServiceEntry> services) {
+        builder.append("  \"services\": [\n");
+        for (int i = 0; i < services.size(); i++) {
+            ServiceEntry svc = services.get(i);
+            builder.append("    {\n");
+            builder.append("      \"requirements\": ").append(jsonArray(svc.requirements())).append(",\n");
+            builder.append("      \"className\": ").append(json(svc.className())).append(",\n");
+            builder.append("      \"file\": ").append(json(svc.file())).append(",\n");
+            builder.append("      \"classTransactional\": ").append(svc.classTransactional()).append(",\n");
+            builder.append("      \"classTransactionalReadOnly\": ").append(svc.classTransactionalReadOnly() == null ? "null" : svc.classTransactionalReadOnly()).append(",\n");
+            builder.append("      \"fields\": [\n");
+            List<ServiceFieldEntry> svcFields = svc.fields();
+            for (int j = 0; j < svcFields.size(); j++) {
+                ServiceFieldEntry sf = svcFields.get(j);
+                builder.append("        { \"name\": ").append(json(sf.name())).append(", \"type\": ").append(json(sf.type())).append(" }");
+                builder.append(j + 1 < svcFields.size() ? "," : "").append("\n");
+            }
+            builder.append("      ],\n");
+            builder.append("      \"methods\": [\n");
+            List<ServiceMethodEntry> methods = svc.methods();
+            for (int j = 0; j < methods.size(); j++) {
+                ServiceMethodEntry m = methods.get(j);
+                builder.append("        {\n");
+                builder.append("          \"name\": ").append(json(m.name())).append(",\n");
+                builder.append("          \"isPublic\": ").append(m.isPublic()).append(",\n");
+                builder.append("          \"hasMethodTransactional\": ").append(m.hasMethodTransactional()).append(",\n");
+                builder.append("          \"methodTransactionalReadOnly\": ").append(m.methodTransactionalReadOnly() == null ? "null" : m.methodTransactionalReadOnly()).append(",\n");
+                builder.append("          \"returnType\": ").append(json(m.returnType())).append(",\n");
+                builder.append("          \"parameterTypes\": ").append(jsonArray(m.parameterTypes())).append("\n");
+                builder.append("        }");
+                builder.append(j + 1 < methods.size() ? "," : "").append("\n");
+            }
+            builder.append("      ]\n");
+            builder.append("    }");
+            builder.append(i + 1 < services.size() ? "," : "").append("\n");
         }
         builder.append("  ]");
     }

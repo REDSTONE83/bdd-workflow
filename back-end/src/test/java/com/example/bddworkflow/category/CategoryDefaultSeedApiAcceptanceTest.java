@@ -1,9 +1,11 @@
 package com.example.bddworkflow.category;
 
+import com.example.bddworkflow.category.repository.CategoryRepository;
+
 import com.example.bddworkflow.harness.AcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
-import com.example.bddworkflow.user.InMemoryUserRepository;
+import com.example.bddworkflow.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,16 +29,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Requirement("REQ-003")
 class CategoryDefaultSeedApiAcceptanceTest {
 
-    private static final String USER_HEADER = "X-User-Id";
+    private static final String USER_HEADER = "X-Authenticated-User-Id";
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
-    private InMemoryCategoryRepository categoryRepository;
+    private CategoryRepository categoryRepository;
 
     @Autowired
-    private InMemoryUserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -68,20 +70,20 @@ class CategoryDefaultSeedApiAcceptanceTest {
                 .andReturn();
 
         JsonNode signupJson = objectMapper.readTree(signupResult.getResponse().getContentAsString());
-        long userId = signupJson.get("userId").asLong();
+        String userId = signupJson.get("userId").asText();
 
         // Then
         mockMvc.perform(get("/categories").header(USER_HEADER, userId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.categories.length()").value(3))
-                .andExpect(jsonPath("$.categories[0].name").value("업무"))
-                .andExpect(jsonPath("$.categories[0].color").value("#2563EB"))
-                .andExpect(jsonPath("$.categories[0].displayOrder").value(1024))
-                .andExpect(jsonPath("$.categories[1].name").value("개인"))
-                .andExpect(jsonPath("$.categories[1].color").value("#16A34A"))
-                .andExpect(jsonPath("$.categories[1].displayOrder").value(2048))
-                .andExpect(jsonPath("$.categories[2].name").value("기타"))
-                .andExpect(jsonPath("$.categories[2].color").value("#6B7280"))
-                .andExpect(jsonPath("$.categories[2].displayOrder").value(3072));
+                .andExpect(jsonPath("$.content.length()").value(3))
+                .andExpect(jsonPath("$.content[0].name").value("업무"))
+                .andExpect(jsonPath("$.content[0].color").value("#2563EB"))
+                .andExpect(jsonPath("$.content[0].displayOrder").value(1024))
+                .andExpect(jsonPath("$.content[1].name").value("개인"))
+                .andExpect(jsonPath("$.content[1].color").value("#16A34A"))
+                .andExpect(jsonPath("$.content[1].displayOrder").value(2048))
+                .andExpect(jsonPath("$.content[2].name").value("기타"))
+                .andExpect(jsonPath("$.content[2].color").value("#6B7280"))
+                .andExpect(jsonPath("$.content[2].displayOrder").value(3072));
     }
 }

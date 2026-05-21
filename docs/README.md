@@ -2,7 +2,13 @@
 
 이 폴더에는 사람이 직접 관리하는 요건 카드만 둔다.
 
-하네스 전체 운영 규칙은 루트 `AGENTS.md`를 기준으로 한다. 구조 설명은 `docs/harness/overview.md`, 전체 폴더 구조는 `docs/harness/project-structure.md`, 질문 기반 작성 절차는 `docs/harness/requirement-authoring.md`, 새 요건 작성 양식은 `docs/templates/requirement-card.md`를 사용한다. 템플릿 폴더 설명은 `docs/templates/README.md`에 둔다.
+루트 `AGENTS.md`는 인덱스다. 본문 규칙은 다음 폴더로 분기한다.
+
+- `docs/standards/`: 사람이 정한 구현 표준 (요건 카드, API, Entity, 테스트, 용어). 진입점은 `docs/standards/README.md`.
+- `docs/harness/overview.md`: 하네스 구조와 상태 판정.
+- `docs/harness/project-structure.md`: 전체 폴더 구조.
+- `docs/harness/requirement-authoring.md`: 질문 기반 작성 절차.
+- `docs/templates/requirement-card.md`: 새 요건 작성 양식. 폴더 설명은 `docs/templates/README.md`.
 
 원칙은 다음과 같다.
 

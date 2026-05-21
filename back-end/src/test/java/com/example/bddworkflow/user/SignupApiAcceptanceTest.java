@@ -1,5 +1,7 @@
 package com.example.bddworkflow.user;
 
+import com.example.bddworkflow.user.repository.UserRepository;
+
 import com.example.bddworkflow.harness.AcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
@@ -27,7 +29,7 @@ class SignupApiAcceptanceTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private InMemoryUserRepository userRepository;
+    private UserRepository userRepository;
 
     @BeforeEach
     void resetRepository() {
@@ -79,7 +81,7 @@ class SignupApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DUPLICATE_EMAIL"))
-                .andExpect(jsonPath("$.field").value("email"));
+                .andExpect(jsonPath("$.details[0].field").value("email"));
     }
 
     @Test
@@ -101,7 +103,7 @@ class SignupApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.field").value("password"));
+                .andExpect(jsonPath("$.details[0].field").value("password"));
 
         assertThat(userRepository.existsByEmail("hong@example.com")).isFalse();
     }

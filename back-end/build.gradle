@@ -27,6 +27,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
     implementation 'org.springframework.security:spring-security-crypto'
+    implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
 
     runtimeOnly 'com.h2database:h2'
 
@@ -88,13 +92,47 @@ tasks.register('validateTerminologyStrict', Exec) {
     commandLine 'node', 'tools/terminology.mjs', 'validate', '--strict'
 }
 
+tasks.register('validateStandards', Exec) {
+    group = 'verification'
+    description = 'Write standards-report.{json,md} (always exit 0; for inspection).'
+    dependsOn tasks.named('generateHarnessSourceIndex')
+    commandLine 'node', 'tools/validate-standards.mjs'
+}
+
+tasks.register('validateStandardsStrict', Exec) {
+    group = 'verification'
+    description = 'Strict standards gate: fail the build on any docs/standards violation.'
+    dependsOn tasks.named('generateHarnessSourceIndex')
+    commandLine 'node', 'tools/validate-standards.mjs', '--check'
+}
+
+// Order the strict standards check before tests inside validateHarness so that
+// structural violations surface even when tests fail.
+// Also make traceRequirements run as a finalizer of `test` so the trace report
+// always reflects the latest test run, even when tests fail.
+tasks.named('test').configure {
+    mustRunAfter tasks.named('validateStandardsStrict'), tasks.named('validateStandards')
+    finalizedBy tasks.named('traceRequirements')
+}
+
 tasks.register('validateHarness', Exec) {
     group = 'verification'
-    description = 'Run the requirement trace and fail when any requirement remains RED.'
-    dependsOn tasks.named('test'),
-            tasks.named('generateHarnessSourceIndex'),
-            tasks.named('validateTerminology')
+    description = 'Strict gate: standards + safe-terminology + tests + RED/GREEN/BLUE trace.'
+    dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('validateStandardsStrict'),
+            tasks.named('validateTerminology'),
+            tasks.named('test')
     commandLine 'node', 'tools/trace-requirements.mjs', '--check'
+}
+
+tasks.register('harnessReport') {
+    group = 'verification'
+    description = 'Generate every harness report bundle (standards + terminology + tests + trace). ' +
+            'Reports always produce before exit, but the task exit code still reflects test pass/fail. ' +
+            'Trace runs as a finalizer of test, so the trace report sees the latest test results.'
+    dependsOn tasks.named('validateStandards'),
+            tasks.named('validateTerminology'),
+            tasks.named('test')
 }
 
 tasks.named('check') {

@@ -1,5 +1,8 @@
 package com.example.bddworkflow.category;
 
+import com.example.bddworkflow.category.domain.Category;
+import com.example.bddworkflow.category.repository.CategoryRepository;
+
 import com.example.bddworkflow.harness.AcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
@@ -23,15 +26,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Requirement("REQ-003")
 class CategoryUpdateApiAcceptanceTest {
 
-    private static final String USER_HEADER = "X-User-Id";
-    private static final long USER_ID = 100L;
-    private static final long OTHER_USER_ID = 200L;
+    private static final String USER_HEADER = "X-Authenticated-User-Id";
+    private static final java.util.UUID USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-000000000064");
+    private static final java.util.UUID OTHER_USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-0000000000c8");
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
-    private InMemoryCategoryRepository categoryRepository;
+    private CategoryRepository categoryRepository;
 
     @BeforeEach
     void resetRepository() {
@@ -56,7 +59,7 @@ class CategoryUpdateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.categoryId").value(existing.id()))
+                .andExpect(jsonPath("$.categoryId").value(existing.id().toString()))
                 .andExpect(jsonPath("$.name").value("업무 (수정)"))
                 .andExpect(jsonPath("$.color").value("#2563EB"))
                 .andExpect(jsonPath("$.description").value("회사 일"))
@@ -132,7 +135,7 @@ class CategoryUpdateApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.field").value("name"));
+                .andExpect(jsonPath("$.details[0].field").value("name"));
     }
 
     @Test
@@ -155,7 +158,7 @@ class CategoryUpdateApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.field").value("name"));
+                .andExpect(jsonPath("$.details[0].field").value("name"));
     }
 
     @Test
@@ -178,7 +181,7 @@ class CategoryUpdateApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.field").value("description"));
+                .andExpect(jsonPath("$.details[0].field").value("description"));
     }
 
     @Test
@@ -200,7 +203,7 @@ class CategoryUpdateApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.field").value("color"));
+                .andExpect(jsonPath("$.details[0].field").value("color"));
     }
 
     @Test
@@ -223,7 +226,7 @@ class CategoryUpdateApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DUPLICATE_CATEGORY_NAME"))
-                .andExpect(jsonPath("$.field").value("name"));
+                .andExpect(jsonPath("$.details[0].field").value("name"));
     }
 
     @Test
@@ -231,7 +234,7 @@ class CategoryUpdateApiAcceptanceTest {
     @DisplayName("존재하지 않는 카테고리를 수정하려 하면 거절된다")
     void updateNonExistingCategoryReturnsNotFound() throws Exception {
         // Given
-        long missingId = 9_999L;
+        java.util.UUID missingId = java.util.UUID.fromString("00000000-0000-0000-0000-00000000270f");
         String requestBody = """
                 {
                   "name": "없음"

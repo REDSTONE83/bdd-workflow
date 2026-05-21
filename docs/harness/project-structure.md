@@ -14,6 +14,16 @@ bdd-workflow/
       requirement-authoring.md
     requirements/
       REQ-001-email-signup.md
+    standards/
+      README.md
+      requirement-card.md
+      package-structure.md
+      api-contract.md
+      persistence-schema.md
+      acceptance-test.md
+      id-policy.md
+      datetime.md
+      terminology.md
     templates/
       README.md
       requirement-card.md
@@ -49,7 +59,7 @@ bdd-workflow/
             user/
               UserController.java
               UserService.java
-              InMemoryUserRepository.java
+              UserRepository.java
               SignupRequest.java
               SignupResponse.java
               DuplicateEmailException.java
@@ -78,7 +88,7 @@ bdd-workflow/
 AGENTS.md
 ```
 
-하네스 운영의 최상위 규칙이다. 요건 작성, 질문, 의사결정 로그, BDD 테스트 작성, RED/GREEN/BLUE 판정, 검증 명령은 이 문서를 기준으로 한다.
+문서 진입점 인덱스다. 핵심 원칙과 작성 절차 요약을 두고, 세부 규칙은 `docs/standards/`, 하네스 운영은 `docs/harness/`로 분기한다.
 
 ```text
 .gitignore
@@ -113,6 +123,18 @@ docs/requirements/
 ```text
 REQ-001-email-signup.md
 ```
+
+```text
+docs/standards/
+```
+
+사람이 정한 전역 구현 표준을 둔다. 요건 카드 형식, API 계약, JPA Entity, Acceptance Test, 표준 용어 운영 규칙이 모두 이 폴더의 단일 소스에서 관리된다. `AGENTS.md`는 이 폴더의 인덱스 역할만 한다.
+
+- `requirement-card.md`: 요건 카드 필수 항목과 작성 규칙
+- `api-contract.md`: 컨트롤러/DTO/OpenAPI/전역 오류 응답
+- `persistence-schema.md`: JPA Entity와 schema preview
+- `acceptance-test.md`: Acceptance Test와 리뷰 체크리스트
+- `terminology.md`: 표준 용어 safe/strict 게이트 운영
 
 ```text
 docs/templates/
@@ -195,15 +217,20 @@ harness/
 {domain}/
 ```
 
-도메인별 API, 서비스, DTO, 예외, 도메인 모델을 같은 패키지에 둔다. 예제는 `user/` 패키지다.
+도메인별로 별도 패키지를 둔다. 한 도메인 안에서는 다음 6개 하위 패키지로 명시적으로 분리한다. 자세한 규칙은 `docs/standards/package-structure.md`를 본다.
 
-- `*Controller.java`: API 엔드포인트, `@Requirement`, OpenAPI 명세
-- `*Service.java`: 유스케이스 처리
-- `*Repository.java`: 예제 저장소 또는 영속성 포트
-- `*Request.java`: 요청 DTO, Bean Validation, `@Schema`
-- `*Response.java`: 응답 DTO, `@Schema`
-- `*Exception.java`: 도메인 예외
-- 도메인 모델 / JPA Entity: `UserAccount.java` 같은 업무 객체. DB 테이블에 매핑되는 경우 `@Entity`, `@Table`, `@Column`과 함께 클래스/필드 레벨 `@Requirement`를 부여한다.
+```text
+{domain}/
+  controller/   # API 엔드포인트, @Requirement, OpenAPI
+  dto/          # Request/Response DTO, Bean Validation, @Schema
+  service/      # 유스케이스 처리
+  domain/       # 도메인 모델 / JPA Entity
+  exception/    # 도메인 예외
+  repository/   # Spring Data JPA repository 또는 영속성 포트
+```
+
+- 컨트롤러/DTO는 [`api-contract.md`](../standards/api-contract.md), Entity는 [`persistence-schema.md`](../standards/persistence-schema.md)를 따른다.
+- 식별자는 시간 정렬 UUID ([`id-policy.md`](../standards/id-policy.md)), 시각은 `Instant` UTC ([`datetime.md`](../standards/datetime.md)).
 
 ## 테스트 구조
 
@@ -259,11 +286,13 @@ back-end/build/harness/schema-preview.sql
 
 ```text
 docs/requirements/REQ-002-some-feature.md
-back-end/src/main/java/com/example/bddworkflow/{domain}/SomeController.java
-back-end/src/main/java/com/example/bddworkflow/{domain}/SomeService.java
-back-end/src/main/java/com/example/bddworkflow/{domain}/SomeRequest.java
-back-end/src/main/java/com/example/bddworkflow/{domain}/SomeResponse.java
-back-end/src/main/java/com/example/bddworkflow/{domain}/SomeEntity.java   # 필요 시
+back-end/src/main/java/com/example/bddworkflow/{domain}/controller/SomeController.java
+back-end/src/main/java/com/example/bddworkflow/{domain}/service/SomeService.java
+back-end/src/main/java/com/example/bddworkflow/{domain}/dto/SomeRequest.java
+back-end/src/main/java/com/example/bddworkflow/{domain}/dto/SomeResponse.java
+back-end/src/main/java/com/example/bddworkflow/{domain}/domain/SomeEntity.java       # 필요 시
+back-end/src/main/java/com/example/bddworkflow/{domain}/exception/SomeException.java # 필요 시
+back-end/src/main/java/com/example/bddworkflow/{domain}/repository/SomeRepository.java
 back-end/src/test/java/com/example/bddworkflow/{domain}/SomeApiAcceptanceTest.java
 ```
 

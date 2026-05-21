@@ -106,7 +106,7 @@ cd back-end
 ./gradlew previewSchema
 ```
 
-`back-end/build/harness/schema-preview.sql`에 JPA `@Entity` 정의로부터 생성된 DDL 미리보기가 떨어진다. 컬럼마다 어느 요건에서 도입됐는지 주석으로 남는다. 사용자에게 확인을 받은 뒤에 실제 마이그레이션을 작성한다.
+`back-end/build/harness/schema-preview.sql`에 JPA `@Entity` 정의로부터 생성된 DDL 미리보기가 떨어진다. 컬럼마다 어느 요건에서 도입됐는지 주석으로 남는다. 사용자에게 확인을 받은 뒤 Entity를 그대로 source of truth로 사용한다 (별도 마이그레이션 스크립트를 작성하지 않는다 — [`persistence-schema.md`](../standards/persistence-schema.md)).
 
 ## 요건 작성과 리뷰 흐름
 
