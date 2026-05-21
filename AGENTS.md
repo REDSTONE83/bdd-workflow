@@ -82,7 +82,7 @@ back-end/build/harness/
 
 `수용 기준`의 각 문장은 Acceptance Test의 `@Covers` 값과 정확히 일치해야 한다.
 
-`표준 용어`에는 `docs/terminology/`에 정의된 term key만 적는다. 검색은 `node back-end/tools/terminology.mjs search <표현>`을 쓰고, 새 용어가 필요하면 `docs/terminology/draft.json`에 후보를 추가한다. draft 용어가 카드에 남아 있어도 일상 검증(`validateHarness`)은 통과하지만, 최종 승인 게이트인 `./gradlew validateTerminologyStrict`에서는 error가 되어 빌드를 실패시킨다.
+`표준 용어`에는 `docs/terminology/`에 정의된 term key만 적는다. 검색은 `node back-end/tools/terminology.mjs search <표현>`을 쓰고, 새 용어가 필요하면 `node back-end/tools/terminology.mjs draft add ...`로 후보를 등록한다. `draft.json`은 직접 편집하지 않는다. 명령 상세는 `docs/terminology/README.md` 운영 흐름 절을 참고한다. draft 용어가 카드에 남아 있어도 일상 검증(`validateHarness`)은 통과하지만, 최종 승인 게이트인 `./gradlew validateTerminologyStrict`에서는 error가 되어 빌드를 실패시킨다.
 
 요건 카드에는 API 목록이나 테스트 메서드 목록을 직접 관리하지 않는다. API와 테스트 연결은 코드의 `@Requirement`, `@Covers`를 스캔해 생성 리포트에서 확인한다.
 
@@ -311,7 +311,7 @@ cd back-end
 1. 요건 카드를 초안으로 작성하거나 수정한다.
 2. 불명확한 부분을 사용자에게 질문한다.
 3. 답변과 결정을 요건 카드에 기록한다.
-4. `node back-end/tools/terminology.mjs search`로 기존 용어를 찾고 카드의 `표준 용어`에 term key를 적는다. 필요하면 `docs/terminology/draft.json`에 후보를 추가한다.
+4. `node back-end/tools/terminology.mjs search`로 기존 용어를 찾고 카드의 `표준 용어`에 term key를 적는다. 필요하면 `node back-end/tools/terminology.mjs draft add ...`로 후보를 등록한다 (수정/삭제도 동일하게 `draft update`, `draft delete`를 쓴다; `draft.json`을 직접 편집하지 않는다).
 5. 수용 기준을 확정한다.
 6. Acceptance Test에 `@Requirement`, `@Covers`, `@DisplayName`을 작성한다.
 7. BDD 테스트 코드가 요건을 충분히 커버하는지 리뷰한다.

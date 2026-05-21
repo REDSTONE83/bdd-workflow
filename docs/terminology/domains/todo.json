@@ -1,0 +1,130 @@
+{
+    "$schema": "../schema.json",
+    "note": "개인별 할 일 관리 도메인. REQ-002에서 할 일 속성, 목록 정렬, PATCH 의미론, 카테고리 참조 정책을 확정했다.",
+    "terms": {
+        "todo.task": {
+            "ko": "할 일",
+            "en": "todo",
+            "meaning": "사용자가 자신의 일정으로 관리하는 단위 작업.",
+            "allow": ["할 일 항목"],
+            "names": {
+                "java": ["Todo", "TodoController"],
+                "table": ["todo"],
+                "path": ["todos"]
+            }
+        },
+        "todo.title": {
+            "ko": "제목",
+            "en": "title",
+            "meaning": "할 일을 요약해 표시하는 짧은 문자열.",
+            "names": {
+                "field": ["title"],
+                "json": ["title"],
+                "column": ["title"]
+            }
+        },
+        "todo.description": {
+            "ko": "설명",
+            "en": "description",
+            "meaning": "할 일의 부가 설명 본문 문자열.",
+            "names": {
+                "field": ["description"],
+                "json": ["description"],
+                "column": ["description"]
+            }
+        },
+        "todo.dueDate": {
+            "ko": "마감일",
+            "en": "due date",
+            "meaning": "할 일을 마치기로 한 목표 날짜.",
+            "names": {
+                "field": ["dueDate"],
+                "json": ["dueDate"],
+                "column": ["due_date"]
+            }
+        },
+        "todo.priority": {
+            "ko": "우선순위",
+            "en": "priority",
+            "meaning": "할 일의 처리 시급도. HIGH, MEDIUM, LOW 세 단계로 표현한다.",
+            "names": {
+                "field": ["priority"],
+                "json": ["priority"],
+                "column": ["priority"]
+            }
+        },
+        "todo.completed": {
+            "ko": "완료 여부",
+            "en": "completed",
+            "meaning": "할 일의 완료 상태를 나타내는 boolean 값.",
+            "names": {
+                "field": ["completed"],
+                "json": ["completed"],
+                "column": ["completed"]
+            }
+        },
+        "todo.create": {
+            "ko": "할 일 생성",
+            "en": "create todo",
+            "meaning": "사용자가 새 할 일을 등록하는 행위.",
+            "allow": ["할 일 등록"],
+            "names": {
+                "java": ["CreateTodoRequest", "CreateTodoResponse"],
+                "method": ["createTodo"]
+            }
+        },
+        "todo.list": {
+            "ko": "할 일 목록 조회",
+            "en": "list todos",
+            "meaning": "사용자가 자신의 할 일 목록을 가져오는 행위.",
+            "names": {
+                "java": ["ListTodosResponse"],
+                "method": ["listTodos"]
+            }
+        },
+        "todo.update": {
+            "ko": "할 일 수정",
+            "en": "update todo",
+            "meaning": "사용자가 자신의 할 일 내용을 변경하는 행위.",
+            "names": {
+                "java": ["UpdateTodoRequest", "UpdateTodoResponse"],
+                "method": ["updateTodo"]
+            }
+        },
+        "todo.complete": {
+            "ko": "완료 처리",
+            "en": "complete todo",
+            "meaning": "할 일을 완료 또는 미완료 상태로 토글하는 행위.",
+            "allow": ["완료 토글"],
+            "names": {
+                "java": ["CompleteTodoRequest"],
+                "method": ["completeTodo"],
+                "path": ["completion"]
+            }
+        },
+        "todo.delete": {
+            "ko": "할 일 삭제",
+            "en": "delete todo",
+            "meaning": "사용자가 자신의 할 일을 영구 삭제하는 행위.",
+            "names": {
+                "method": ["deleteTodo"]
+            }
+        },
+        "todo.notFound": {
+            "ko": "존재하지 않는 할 일",
+            "en": "todo not found",
+            "meaning": "지정한 할 일이 존재하지 않거나 다른 사용자의 자원이라 접근이 거절되는 상태.",
+            "names": {
+                "java": ["TodoNotFoundException"]
+            }
+        },
+        "todo.invalidCategory": {
+            "ko": "유효하지 않은 카테고리 ID",
+            "en": "invalid category",
+            "meaning": "할 일 생성·수정 요청에 명시된 카테고리 ID가 존재하지 않거나 다른 사용자의 자원이라 검증에 실패한 상태.",
+            "names": {
+                "java": ["InvalidCategoryException"]
+            }
+        }
+    }
+}

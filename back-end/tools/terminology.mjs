@@ -18,6 +18,7 @@ const requirementsDir = path.join(repoRoot, 'docs', 'requirements');
 
 const TERM_KEY_PATTERN = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){1,2}$/;
 const NAME_CATEGORIES = ['java', 'method', 'field', 'column', 'table', 'json', 'path'];
+const SCALAR_TERM_FIELDS = ['ko', 'en', 'meaning', 'note', 'reason'];
 
 const STRICT_SEVERITY = {
     BAN_VIOLATION: 'error',
@@ -775,6 +776,346 @@ function commandValidate(options) {
     }
 }
 
+function parseFlags(argv) {
+    const positional = [];
+    const flags = {};
+    for (let i = 0; i < argv.length; i++) {
+        const token = argv[i];
+        if (token.startsWith('--')) {
+            const name = token.slice(2);
+            const next = argv[i + 1];
+            if (next === undefined || next.startsWith('--')) {
+                if (!flags[name]) flags[name] = [];
+                flags[name].push(true);
+            } else {
+                if (!flags[name]) flags[name] = [];
+                flags[name].push(next);
+                i++;
+            }
+        } else {
+            positional.push(token);
+        }
+    }
+    return { positional, flags };
+}
+
+function requireSingle(flags, name) {
+    const vals = flags[name];
+    if (!vals || vals.length === 0) {
+        throw new Error(`필수 옵션 누락: --${name}`);
+    }
+    if (vals.length > 1) {
+        throw new Error(`--${name}은 한 번만 지정할 수 있다.`);
+    }
+    if (vals[0] === true) {
+        throw new Error(`--${name}에 값이 필요하다.`);
+    }
+    return vals[0];
+}
+
+function optionalSingle(flags, name) {
+    const vals = flags[name];
+    if (!vals || vals.length === 0) return undefined;
+    if (vals.length > 1) {
+        throw new Error(`--${name}은 한 번만 지정할 수 있다.`);
+    }
+    if (vals[0] === true) {
+        throw new Error(`--${name}에 값이 필요하다.`);
+    }
+    return vals[0];
+}
+
+function multi(flags, name) {
+    const vals = flags[name];
+    if (!vals) return [];
+    return vals.filter((v) => v !== true);
+}
+
+function booleanFlag(flags, name) {
+    return Array.isArray(flags[name]) && flags[name].length > 0;
+}
+
+function rejectUnknownFlags(flags, allowed, context) {
+    const unknown = Object.keys(flags).filter((name) => !allowed.includes(name));
+    if (unknown.length > 0) {
+        throw new Error(`${context}에서 알 수 없는 옵션: ${unknown.map((n) => '--' + n).join(', ')}`);
+    }
+}
+
+function rejectPositional(positional, expected, context) {
+    if (positional.length !== expected) {
+        throw new Error(`${context}는 위치 인자 ${expected}개를 기대한다. 받은 값: ${positional.length}개${positional.length > 0 ? ' (' + positional.join(', ') + ')' : ''}`);
+    }
+}
+
+function parseCategoryValue(spec, flagName) {
+    const eq = spec.indexOf('=');
+    if (eq < 0) {
+        throw new Error(`--${flagName} 형식이 잘못됨: "${spec}". category=value로 적어라.`);
+    }
+    const category = spec.slice(0, eq).trim();
+    const value = spec.slice(eq + 1);
+    if (!NAME_CATEGORIES.includes(category)) {
+        throw new Error(`알 수 없는 names 카테고리 "${category}". 허용: ${NAME_CATEGORIES.join(', ')}`);
+    }
+    if (!value) {
+        throw new Error(`--${flagName} "${spec}"의 값이 비어 있다.`);
+    }
+    return { category, value };
+}
+
+function parseSetSpec(spec) {
+    const eq = spec.indexOf('=');
+    if (eq < 0) {
+        throw new Error(`--set 형식이 잘못됨: "${spec}". field=value로 적어라.`);
+    }
+    const field = spec.slice(0, eq).trim();
+    const value = spec.slice(eq + 1);
+    if (!SCALAR_TERM_FIELDS.includes(field)) {
+        throw new Error(`--set은 ${SCALAR_TERM_FIELDS.join(', ')}만 지원한다. (${field})`);
+    }
+    if (value.length === 0) {
+        throw new Error(`--set ${field}의 값이 비어 있다.`);
+    }
+    return { field, value };
+}
+
+function readDraftFileOrThrow() {
+    if (!fs.existsSync(draftPath)) {
+        throw new Error(`${relativeToRepo(draftPath)}가 존재하지 않는다.`);
+    }
+    const raw = fs.readFileSync(draftPath, 'utf8');
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    } catch (err) {
+        throw new Error(`${relativeToRepo(draftPath)} JSON parse 실패: ${err.message}`);
+    }
+    if (!parsed || typeof parsed !== 'object' || !parsed.terms || typeof parsed.terms !== 'object') {
+        throw new Error(`${relativeToRepo(draftPath)}에 terms 객체가 없다.`);
+    }
+    return { raw, parsed };
+}
+
+function serializeValue(value, indent, level) {
+    if (value === null || typeof value !== 'object') {
+        return JSON.stringify(value);
+    }
+    if (Array.isArray(value)) {
+        const items = value.map((item) => JSON.stringify(item));
+        return '[' + items.join(', ') + ']';
+    }
+    const keys = Object.keys(value);
+    if (keys.length === 0) return '{}';
+    const childIndent = ' '.repeat((level + 1) * indent);
+    const closeIndent = ' '.repeat(level * indent);
+    const lines = keys.map((key) => `${childIndent}${JSON.stringify(key)}: ${serializeValue(value[key], indent, level + 1)}`);
+    return '{\n' + lines.join(',\n') + '\n' + closeIndent + '}';
+}
+
+function serializeDraft(parsed) {
+    return serializeValue(parsed, 4, 0) + '\n';
+}
+
+function applyDraftMutation(mutator) {
+    const { raw, parsed } = readDraftFileOrThrow();
+    mutator(parsed);
+    fs.writeFileSync(draftPath, serializeDraft(parsed));
+    const loaded = loadTerminology();
+    const errors = loaded.diagnostics.filter((d) => d.severity === 'error');
+    if (errors.length > 0) {
+        fs.writeFileSync(draftPath, raw);
+        for (const err of errors) {
+            const where = err.term ? ` term=${err.term}` : '';
+            const file = err.file ? ` file=${err.file}` : '';
+            console.error(`  [${err.kind}]${where}${file} ${err.message}`);
+        }
+        throw new Error('변경 후 진단 오류가 발견되어 draft.json을 원상복구했다.');
+    }
+}
+
+function ensureTermKeyNotTaken(termKey) {
+    const loaded = loadTerminology();
+    const existing = loaded.entries.find((e) => e.key === termKey);
+    if (existing) {
+        throw new Error(`${termKey}은 이미 ${existing.sourceFile}에 ${existing.status} 상태로 존재한다.`);
+    }
+    const blocking = loaded.diagnostics.filter((d) => d.severity === 'error');
+    if (blocking.length > 0) {
+        console.error('주의: 기존 용어 파일에 오류가 있다. 먼저 정리하라.');
+        for (const err of blocking) {
+            const where = err.term ? ` term=${err.term}` : '';
+            const file = err.file ? ` file=${err.file}` : '';
+            console.error(`  [${err.kind}]${where}${file} ${err.message}`);
+        }
+        throw new Error('terminology 로딩 진단 오류 때문에 추가를 중단한다.');
+    }
+}
+
+function ensureDraftTermExists(parsed, termKey) {
+    if (!parsed.terms[termKey]) {
+        throw new Error(`${termKey}이 draft.json에 없다. draft 명령은 draft 상태 term에만 동작한다.`);
+    }
+}
+
+const DRAFT_ADD_FLAGS = ['key', 'ko', 'en', 'meaning', 'reason', 'note', 'allow', 'ban', 'name'];
+const DRAFT_UPDATE_FLAGS = ['set', 'add-allow', 'remove-allow', 'add-ban', 'remove-ban', 'add-name', 'remove-name'];
+const DRAFT_DELETE_FLAGS = ['force'];
+
+function commandDraftAdd(rest) {
+    const { positional, flags } = parseFlags(rest);
+    rejectPositional(positional, 0, 'draft add');
+    rejectUnknownFlags(flags, DRAFT_ADD_FLAGS, 'draft add');
+    const termKey = requireSingle(flags, 'key');
+    if (!TERM_KEY_PATTERN.test(termKey)) {
+        throw new Error(`term key 형식 위반: "${termKey}". {domain}.{concept}[.{subConcept}] 형식이어야 한다.`);
+    }
+    const ko = requireSingle(flags, 'ko');
+    const en = requireSingle(flags, 'en');
+    const meaning = requireSingle(flags, 'meaning');
+    const reason = requireSingle(flags, 'reason');
+    const note = optionalSingle(flags, 'note');
+    const allow = multi(flags, 'allow');
+    const ban = multi(flags, 'ban');
+    const nameSpecs = multi(flags, 'name').map((s) => parseCategoryValue(s, 'name'));
+
+    ensureTermKeyNotTaken(termKey);
+
+    const term = { ko, en, meaning };
+    if (allow.length > 0) term.allow = Array.from(new Set(allow));
+    if (ban.length > 0) term.ban = Array.from(new Set(ban));
+    if (nameSpecs.length > 0) {
+        term.names = {};
+        for (const { category, value } of nameSpecs) {
+            if (!term.names[category]) term.names[category] = [];
+            if (!term.names[category].includes(value)) term.names[category].push(value);
+        }
+    }
+    if (note) term.note = note;
+    term.reason = reason;
+
+    applyDraftMutation((parsed) => {
+        parsed.terms[termKey] = term;
+    });
+    console.log(`Added draft term ${termKey} to ${relativeToRepo(draftPath)}.`);
+}
+
+function commandDraftUpdate(rest) {
+    const { positional, flags } = parseFlags(rest);
+    rejectPositional(positional, 1, 'draft update');
+    rejectUnknownFlags(flags, DRAFT_UPDATE_FLAGS, 'draft update');
+    const termKey = positional[0];
+
+    const setSpecs = multi(flags, 'set').map(parseSetSpec);
+    const addAllow = multi(flags, 'add-allow');
+    const removeAllow = multi(flags, 'remove-allow');
+    const addBan = multi(flags, 'add-ban');
+    const removeBan = multi(flags, 'remove-ban');
+    const addName = multi(flags, 'add-name').map((s) => parseCategoryValue(s, 'add-name'));
+    const removeName = multi(flags, 'remove-name').map((s) => parseCategoryValue(s, 'remove-name'));
+
+    const hasAnyChange =
+        setSpecs.length + addAllow.length + removeAllow.length +
+        addBan.length + removeBan.length + addName.length + removeName.length > 0;
+    if (!hasAnyChange) {
+        throw new Error('변경 옵션이 없다. --set/--add-*/--remove-* 중 하나 이상을 지정하라.');
+    }
+
+    applyDraftMutation((parsed) => {
+        ensureDraftTermExists(parsed, termKey);
+        const term = parsed.terms[termKey];
+
+        for (const { field, value } of setSpecs) {
+            term[field] = value;
+        }
+        if (addAllow.length > 0 || removeAllow.length > 0) {
+            const current = Array.isArray(term.allow) ? term.allow.slice() : [];
+            for (const v of addAllow) if (!current.includes(v)) current.push(v);
+            const filtered = current.filter((v) => !removeAllow.includes(v));
+            if (filtered.length > 0) term.allow = filtered;
+            else delete term.allow;
+        }
+        if (addBan.length > 0 || removeBan.length > 0) {
+            const current = Array.isArray(term.ban) ? term.ban.slice() : [];
+            for (const v of addBan) if (!current.includes(v)) current.push(v);
+            const filtered = current.filter((v) => !removeBan.includes(v));
+            if (filtered.length > 0) term.ban = filtered;
+            else delete term.ban;
+        }
+        if (addName.length > 0 || removeName.length > 0) {
+            const names = (term.names && typeof term.names === 'object') ? { ...term.names } : {};
+            for (const { category, value } of addName) {
+                const list = Array.isArray(names[category]) ? names[category].slice() : [];
+                if (!list.includes(value)) list.push(value);
+                names[category] = list;
+            }
+            for (const { category, value } of removeName) {
+                if (!Array.isArray(names[category])) continue;
+                const filtered = names[category].filter((v) => v !== value);
+                if (filtered.length > 0) names[category] = filtered;
+                else delete names[category];
+            }
+            if (Object.keys(names).length > 0) term.names = names;
+            else delete term.names;
+        }
+    });
+    console.log(`Updated draft term ${termKey} in ${relativeToRepo(draftPath)}.`);
+}
+
+function commandDraftDelete(rest) {
+    const { positional, flags } = parseFlags(rest);
+    rejectPositional(positional, 1, 'draft delete');
+    rejectUnknownFlags(flags, DRAFT_DELETE_FLAGS, 'draft delete');
+    const termKey = positional[0];
+    const force = booleanFlag(flags, 'force');
+
+    const referencing = loadRequirementCards().filter((card) => card.declaredTerms.includes(termKey));
+    if (referencing.length > 0 && !force) {
+        console.error(`${termKey}이 ${referencing.length}개 요건 카드의 표준 용어에 등록되어 있다.`);
+        for (const card of referencing) {
+            const id = card.requirementId || '(?)';
+            const line = card.declaredTermLines[termKey] || '?';
+            console.error(`  ${id} ${card.file}:${line}`);
+        }
+        console.error('카드에서 먼저 제거하거나 --force로 우회하라.');
+        process.exit(1);
+    }
+
+    applyDraftMutation((parsed) => {
+        ensureDraftTermExists(parsed, termKey);
+        delete parsed.terms[termKey];
+    });
+    const refNote = referencing.length > 0 ? ` (${referencing.length}개 카드가 여전히 참조 중이다)` : '';
+    console.log(`Deleted draft term ${termKey} from ${relativeToRepo(draftPath)}.${refNote}`);
+}
+
+function commandDraft(rest) {
+    const sub = rest[0];
+    const tail = rest.slice(1);
+    try {
+        switch (sub) {
+            case 'add':
+                commandDraftAdd(tail);
+                break;
+            case 'update':
+                commandDraftUpdate(tail);
+                break;
+            case 'delete':
+                commandDraftDelete(tail);
+                break;
+            default:
+                console.error('Usage: node tools/terminology.mjs draft <add|update|delete> [args]');
+                console.error('  draft add     --key X --ko Y --en Z --meaning W --reason R [--note N] [--allow A]... [--ban B]... [--name cat=val]...');
+                console.error('  draft update  <termKey> [--set field=value]... [--add-allow X]... [--remove-allow X]... [--add-ban X]... [--remove-ban X]... [--add-name cat=val]... [--remove-name cat=val]...');
+                console.error('  draft delete  <termKey> [--force]');
+                process.exit(2);
+        }
+    } catch (err) {
+        console.error(err.message);
+        process.exit(1);
+    }
+}
+
 const [, , command, ...args] = process.argv;
 switch (command) {
     case 'index':
@@ -788,9 +1129,13 @@ switch (command) {
         commandValidate({ mode });
         break;
     }
+    case 'draft':
+        commandDraft(args);
+        break;
     default:
-        console.error('Usage: node tools/terminology.mjs <index|search|validate> [args]');
+        console.error('Usage: node tools/terminology.mjs <index|search|validate|draft> [args]');
         console.error('  validate            safe (기본): 모든 finding을 warning으로 보고, 항상 exit 0');
         console.error('  validate --strict   strict: 심각 finding은 error, error가 있으면 exit 1');
+        console.error('  draft <add|update|delete>  draft.json의 후보 용어 관리');
         process.exit(2);
 }

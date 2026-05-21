@@ -1,0 +1,116 @@
+{
+    "$schema": "../schema.json",
+    "note": "할 일 카테고리 도메인. REQ-003에서 카테고리 CRUD, 기본 시드, 사용자별 이름 유일성, PATCH 의미론을 확정했다.",
+    "terms": {
+        "category.category": {
+            "ko": "카테고리",
+            "en": "category",
+            "meaning": "사용자가 자신의 할 일을 분류하기 위해 사용하는 라벨 엔티티.",
+            "allow": ["할 일 카테고리"],
+            "names": {
+                "java": ["Category", "CategoryController", "CategoryResponse"],
+                "table": ["category"],
+                "path": ["categories"]
+            }
+        },
+        "category.id": {
+            "ko": "카테고리 ID",
+            "en": "category id",
+            "meaning": "카테고리를 외부 응답에서 식별하는 ID.",
+            "names": {
+                "field": ["categoryId"],
+                "json": ["categoryId"]
+            }
+        },
+        "category.name": {
+            "ko": "카테고리 이름",
+            "en": "category name",
+            "meaning": "사용자가 카테고리를 식별하기 위해 부여하는 사람이 읽는 짧은 이름."
+        },
+        "category.color": {
+            "ko": "카테고리 색상",
+            "en": "category color",
+            "meaning": "UI에서 카테고리를 시각적으로 구분하기 위한 색상 값. #RRGGBB 형식 hex 문자열로 표현한다.",
+            "names": {
+                "field": ["color"],
+                "json": ["color"],
+                "column": ["color"]
+            }
+        },
+        "category.description": {
+            "ko": "카테고리 설명",
+            "en": "category description",
+            "meaning": "카테고리의 용도를 부연하는 선택 본문 문자열."
+        },
+        "category.displayOrder": {
+            "ko": "정렬 순서",
+            "en": "display order",
+            "meaning": "사용자가 자신의 카테고리 목록을 표시할 때 사용하는 정렬용 정수 값. 미입력 시 본인 카테고리의 최대값에 1024를 더해 자동 할당한다.",
+            "names": {
+                "field": ["displayOrder"],
+                "json": ["displayOrder"],
+                "column": ["display_order"]
+            }
+        },
+        "category.create": {
+            "ko": "카테고리 생성",
+            "en": "create category",
+            "meaning": "사용자가 새 카테고리를 등록하는 행위.",
+            "allow": ["카테고리 등록"],
+            "names": {
+                "java": ["CreateCategoryRequest", "CreateCategoryResponse"],
+                "method": ["createCategory"]
+            }
+        },
+        "category.list": {
+            "ko": "카테고리 목록 조회",
+            "en": "list categories",
+            "meaning": "사용자가 자신의 카테고리 목록을 가져오는 행위.",
+            "names": {
+                "java": ["ListCategoriesResponse"],
+                "method": ["listCategories"],
+                "field": ["categories"],
+                "json": ["categories"]
+            }
+        },
+        "category.update": {
+            "ko": "카테고리 수정",
+            "en": "update category",
+            "meaning": "사용자가 자신의 카테고리 내용을 부분 수정하는 행위. 요청에 포함된 필드만 변경하고 누락 필드는 유지하며, color/description은 명시적 null로 비울 수 있다.",
+            "names": {
+                "java": ["UpdateCategoryRequest", "UpdateCategoryResponse"],
+                "method": ["updateCategory"]
+            }
+        },
+        "category.delete": {
+            "ko": "카테고리 삭제",
+            "en": "delete category",
+            "meaning": "사용자가 자신의 카테고리를 영구 삭제하는 행위.",
+            "names": {
+                "method": ["deleteCategory"]
+            }
+        },
+        "category.notFound": {
+            "ko": "존재하지 않는 카테고리",
+            "en": "category not found",
+            "meaning": "지정한 카테고리가 존재하지 않거나 다른 사용자의 자원이라 접근이 거절되는 상태.",
+            "names": {
+                "java": ["CategoryNotFoundException"]
+            }
+        },
+        "category.duplicateName": {
+            "ko": "중복 카테고리 이름",
+            "en": "duplicate category name",
+            "meaning": "같은 사용자가 이미 보유한 카테고리 이름으로 생성 또는 수정을 시도하는 상태.",
+            "names": {
+                "java": ["DuplicateCategoryNameException"]
+            }
+        },
+        "category.default": {
+            "ko": "기본 카테고리",
+            "en": "default category",
+            "meaning": "신규 사용자에게 시스템이 자동으로 생성해 주는 초기 카테고리. REQ-003에서는 업무·개인·기타 3개를 시드한다.",
+            "allow": ["시스템 기본 카테고리"]
+        }
+    }
+}

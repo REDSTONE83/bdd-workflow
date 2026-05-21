@@ -22,7 +22,8 @@
             "allow": ["생성된 사용자 ID"],
             "names": {
                 "field": ["userId"],
-                "json": ["userId"]
+                "json": ["userId"],
+                "column": ["user_id"]
             }
         },
         "user.name": {

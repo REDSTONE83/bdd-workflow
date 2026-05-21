@@ -173,7 +173,45 @@ draft.json에만 있음    draft      safe=warning, strict=error
 
 1. 새 요건 작성 전 `node back-end/tools/terminology.mjs search <표현>`으로 기존 용어를 찾는다.
 2. 적합한 term이 있으면 카드의 `표준 용어`에 key를 적는다.
-3. 없으면 `draft.json`에 후보 term을 추가하고 카드에 key를 적는다. safe 검증에서는 warning이고, strict 검증에서는 error다.
+3. 적합한 term이 없으면 CLI로 draft 후보를 등록한다. `draft.json`을 직접 편집하지 않는다.
 4. 도메인 합의 후 `domains/<domain>.json`으로 이동하면 approved로 승격되어 strict 검증에서도 통과한다.
+
+### draft 관리 CLI
+
+`draft.json`은 저장 포맷이고, 편집은 CLI로 한다. 검색에서 적합한 term을 찾지 못한 경우 또는 사용자의 명시적 선택으로만 신규 등록한다.
+
+```bash
+node back-end/tools/terminology.mjs draft add \
+  --key todo.dueDate \
+  --ko "마감일" \
+  --en "due date" \
+  --meaning "할 일을 마치기로 한 목표 날짜." \
+  --reason "REQ-002 작성 중 검색 결과가 없어 후보로 등록" \
+  --name field=dueDate --name json=dueDate --name column=due_date
+```
+
+- `--key`, `--ko`, `--en`, `--meaning`, `--reason`은 필수.
+- `--allow`, `--ban`, `--name category=value`, `--note`는 0회 이상 반복 가능.
+- 이미 approved 또는 draft에 존재하는 key는 거부한다.
+
+```bash
+node back-end/tools/terminology.mjs draft update todo.dueDate \
+  --set "reason=시간 포함 여부 합의 후 승격" \
+  --add-allow "due-date" \
+  --add-name table=todo \
+  --remove-name column=due_date
+```
+
+- `--set`은 `ko/en/meaning/note/reason`만 지원한다. allow/ban/names는 `--add-*` / `--remove-*`로 patch한다.
+- 변경 옵션이 하나도 없으면 거부한다.
+
+```bash
+node back-end/tools/terminology.mjs draft delete todo.dueDate
+```
+
+- 요건 카드의 `표준 용어` bullet에 등장하면 기본 거부한다. 어느 카드가 참조하는지 함께 출력한다.
+- `--force`로 우회할 수 있다. 우회 시에도 어떤 카드가 여전히 참조 중인지 출력한다.
+
+모든 쓰기는 변경 직후 `loadTerminology()` 진단을 다시 돌려 새 오류가 생기면 draft.json을 원상복구한다.
 
 `draft.json`에 샘플 term을 한 개 이상 유지해 DRAFT_TERM 경로가 항상 살아 있는지 확인한다. 어느 카드도 참조하지 않는 draft term은 finding 0개로 termStatus에만 표시된다.
