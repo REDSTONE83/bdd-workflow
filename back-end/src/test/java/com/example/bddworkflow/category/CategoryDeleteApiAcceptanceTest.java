@@ -1,0 +1,84 @@
+package com.example.bddworkflow.category;
+
+import com.example.bddworkflow.harness.AcceptanceTest;
+import com.example.bddworkflow.harness.Covers;
+import com.example.bddworkflow.harness.Requirement;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@AcceptanceTest
+@SpringBootTest
+@AutoConfigureMockMvc
+@Requirement("REQ-003")
+class CategoryDeleteApiAcceptanceTest {
+
+    private static final String USER_HEADER = "X-User-Id";
+    private static final long USER_ID = 100L;
+    private static final long OTHER_USER_ID = 200L;
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private InMemoryCategoryRepository categoryRepository;
+
+    @BeforeEach
+    void resetRepository() {
+        categoryRepository.deleteAll();
+    }
+
+    @Test
+    @Covers("본인의 카테고리를 영구 삭제할 수 있다")
+    @DisplayName("본인의 카테고리를 영구 삭제할 수 있다")
+    void deleteOwnCategoryRemovesItPermanently() throws Exception {
+        // Given
+        Category existing = categoryRepository.save(USER_ID, "업무", "#2563EB", null, 1024);
+
+        // When / Then
+        mockMvc.perform(delete("/categories/{id}", existing.id())
+                        .header(USER_HEADER, USER_ID))
+                .andExpect(status().isNoContent());
+
+        assertThat(categoryRepository.findById(existing.id())).isEmpty();
+    }
+
+    @Test
+    @Covers("존재하지 않는 카테고리를 삭제하려 하면 거절된다")
+    @DisplayName("존재하지 않는 카테고리를 삭제하려 하면 거절된다")
+    void deleteNonExistingCategoryReturnsNotFound() throws Exception {
+        // Given
+        long missingId = 9_999L;
+
+        // When / Then
+        mockMvc.perform(delete("/categories/{id}", missingId)
+                        .header(USER_HEADER, USER_ID))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("CATEGORY_NOT_FOUND"));
+    }
+
+    @Test
+    @Covers("다른 사용자의 카테고리를 삭제하려 하면 거절된다")
+    @DisplayName("다른 사용자의 카테고리를 삭제하려 하면 거절된다")
+    void deleteOtherUsersCategoryReturnsNotFound() throws Exception {
+        // Given
+        Category othersCategory = categoryRepository.save(OTHER_USER_ID, "타인업무", "#FF0000", null, 1024);
+
+        // When / Then
+        mockMvc.perform(delete("/categories/{id}", othersCategory.id())
+                        .header(USER_HEADER, USER_ID))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("CATEGORY_NOT_FOUND"));
+
+        assertThat(categoryRepository.findById(othersCategory.id())).isPresent();
+    }
+}
