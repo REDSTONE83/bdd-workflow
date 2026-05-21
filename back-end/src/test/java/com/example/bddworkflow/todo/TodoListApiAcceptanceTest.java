@@ -57,13 +57,13 @@ class TodoListApiAcceptanceTest {
         // When / Then
         mockMvc.perform(get("/todos").header(USER_HEADER, USER_ID))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.todos.length()").value(2))
+                .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.content[*].title", org.hamcrest.Matchers.containsInAnyOrder("내 할 일 A", "내 할 일 B")));
     }
 
     @Test
-    @Covers("본인의 할 일 목록은 미완료가 먼저, 같은 상태에서는 우선순위 HIGH, MEDIUM, LOW 순서, 동률은 식별자 오름차순으로 정렬되어 반환된다")
-    @DisplayName("본인의 할 일 목록은 미완료가 먼저, 같은 상태에서는 우선순위 HIGH, MEDIUM, LOW 순서, 동률은 식별자 오름차순으로 정렬되어 반환된다")
+    @Covers("클라이언트가 sort를 지정하지 않으면 본인의 할 일 목록은 미완료가 먼저, 같은 상태에서는 우선순위 HIGH, MEDIUM, LOW 순서, 동률은 식별자 오름차순으로 정렬되어 반환된다")
+    @DisplayName("클라이언트가 sort를 지정하지 않으면 본인의 할 일 목록은 미완료가 먼저, 같은 상태에서는 우선순위 HIGH, MEDIUM, LOW 순서, 동률은 식별자 오름차순으로 정렬되어 반환된다")
     void listSortsByCompletedThenPriorityThenId() throws Exception {
         // Given: 입력 순서를 의도적으로 섞어둔다
         //   id=1: completed=false, MEDIUM
@@ -104,7 +104,7 @@ class TodoListApiAcceptanceTest {
         // When / Then
         mockMvc.perform(get("/todos").header(USER_HEADER, USER_ID))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.todos.length()").value(2))
+                .andExpect(jsonPath("$.content.length()").value(2))
                 // 분류된 항목
                 .andExpect(jsonPath("$.content[?(@.title=='분류된 할 일')].category.categoryId").value(category.id().toString()))
                 .andExpect(jsonPath("$.content[?(@.title=='분류된 할 일')].category.name").value("업무"))

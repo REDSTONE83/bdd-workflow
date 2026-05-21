@@ -1,7 +1,9 @@
 package com.example.bddworkflow.category.dto;
 
+import com.example.bddworkflow.common.Strings;
 import com.example.bddworkflow.harness.Requirement;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.openapitools.jackson.nullable.JsonNullable;
@@ -11,7 +13,7 @@ import org.openapitools.jackson.nullable.JsonNullable;
 public class UpdateCategoryRequest {
 
     @Schema(description = "카테고리 이름", example = "업무", nullable = true)
-    private JsonNullable<@Size(max = 50) String> name = JsonNullable.undefined();
+    private JsonNullable<@NotBlank @Size(max = 50) String> name = JsonNullable.undefined();
 
     @Schema(description = "카테고리 색상", example = "#2563EB", nullable = true)
     private JsonNullable<@Pattern(regexp = "^#[0-9A-Fa-f]{6}$") String> color = JsonNullable.undefined();
@@ -39,18 +41,18 @@ public class UpdateCategoryRequest {
     }
 
     public void setName(JsonNullable<String> name) {
-        this.name = name;
+        this.name = Strings.trimInsideNullable(name);
     }
 
     public void setColor(JsonNullable<String> color) {
-        this.color = color;
+        this.color = Strings.trimInsideNullable(color);
     }
 
     public void setDescription(JsonNullable<String> description) {
-        this.description = description;
+        this.description = Strings.trimInsideNullable(description);
     }
 
     public void setDisplayOrder(JsonNullable<Integer> displayOrder) {
-        this.displayOrder = displayOrder;
+        this.displayOrder = displayOrder == null ? JsonNullable.undefined() : displayOrder;
     }
 }

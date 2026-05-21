@@ -77,7 +77,8 @@ spring:
 
 ## 자동 검증 항목
 
-- (예정) `validateTransactions`: 컨트롤러에 `@Transactional`이 붙어 있지 않은지, 서비스 메서드에 명시되었는지 검사.
+- `validateStandards` S1/S2/S3: 서비스 공개 메서드의 메서드 레벨 `@Transactional`, 클래스 레벨 금지, 읽기 메서드의 `readOnly = true`를 검사한다.
+- `validateStandards` S7: `detach`/`unlink`/`clear`/`remove` 계열 일괄 연결해제 메서드가 `findAll` 후 반복 `save` 패턴이면 warning으로 보고한다. 비-cascade 연결해제는 Repository의 `@Modifying @Query` 벌크 업데이트로 구현한다.
 
 ## 수동 리뷰 항목
 

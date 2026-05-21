@@ -8,31 +8,35 @@
 
 | 대상 | 허용 | 금지 |
 | --- | --- | --- |
-| Service / Controller / `@Configuration` | `@RequiredArgsConstructor`, `@Slf4j` | 그 외 Lombok 전부 |
+| Spring Bean stereotype 보유 (`@Service`/`@RestController`/`@Controller`/`@Configuration`/`@Component`/`@Repository`/`@RestControllerAdvice`/`@ControllerAdvice`) | `@RequiredArgsConstructor`, `@Slf4j` | 그 외 Lombok 전부 |
 | 비-PATCH DTO | `record` 우선, Lombok 사용 금지 | 모든 Lombok |
 | PATCH DTO (class) | 명시적 setter/getter, Lombok 사용 금지 | 모든 Lombok |
 | JPA Entity | 명시적 코드, Lombok 사용 금지 | 모든 Lombok |
-| 그 외 모든 위치 (공통/유틸 포함) | `@Slf4j` | `@SneakyThrows`, `@Accessors`, `@UtilityClass`, `@Data`, `@Value`, `@Builder`, `@SuperBuilder`, `@AllArgsConstructor`, `@NoArgsConstructor` |
+| 그 외 모든 위치 (공통/유틸/예외 포함) | `@Slf4j` | `@RequiredArgsConstructor`, `@SneakyThrows`, `@Accessors`, `@UtilityClass`, `@Data`, `@Value`, `@Builder`, `@SuperBuilder`, `@AllArgsConstructor`, `@NoArgsConstructor` |
+| 테스트 코드 (`src/test/java`) | 사용 금지 | 모든 Lombok |
 
 ## 의존성
 
-Lombok은 컴파일 타임 도구로만 둔다. 런타임 의존성으로 넣지 않는다.
+Lombok은 컴파일 타임 도구로만 둔다. 런타임 의존성으로 넣지 않는다. **테스트 코드에서는 Lombok을 사용하지 않으므로 `testCompileOnly`/`testAnnotationProcessor`는 선언하지 않는다.**
 
 ```groovy
 dependencies {
     compileOnly       'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-
-    testCompileOnly       'org.projectlombok:lombok'
-    testAnnotationProcessor 'org.projectlombok:lombok'
 }
 ```
 
 버전은 Spring Boot dependency management가 제공하는 값을 그대로 쓴다. 직접 버전을 박지 않는다.
 
+테스트에서도 Lombok이 필요한 상황이 생기면 이 문서를 먼저 갱신하고 그때 test 의존성을 추가한다. 표준이 갱신되기 전 임시 도입은 허용하지 않는다.
+
 ## 규칙 상세
 
-### Service / Controller / `@Configuration`
+### Spring Bean stereotype 클래스
+
+다음 stereotype 중 하나를 보유한 클래스에서만 `@RequiredArgsConstructor`를 허용한다.
+
+- `@Service`, `@RestController`, `@Controller`, `@Configuration`, `@Component`, `@Repository`, `@RestControllerAdvice`, `@ControllerAdvice`
 
 - `@RequiredArgsConstructor` 허용. `final` 의존성을 받는 생성자 boilerplate 제거 용도.
 - `@Slf4j` 허용. `SLF4J Logger` 선언 boilerplate 제거 용도.
@@ -48,7 +52,7 @@ public class CategoryService {
 }
 ```
 
-`@Service`/`@RestController`/`@Configuration` 외의 Bean (예: `@Component`)도 같은 규칙을 따른다.
+stereotype을 갖지 않는 일반 클래스(공통 유틸, 예외, 헬퍼, argument resolver 등)는 `@RequiredArgsConstructor`도 금지다. 생성자를 직접 작성해 의존성/필드 초기화 의도를 명시한다.
 
 ### 비-PATCH DTO
 
@@ -109,6 +113,12 @@ public class CategoryService {
 - `@ToString`
 - `@RequiredArgsConstructor`
 
+**Spring Bean stereotype 미보유 클래스에서 추가 금지** (`L4`)
+
+- `@RequiredArgsConstructor`
+
+`@Service`/`@RestController`/`@Controller`/`@Configuration`/`@Component`/`@Repository`/`@RestControllerAdvice`/`@ControllerAdvice` 중 하나도 갖지 않는 일반 클래스에 `@RequiredArgsConstructor`를 붙이면 L4 위반이다. 단, Entity는 L2, DTO는 L3가 더 구체적인 메시지로 먼저 보고한다.
+
 ## 새 Lombok 애너테이션 도입
 
 새 Lombok 애너테이션을 도입하려면 다음 절차를 따른다.
@@ -120,7 +130,7 @@ public class CategoryService {
 
 ## 자동 검증 항목
 
-- `validateStandards`: L1/L2/L3 룰이 위반된 클래스/필드를 보고한다 (`back-end/build/harness/standards-report.md`).
+- `validateStandards`: L1/L2/L3/L4 룰이 위반된 클래스/필드를 보고한다 (`back-end/build/harness/standards-report.md`).
 - `validateStandardsStrict`: 위반 시 빌드를 실패시킨다.
 
 ## 수동 리뷰 항목

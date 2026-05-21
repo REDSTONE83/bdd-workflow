@@ -3,6 +3,7 @@ package com.example.bddworkflow.todo.dto;
 import com.example.bddworkflow.todo.domain.Priority;
 
 import com.example.bddworkflow.harness.Requirement;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
@@ -29,7 +30,8 @@ public record TodoResponse(
         @Schema(description = "완료 여부", example = "false")
         boolean completed,
 
-        @Schema(description = "연결된 카테고리 정보. 연결이 없으면 null이다.", nullable = true)
+        @Schema(description = "연결된 카테고리 정보. 연결이 없으면 명시적 null로 직렬화된다.", nullable = true)
+        @JsonInclude(JsonInclude.Include.ALWAYS)
         TodoCategoryInfo category
 ) {
 }

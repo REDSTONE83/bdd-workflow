@@ -134,7 +134,9 @@ public static String trimToNull(String s) {
 
 ## 자동 검증 항목
 
-- (예정) `validateInputValidation`: 모든 컨트롤러 메서드의 RequestBody DTO에 `@Valid`가 붙어 있는지, 도메인 enum이 String/숫자로 받지 않는지 검사.
+- `validateStandards` C4: 모든 컨트롤러 메서드의 RequestBody DTO에 `@Valid` 또는 `@Validated`가 붙어 있는지 검사한다.
+- `validateStandards` D7: `*Request` DTO의 `String` 필드/컴포넌트에 Bean Validation 어노테이션이 없으면 warning으로 보고한다. 타입 사용 위치의 `JsonNullable<@Size ... String>`도 declaration line 기준으로 확인한다.
+- `validateStandards` S6: 서비스 메서드가 `normalizeX(String)` 또는 `validateX(String)` 형태이면 입력 형식 검증/정규화가 서비스로 밀린 것으로 보고 warning으로 알린다. 도메인 상태 조회가 필요한 검증이면 수동 리뷰로 예외 여부를 판단한다.
 
 ## 수동 리뷰 항목
 

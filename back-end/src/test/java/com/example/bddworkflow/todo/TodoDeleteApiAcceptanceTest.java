@@ -62,8 +62,9 @@ class TodoDeleteApiAcceptanceTest {
         // Given: 존재하는 본인 할 일을 seed해, 거절이 다른 할 일을 함께 지우지 않는지 검증한다.
         Todo existing = todoRepository.save(USER_ID, "보존되어야 할 할 일", null, null,
                 Priority.MEDIUM, false, null);
+        java.util.UUID missingTodoId = java.util.UUID.fromString("00000000-0000-0000-0000-00000000270f");
 
-        mockMvc.perform(delete("/todos/{id}", 9999L).header(USER_HEADER, USER_ID))
+        mockMvc.perform(delete("/todos/{id}", missingTodoId).header(USER_HEADER, USER_ID))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("TODO_NOT_FOUND"));
 

@@ -34,6 +34,7 @@
 
 - 첫 번째 수용 기준을 작성한다
 - 두 번째 수용 기준을 작성한다
+- 목록 조회 API가 포함되면 page/size 요청에 따른 content 슬라이스와 page/size/totalElements/totalPages 메타데이터 수용 기준을 반드시 작성한다
 
 ## 의사결정 로그
 
@@ -47,7 +48,7 @@
 
 - 리뷰일: YYYY-MM-DD
   리뷰자: Product Owner, Tech Lead, QA
-  확인: 수용 기준과 `@Covers` 일치 여부, 정상/예외/경계 조건 커버 여부.
+  확인: 수용 기준과 `@Covers` 일치 여부, 정상/예외/경계 조건 커버 여부, 목록 API의 페이징 AC/테스트 포함 여부.
   결과: 미완료, 승인, 또는 수정 필요.
 
 ## 열린 질문

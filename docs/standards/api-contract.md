@@ -212,6 +212,7 @@ public class JacksonConfig {
 - 응답 본문은 공통 DTO `PageResponse<T>`를 쓴다.
 - Repository 조회 시그니처는 `Page<T> findAllBy...(... , Pageable pageable)` 형식이다. 메서드명에 OrderBy를 박지 않는다. ([persistence-schema.md](./persistence-schema.md) Repository 패턴.)
 - 동률 정렬은 항상 `id` 오름차순으로 끊는다.
+- 요건 카드에는 페이징 동작을 별도 수용 기준으로 둔다. 최소한 `page`/`size`에 따른 `content` 슬라이스와 `page`, `size`, `totalElements`, `totalPages` 메타데이터가 검증 가능해야 한다.
 - 커서 기반 페이지네이션이 필요해지면 별도 표준으로 승격한다.
 
 #### `PageResponse<T>` 공통 DTO

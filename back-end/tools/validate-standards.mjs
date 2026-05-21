@@ -92,6 +92,8 @@ for (const name of patchBodyDtoNames) {
 }
 
 const FORBIDDEN_DATE_TYPES = new Set(['LocalDateTime', 'Date', 'Calendar', 'Timestamp']);
+const REQUEST_DTO_NAME = /Request$/;
+const BEAN_VALIDATION_ANNOTATION_RE = /@(NotNull|NotBlank|NotEmpty|Size|Length|Pattern|Email|Min|Max|Positive|PositiveOrZero|Past|PastOrPresent|Future|FutureOrPresent|DecimalMin|DecimalMax)\b/;
 
 function isJsonNullable(typeStr) {
     return /^JsonNullable<.+>$/.test(typeStr ?? '');
@@ -101,6 +103,16 @@ function unwrapJsonNullable(typeStr) {
     if (typeStr == null) return typeStr;
     const m = typeStr.match(/^JsonNullable<(.+)>$/);
     return m ? m[1].trim() : typeStr;
+}
+
+function sourceWindowAroundLine(file, line, before = 5, after = 0) {
+    if (!file || !line) return '';
+    const fullPath = path.join(repoRoot, file);
+    if (!fs.existsSync(fullPath)) return '';
+    const lines = fs.readFileSync(fullPath, 'utf8').split(/\r?\n/);
+    const start = Math.max(0, line - 1 - before);
+    const end = Math.min(lines.length, line + after);
+    return lines.slice(start, end).join('\n');
 }
 
 // Read-name patterns: methods starting with these verbs are considered read-only operations.
@@ -220,6 +232,7 @@ for (const dto of dtos) {
     const file = dto.file;
     const cn = dto.className;
     const fields = dto.fields ?? [];
+    const isRequestDto = REQUEST_DTO_NAME.test(cn);
 
     // D1: id-named fields are UUID (also enforced inside JsonNullable<T>)
     for (const f of fields) {
@@ -258,6 +271,26 @@ for (const dto of dtos) {
                 `DTO ${cn}: field "${f.name}" uses forbidden type ${inner}. ` +
                 'Use Instant (datetime.md).',
                 { file, target: `${cn}.${f.name}` });
+        }
+    }
+
+    // D7: request DTO String fields should carry Bean Validation annotations.
+    // This intentionally reports warnings because the index cannot fully infer
+    // domain optionality or every custom validator. It still catches the common
+    // drift where constraints are documented in @Schema but implemented in Service.
+    if (isRequestDto) {
+        for (const f of fields) {
+            const innerType = unwrapJsonNullable(f.javaType);
+            if (innerType !== 'String') continue;
+            const sourceLine = sourceWindowAroundLine(file, f.line, 0, 3);
+            const annotationText = [...(f.annotations ?? []).map(a => '@' + a), sourceLine].join('\n');
+            if (!BEAN_VALIDATION_ANNOTATION_RE.test(annotationText)) {
+                add('D7', 'warning',
+                    `Request DTO ${cn}: String field "${f.name}" has no Bean Validation annotation near its declaration. ` +
+                    'Input-only constraints should be declared on DTO fields/components; do not rely on Service validation ' +
+                    '(validation.md DTO 레이어).',
+                    { file, target: `${cn}.${f.name}`, line: f.line });
+            }
         }
     }
 
@@ -491,6 +524,16 @@ for (const svc of services) {
     const FORBIDDEN_JSON_TYPES = new Set(['JsonNode', 'ObjectNode', 'ArrayNode', 'TreeNode']);
 
     for (const m of svc.methods ?? []) {
+        // S6: service-level String normalization / syntactic validation is a smell.
+        // Existence / ownership / state validation belongs here, but trim/length/format
+        // checks belong in DTO Bean Validation and canonical constructors.
+        if (/^(normalize|validate)[A-Z]/.test(m.name) && (m.parameterTypes ?? []).includes('String')) {
+            add('S6', 'warning',
+                `Service ${cn}: method "${m.name}" looks like String input validation/normalization. ` +
+                'Move input-only validation and trim/lowercase normalization to the DTO layer unless this check depends on domain state ' +
+                '(validation.md).',
+                { file, target: `${cn}.${m.name}` });
+        }
         if (!m.isPublic) continue;
         // S1: public service methods must declare a method-level @Transactional.
         // When the class already has one, S2 reports the placement violation and
@@ -553,6 +596,31 @@ for (const svc of services) {
             }
         }
     }
+
+    // S7: non-cascade unlink/detach side effects should be explicit bulk updates.
+    // Heuristic: methods named detach/unlink/clear/remove...All that load rows and save
+    // them one-by-one are reported as warnings; the standard implementation is a
+    // repository @Modifying @Query update in the same transaction.
+    if (svc.file) {
+        const fullPath = path.join(repoRoot, svc.file);
+        if (fs.existsSync(fullPath)) {
+            const raw = fs.readFileSync(fullPath, 'utf8');
+            const stripped = stripCommentsAndStrings(raw);
+            for (const m of svc.methods ?? []) {
+                if (!/(detach|unlink|clear|remove).*(All|By)|(All|By).*(detach|unlink|clear|remove)/i.test(m.name)) {
+                    continue;
+                }
+                const body = extractMethodBody(stripped, m.name);
+                if (/\bfor\s*\(/.test(body) && /\.\s*save\s*\(/.test(body)) {
+                    add('S7', 'warning',
+                        `Service ${cn}: method "${m.name}" appears to detach/unlink rows by looping and saving each entity. ` +
+                        'Use an explicit repository @Modifying @Query bulk update for non-cascade unlink side effects ' +
+                        '(persistence-schema.md Repository 패턴 / transaction.md).',
+                        { file: svc.file, target: `${cn}.${m.name}` });
+                }
+            }
+        }
+    }
 }
 
 function stripCommentsAndStrings(src) {
@@ -564,11 +632,33 @@ function stripCommentsAndStrings(src) {
         .replace(/(^|[^:])\/\/.*$/gm, '$1');          // strip // line comments (preserve `://`)
 }
 
-// --- Lombok rules (L1 / L2 / L3) ---
+function extractMethodBody(src, methodName) {
+    const nameIdx = src.indexOf(methodName);
+    if (nameIdx < 0) return '';
+    const openIdx = src.indexOf('{', nameIdx);
+    if (openIdx < 0) return '';
+    let depth = 0;
+    for (let i = openIdx; i < src.length; i++) {
+        const ch = src[i];
+        if (ch === '{') depth++;
+        else if (ch === '}') {
+            depth--;
+            if (depth === 0) return src.slice(openIdx, i + 1);
+        }
+    }
+    return src.slice(openIdx);
+}
+
+// --- Lombok rules (L1 / L2 / L3 / L4) ---
 //
 // L1: globally forbidden Lombok annotations (Data, Value, Builder, ...).
 // L2: additional Lombok annotations forbidden on @Entity classes (Setter, Getter, ...).
 // L3: additional Lombok annotations forbidden on DTOs (Setter, Getter, ...).
+// L4: @RequiredArgsConstructor restricted to Spring Bean stereotype classes
+//     (@Service / @RestController / @Controller / @Configuration / @Component
+//     / @Repository / @RestControllerAdvice / @ControllerAdvice). Files that
+//     are Entity or DTO are skipped here because L2/L3 already report them
+//     with a more specific message.
 //
 // Detection is import-aware so Spring's @Value and Lombok's @Value don't collide.
 // A simple-name use like `@Value` only counts as Lombok when the file imports it from
@@ -668,6 +758,19 @@ const mainJavaRoot = path.join(backendRoot, 'src', 'main', 'java');
 const entityFiles = new Set(entities.map(e => e.file));
 const dtoFiles = new Set(dtos.map(d => d.file));
 
+const SPRING_BEAN_STEREOTYPES = [
+    'Service', 'RestController', 'Controller', 'Configuration',
+    'Component', 'Repository', 'RestControllerAdvice', 'ControllerAdvice',
+];
+
+function fileHasSpringStereotype(strippedSrc) {
+    for (const name of SPRING_BEAN_STEREOTYPES) {
+        const re = new RegExp('@' + name + '\\b', 'g');
+        if (re.test(strippedSrc)) return true;
+    }
+    return false;
+}
+
 for (const fullPath of listJavaFilesUnder(mainJavaRoot)) {
     const relative = relPath(fullPath);
     const raw = fs.readFileSync(fullPath, 'utf8');
@@ -708,6 +811,23 @@ for (const fullPath of listJavaFilesUnder(mainJavaRoot)) {
                 add('L3', 'error',
                     `Lombok @${name} is forbidden on DTOs. ` +
                     'Use record for non-PATCH DTOs and explicit setters/getters for PATCH DTOs (java-code-style.md DTO 절).',
+                    { file: relative, line });
+            }
+        }
+    }
+
+    // L4: @RequiredArgsConstructor outside Spring Bean stereotypes.
+    // Skip when L2/L3 already covers the file (Entity/DTO) so the user gets the
+    // more specific message without duplicate L4 noise.
+    if (!isEntity && !isDto) {
+        const requiredArgsHits = findLombokUses(stripped, 'RequiredArgsConstructor', 'lombok', imports);
+        if (requiredArgsHits.length > 0 && !fileHasSpringStereotype(stripped)) {
+            for (const idx of requiredArgsHits) {
+                const line = lineNumberAt(stripped, idx);
+                add('L4', 'error',
+                    'Lombok @RequiredArgsConstructor is only allowed on classes annotated with a Spring Bean ' +
+                    'stereotype (@Service / @RestController / @Controller / @Configuration / @Component / @Repository / ' +
+                    '@RestControllerAdvice / @ControllerAdvice). Write the constructor explicitly here (java-code-style.md L4).',
                     { file: relative, line });
             }
         }

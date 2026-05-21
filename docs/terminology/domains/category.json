@@ -16,10 +16,11 @@
         "category.id": {
             "ko": "카테고리 ID",
             "en": "category id",
-            "meaning": "카테고리를 외부 응답에서 식별하는 ID.",
+            "meaning": "카테고리를 외부 응답에서 식별하는 ID. Todo의 외래키 컬럼명도 같은 term에 포함한다.",
             "names": {
                 "field": ["categoryId"],
-                "json": ["categoryId"]
+                "json": ["categoryId"],
+                "column": ["category_id"]
             }
         },
         "category.name": {
@@ -65,12 +66,9 @@
         "category.list": {
             "ko": "카테고리 목록 조회",
             "en": "list categories",
-            "meaning": "사용자가 자신의 카테고리 목록을 가져오는 행위.",
+            "meaning": "사용자가 자신의 카테고리 목록을 가져오는 행위. 응답은 공통 PageResponse를 사용한다.",
             "names": {
-                "java": ["ListCategoriesResponse"],
-                "method": ["listCategories"],
-                "field": ["categories"],
-                "json": ["categories"]
+                "method": ["listCategories"]
             }
         },
         "category.update": {

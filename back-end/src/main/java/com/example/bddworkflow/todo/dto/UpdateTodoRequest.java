@@ -4,6 +4,8 @@ import com.example.bddworkflow.todo.domain.Priority;
 
 import com.example.bddworkflow.harness.Requirement;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.openapitools.jackson.nullable.JsonNullable;
 
@@ -22,7 +24,7 @@ import java.util.UUID;
 public class UpdateTodoRequest {
 
     @Schema(description = "할 일 제목", example = "보고서 작성", nullable = true)
-    private JsonNullable<@Size(max = 100) String> title = JsonNullable.undefined();
+    private JsonNullable<@NotBlank @Size(max = 100) String> title = JsonNullable.undefined();
 
     @Schema(description = "할 일 설명", example = "분기 보고서 초안", nullable = true)
     private JsonNullable<@Size(max = 1000) String> description = JsonNullable.undefined();
@@ -31,10 +33,10 @@ public class UpdateTodoRequest {
     private JsonNullable<LocalDate> dueDate = JsonNullable.undefined();
 
     @Schema(description = "우선순위", example = "HIGH", nullable = true)
-    private JsonNullable<Priority> priority = JsonNullable.undefined();
+    private JsonNullable<@NotNull Priority> priority = JsonNullable.undefined();
 
     @Schema(description = "완료 여부", example = "true", nullable = true)
-    private JsonNullable<Boolean> completed = JsonNullable.undefined();
+    private JsonNullable<@NotNull Boolean> completed = JsonNullable.undefined();
 
     @Schema(description = "본인 소유 카테고리 ID. null이면 연결 해제.",
             example = "01900000-0000-7000-8000-000000000000", nullable = true)
@@ -47,7 +49,14 @@ public class UpdateTodoRequest {
     public JsonNullable<Boolean> completed() { return completed; }
     public JsonNullable<UUID> categoryId() { return categoryId; }
 
-    public void setTitle(JsonNullable<String> title) { this.title = title; }
+    public void setTitle(JsonNullable<String> title) {
+        if (!title.isPresent()) {
+            this.title = title;
+            return;
+        }
+        String v = title.get();
+        this.title = JsonNullable.of(v == null ? null : v.trim());
+    }
     public void setDescription(JsonNullable<String> description) { this.description = description; }
     public void setDueDate(JsonNullable<LocalDate> dueDate) { this.dueDate = dueDate; }
     public void setPriority(JsonNullable<Priority> priority) { this.priority = priority; }

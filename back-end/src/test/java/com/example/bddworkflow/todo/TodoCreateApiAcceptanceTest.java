@@ -455,7 +455,7 @@ class TodoCreateApiAcceptanceTest {
         String requestBody = """
                 {
                   "title": "보고서 작성",
-                  "categoryId": %d
+                  "categoryId": "%s"
                 }
                 """.formatted(categoryId);
 
@@ -465,7 +465,7 @@ class TodoCreateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.category.categoryId").value(categoryId))
+                .andExpect(jsonPath("$.category.categoryId").value(categoryId.toString()))
                 .andExpect(jsonPath("$.category.name").value("업무"))
                 .andExpect(jsonPath("$.category.color").value("#2563EB"));
 
@@ -484,7 +484,7 @@ class TodoCreateApiAcceptanceTest {
         String foreignBody = """
                 {
                   "title": "보고서 작성",
-                  "categoryId": %d
+                  "categoryId": "%s"
                 }
                 """.formatted(othersCategoryId);
 
@@ -498,12 +498,13 @@ class TodoCreateApiAcceptanceTest {
                 .andExpect(jsonPath("$.details[0].field").value("categoryId"));
 
         // 존재하지 않는 카테고리 ID도 동일
+        java.util.UUID missingCategoryId = java.util.UUID.fromString("00000000-0000-0000-0000-00000000270f");
         String missingBody = """
                 {
                   "title": "보고서 작성",
-                  "categoryId": 9999
+                  "categoryId": "%s"
                 }
-                """;
+                """.formatted(missingCategoryId);
         mockMvc.perform(post("/todos")
                         .header(USER_HEADER, USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)

@@ -3,7 +3,7 @@
 요건 ID: REQ-002
 제목: 개인별 할 일 관리
 우선순위: 높음
-상태: 초안
+상태: 승인
 
 ## 사용자/목적
 
@@ -15,7 +15,8 @@
 - 제목은 앞뒤 공백을 제거한 뒤 저장하며, trim 후 빈 문자열이면 거절한다. 제목은 최대 100자, 설명은 최대 1000자이다.
 - 마감일은 ISO 8601 날짜(`YYYY-MM-DD`)로 입력한다. 시각은 포함하지 않으며 선택 입력이고 과거 날짜도 허용한다.
 - 우선순위는 `HIGH`, `MEDIUM`, `LOW` 중 하나이며 미입력 시 `MEDIUM`이 적용된다.
-- 사용자는 자신의 할 일 목록을 조회한다. 목록은 미완료(`completed=false`)가 먼저, 같은 상태에서는 우선순위 내림차순(HIGH→MEDIUM→LOW), 동률은 식별자 오름차순으로 정렬되어 반환된다. 응답에는 연결된 카테고리의 ID, 이름, 색상이 함께 포함되며 카테고리가 없으면 카테고리 정보는 `null`이다.
+- 사용자는 자신의 할 일 목록을 조회한다. 응답은 `page`, `size`, `totalElements`, `totalPages`, `content`를 가진 페이지 응답이다. 클라이언트가 `sort`를 지정하지 않으면 기본 정렬은 미완료(`completed=false`)가 먼저, 같은 상태에서는 우선순위 내림차순(HIGH→MEDIUM→LOW), 동률은 식별자 오름차순이다. 클라이언트가 `sort`를 보내면 그 정렬이 기본 정렬을 덮어쓴다. 응답 항목에는 연결된 카테고리의 ID, 이름, 색상이 함께 포함되며 카테고리가 없으면 카테고리 정보는 `null`이다.
+- 목록은 `page`(0부터, 기본 0), `size`(기본 20, 최대 100) 쿼리 파라미터로 페이지 단위 조회된다. 데이터 개수를 초과한 `page`를 요청하면 빈 `content`가 반환되고 `totalElements`/`totalPages`는 데이터에 따른 값이 동일하게 유지된다.
 - 사용자는 자신의 할 일 내용을 부분 수정한다(PATCH 의미). 누락된 필드는 기존 값을 유지하고, `description`/`dueDate`/`categoryId`는 명시적 `null`로 비울 수 있다. `title`, `priority`, `completed`는 명시적 `null`을 허용하지 않는다.
 - 생성된 할 일의 완료 상태(`completed`)는 항상 `false`(미완료)로 시작한다. 생성 요청은 `completed`를 입력하지 않는다.
 - 사용자는 PATCH의 `completed` 필드(`true`/`false`)로 완료 처리하거나 미완료로 되돌린다.
@@ -25,6 +26,7 @@
 ## 표준 용어
 
 - todo.task
+- todo.id
 - todo.title
 - todo.description
 - todo.dueDate
@@ -35,6 +37,8 @@
 - todo.update
 - todo.complete
 - todo.delete
+- todo.response
+- todo.categoryRef
 - todo.notFound
 - todo.invalidCategory
 - category.category
@@ -43,13 +47,15 @@
 - category.color
 - user.id
 
+> 공통 인프라 용어(`common.*`: audit 컬럼, ApiError 부속 필드, PageResponse 부속 필드 등)는 `docs/terminology/domains/common.json`에 등록되어 있으며, [`docs/standards/terminology.md`](../standards/terminology.md) 정책에 따라 카드별 표준 용어 섹션에는 반복 명시하지 않는다.
+
 ## 제외 범위
 
 - 카테고리 자체의 CRUD (REQ-003에서 다룬다. 본 카드는 할 일이 카테고리를 참조하는 동작만 다룬다.)
 - 세션, JWT 등 정식 인증 방식
 - 반복 일정, 알림, 첨부 파일
 - 마감일을 과거 날짜로 입력하는 것에 대한 차단
-- 검색, 정렬, 필터, 페이지네이션
+- 검색, 필터
 - 다른 사용자와의 공유 또는 위임
 - 할 일 생성 요청의 `completed` 필드 입력 처리 (`CreateTodoRequest` DTO에 `completed` 필드를 두지 않는다. 클라이언트가 `completed` 키를 함께 보낸 경우의 동작은 본 카드 계약 밖이며 BDD 테스트로 검증하지 않는다.)
 
@@ -130,6 +136,11 @@
   답변: 누락 필드는 유지하고, `description`/`dueDate`/`categoryId`만 명시적 `null`로 비울 수 있다. `title`/`priority`/`completed`는 `null` 거절. 모든 필드는 생성과 동일한 검증 규칙(trim, 길이, enum, ISO 날짜 형식, 카테고리 유효성)을 적용한다.
   반영: 범위, 수용 기준, 의사결정 로그에 반영했다.
 
+- 질문일: 2026-05-22
+  질문: 페이지네이션을 REQ-002 범위에 포함할 때 정렬·size 정책은?
+  답변: 클라이언트 `sort` 쿼리 파라미터를 허용해 기본 정렬을 덮어쓸 수 있게 한다. size는 api-contract 표준값(기본 20, 최대 100)을 그대로 따른다.
+  반영: 범위, 수용 기준, 의사결정 로그에 반영했다. 제외 범위에서 정렬·페이지네이션을 제거했다.
+
 ## 수용 기준
 
 - 유효한 정보이면 할 일이 생성된다
@@ -151,7 +162,13 @@
 - 할 일 생성 시 본인의 카테고리 ID를 명시하면 해당 카테고리에 연결되어 저장된다
 - 할 일 생성 시 존재하지 않거나 다른 사용자의 카테고리 ID를 명시하면 거절된다
 - 본인의 할 일 목록만 조회된다
-- 본인의 할 일 목록은 미완료가 먼저, 같은 상태에서는 우선순위 HIGH, MEDIUM, LOW 순서, 동률은 식별자 오름차순으로 정렬되어 반환된다
+- 클라이언트가 sort를 지정하지 않으면 본인의 할 일 목록은 미완료가 먼저, 같은 상태에서는 우선순위 HIGH, MEDIUM, LOW 순서, 동률은 식별자 오름차순으로 정렬되어 반환된다
+- 클라이언트가 sort 쿼리 파라미터를 지정하면 그 정렬이 기본 정렬을 덮어쓴다
+- 본인의 할 일 목록은 page와 size 쿼리 파라미터로 페이지 단위로 조회된다
+- 응답에는 content, page, size, totalElements, totalPages가 포함된다
+- size를 지정하지 않으면 기본값 20이 적용된다
+- size가 100을 초과하면 100으로 제한된다
+- 데이터 개수를 초과한 page를 요청하면 빈 content가 반환되고 totalElements와 totalPages는 데이터에 따라 동일하게 유지된다
 - 할 일 응답에는 연결된 카테고리의 ID, 이름, 색상이 함께 반환되며, 연결이 없으면 카테고리 정보는 null이다
 - 수정 요청에 포함된 필드만 변경되고 누락된 필드는 기존 값을 유지한다
 - 수정 요청에서 설명에 null을 명시하면 설명이 비워진다
@@ -257,11 +274,17 @@
   결정자: Product Owner
   영향: DTO/Entity의 `dueDate` 타입은 `LocalDate`로 둔다. 형식 위반은 400 `VALIDATION_FAILED`로 응답한다.
 
-- 결정일: 2026-05-21
-  결정: 할 일 목록 정렬은 `completed` 오름차순(미완료 먼저) → `priority` 내림차순(HIGH→MEDIUM→LOW) → `id` 오름차순으로 고정한다.
-  이유: 미완료 작업을 우선적으로 노출하는 일반적 UX와 같은 상태 내에서 급한 일을 위로 두는 사용자 의도를 반영한다. 동률 시 식별자 정렬로 결정적 순서를 보장해 테스트가 흔들리지 않는다.
+- 결정일: 2026-05-21 (2026-05-22 갱신)
+  결정: 할 일 목록 **기본 정렬**은 `completed` 오름차순(미완료 먼저) → `priority` 내림차순(HIGH→MEDIUM→LOW) → `id` 오름차순으로 두고, 클라이언트가 `sort` 쿼리 파라미터를 보내면 그 정렬이 기본 정렬을 덮어쓴다.
+  이유: 기본값은 미완료를 우선 노출하는 UX 의도를 반영하면서, sort 덮어쓰기로 클라이언트 정렬 자유도를 함께 확보한다. 동률 시 식별자 정렬로 결정적 순서를 보장한다.
   결정자: Product Owner, Tech Lead
-  영향: `ListTodosResponse`의 정렬은 위 규칙으로 고정한다. 클라이언트가 별도 정렬 옵션을 요구하면 후속 카드에서 보강한다.
+  영향: 서비스는 `Pageable.getSort()`가 unsorted이면 기본 정렬 JPQL을 사용하고, 정렬이 지정되면 Spring Data 기본 ORDER BY를 사용한다. `priority`로 정렬할 때의 정렬 키 의미(enum 문자열 vs HIGH→MEDIUM→LOW 비즈니스 순서)는 별도 카드에서 보강한다.
+
+- 결정일: 2026-05-22
+  결정: 본 카드 범위에 페이지네이션을 포함한다. 쿼리 파라미터는 `page`(0부터, 기본 0), `size`(기본 20, 최대 100), `sort`(`field,direction`)를 받는다. 응답 본문은 `PageResponse<T>`(`content`, `page`, `size`, `totalElements`, `totalPages`)다.
+  이유: api-contract 표준은 모든 목록 API에 페이지네이션을 요구하며, REQ-002 컨트롤러도 이미 `Pageable`을 받고 있어 카드 범위와 구현을 일치시킨다.
+  결정자: Product Owner, Tech Lead
+  영향: `size`가 100을 넘으면 100으로 잘리고, 데이터 개수를 초과한 `page`는 빈 `content` + 정확한 `totalElements`/`totalPages`로 응답한다. 사이즈 cap은 `PageableHandlerMethodArgumentResolverCustomizer`로 전역 설정한다.
 
 - 결정일: 2026-05-21
   결정: 완료 토글은 별도 엔드포인트를 두지 않고 PATCH의 `completed` 필드(`true`/`false`)로 처리한다. `completed` 필드가 요청에 누락되면 변경 없음으로 보고, 명시적 `null`은 PATCH 정밀화 결정에 따라 400 `VALIDATION_FAILED`로 거절한다.
@@ -283,7 +306,7 @@
 
 ## BDD 테스트 리뷰
 
-- 미완료
+- 완료 (2026-05-22). 수용 기준 전체가 `@Covers`로 연결되어 있으며 `./gradlew test`에서 80/80 PASS, `validateHarness` BUILD SUCCESSFUL. 페이지네이션 정책 편입(2026-05-22)에 따라 추가된 6개 시나리오(`TodoListPaginationApiAcceptanceTest`)와 기존 19개 BDD 테스트(`Todo*ApiAcceptanceTest`)가 모두 커버한다.
 
 ## 열린 질문
 

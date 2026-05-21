@@ -335,7 +335,7 @@ class TodoUpdateApiAcceptanceTest {
         mockMvc.perform(patch("/todos/{id}", existing.id())
                         .header(USER_HEADER, USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"categoryId\": " + after.id() + "}"))
+                        .content("{\"categoryId\": \"" + after.id() + "\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.category.categoryId").value(after.id().toString()))
                 .andExpect(jsonPath("$.category.name").value("개인"));
@@ -358,17 +358,18 @@ class TodoUpdateApiAcceptanceTest {
         mockMvc.perform(patch("/todos/{id}", existing.id())
                         .header(USER_HEADER, USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"categoryId\": " + othersCategoryId + "}"))
+                        .content("{\"categoryId\": \"" + othersCategoryId + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_CATEGORY"))
                 .andExpect(jsonPath("$.details[0].field").value("categoryId"));
         assertTodoUnchanged(existing);
 
         // 부재
+        java.util.UUID missingCategoryId = java.util.UUID.fromString("00000000-0000-0000-0000-00000000270f");
         mockMvc.perform(patch("/todos/{id}", existing.id())
                         .header(USER_HEADER, USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"categoryId\": 9999}"))
+                        .content("{\"categoryId\": \"" + missingCategoryId + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_CATEGORY"))
                 .andExpect(jsonPath("$.details[0].field").value("categoryId"));
@@ -420,8 +421,9 @@ class TodoUpdateApiAcceptanceTest {
     void updateMissingTodoReturnsNotFound() throws Exception {
         // Given: 존재하는 본인 할 일을 seed해, 거절이 다른 할 일에 부수효과를 만들지 않는지 함께 검증한다.
         Todo existing = seedTodo();
+        java.util.UUID missingTodoId = java.util.UUID.fromString("00000000-0000-0000-0000-00000000270f");
 
-        mockMvc.perform(patch("/todos/{id}", 9999L)
+        mockMvc.perform(patch("/todos/{id}", missingTodoId)
                         .header(USER_HEADER, USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\": \"새 제목\"}"))
