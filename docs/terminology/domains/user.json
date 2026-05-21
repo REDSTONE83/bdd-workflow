@@ -1,0 +1,70 @@
+{
+    "$schema": "../schema.json",
+    "note": "사용자/계정 객체 도메인. 가입 행위는 account.signup, 결과 객체는 user.account로 분리한다.",
+    "terms": {
+        "user.account": {
+            "ko": "계정",
+            "en": "account",
+            "meaning": "이메일과 비밀번호로 식별되는 인증 주체.",
+            "allow": ["사용자 계정"],
+            "ban": ["회원"],
+            "names": {
+                "java": ["UserAccount", "UserController"],
+                "table": ["user_account"],
+                "path": ["users"]
+            },
+            "note": "결과 객체는 계정으로 표기한다. 회원은 가입 행위(account.signup)에서만 등장한다. 도메인 컨트롤러(UserController)는 user 도메인 단위로 user.account 산하에 둔다."
+        },
+        "user.id": {
+            "ko": "사용자 ID",
+            "en": "user id",
+            "meaning": "사용자 계정을 외부 응답에서 식별하는 ID.",
+            "allow": ["생성된 사용자 ID"],
+            "names": {
+                "field": ["userId"],
+                "json": ["userId"]
+            }
+        },
+        "user.name": {
+            "ko": "사용자 이름",
+            "en": "name",
+            "meaning": "사용자가 표시 이름으로 사용하는 문자열.",
+            "names": {
+                "field": ["name"],
+                "json": ["name"],
+                "column": ["name"]
+            }
+        },
+        "user.email": {
+            "ko": "이메일",
+            "en": "email",
+            "meaning": "계정 식별과 중복 확인에 사용하는 이메일 주소.",
+            "allow": ["이메일 주소"],
+            "ban": ["메일"],
+            "names": {
+                "field": ["email"],
+                "json": ["email"],
+                "column": ["email"]
+            },
+            "note": "메일은 이메일의 줄임말로 쓰지 않는다."
+        },
+        "user.password": {
+            "ko": "비밀번호",
+            "en": "password",
+            "meaning": "사용자가 입력하는 평문 비밀번호.",
+            "names": {
+                "field": ["password"],
+                "json": ["password"]
+            }
+        },
+        "user.passwordHash": {
+            "ko": "비밀번호 해시",
+            "en": "password hash",
+            "meaning": "저장 가능한 형태로 해시된 비밀번호.",
+            "names": {
+                "field": ["passwordHash"],
+                "column": ["password_hash"]
+            }
+        }
+    }
+}

@@ -9,6 +9,7 @@ const workspaceRoot = path.resolve(backendRoot, '..');
 const docsRoot = path.join(workspaceRoot, 'docs', 'requirements');
 const outputDir = path.join(backendRoot, 'build', 'harness');
 const sourceIndexPath = path.join(outputDir, 'source-index.json');
+const terminologyReportPath = path.join(outputDir, 'terminology-report.json');
 const testResultRoots = [
     path.join(backendRoot, 'target', 'surefire-reports'),
     path.join(backendRoot, 'build', 'test-results', 'test')
@@ -96,6 +97,80 @@ function readSourceIndex() {
     };
 }
 
+function readTerminologyReport() {
+    if (!fs.existsSync(terminologyReportPath)) {
+        return null;
+    }
+    try {
+        return JSON.parse(fs.readFileSync(terminologyReportPath, 'utf8'));
+    } catch (err) {
+        return null;
+    }
+}
+
+function emptyTerminologyCounts() {
+    return { error: 0, warning: 0, strictError: 0, byKind: {} };
+}
+
+function tallyFindings(findings) {
+    const counts = emptyTerminologyCounts();
+    for (const finding of findings) {
+        if (finding.severity === 'error') counts.error++;
+        else if (finding.severity === 'warning') counts.warning++;
+        if (finding.strictSeverity === 'error') counts.strictError++;
+        counts.byKind[finding.kind] = (counts.byKind[finding.kind] || 0) + 1;
+    }
+    return counts;
+}
+
+function bucketTerminologyFindings(report, knownIds) {
+    if (!report) {
+        return { present: false, perRequirement: new Map(), unattributed: [], totals: emptyTerminologyCounts(), mode: null, generatedAt: null };
+    }
+    const perRequirement = new Map();
+    const unattributed = [];
+    for (const finding of report.findings || []) {
+        const attributed = (finding.requirements || []).filter((req) => knownIds.has(req));
+        if (attributed.length === 0) {
+            unattributed.push(finding);
+            continue;
+        }
+        for (const reqId of attributed) {
+            if (!perRequirement.has(reqId)) {
+                perRequirement.set(reqId, []);
+            }
+            perRequirement.get(reqId).push(finding);
+        }
+    }
+    return {
+        present: true,
+        perRequirement,
+        unattributed,
+        totals: tallyFindings(report.findings || []),
+        mode: report.mode || null,
+        generatedAt: report.generatedAt || null
+    };
+}
+
+function formatFindingLocation(finding) {
+    const loc = finding.location || {};
+    const parts = [];
+    if (loc.file) parts.push(loc.line ? `${loc.file}:${loc.line}` : loc.file);
+    if (loc.channel) parts.push(`[${loc.channel}]`);
+    return parts.join(' ');
+}
+
+function formatFindingLine(finding) {
+    const sev = finding.severity === finding.strictSeverity
+        ? finding.severity
+        : `${finding.severity}/strict:${finding.strictSeverity}`;
+    const term = finding.term ? ` ${finding.term}` : (finding.originTerms ? ` (${finding.originTerms.join(', ')})` : '');
+    const surface = finding.surface ? ` "${finding.surface}"` : '';
+    const candidates = finding.candidates ? ` → ${finding.candidates.join(', ')}` : '';
+    const loc = formatFindingLocation(finding);
+    return `- [${sev}] ${finding.kind}${term}${surface}${candidates}${loc ? ' — ' + loc : ''}`;
+}
+
 function readTestResults() {
     const results = new Map();
     for (const file of testResultRoots.flatMap((root) => walk(root, (candidate) => candidate.endsWith('.xml')))) {
@@ -142,6 +217,17 @@ function statusForCriterion(criterion, tests, results) {
         return { status: 'NOT_RUN', tests: testStatuses };
     }
     return { status: 'PASS', tests: testStatuses };
+}
+
+function attachTerminology(requirement, bucket) {
+    const findings = bucket.perRequirement.get(requirement.id) || [];
+    return {
+        ...requirement,
+        terminology: {
+            findings,
+            counts: tallyFindings(findings)
+        }
+    };
 }
 
 function evaluateRequirement(card, apis, tests, entities, results) {
@@ -203,9 +289,12 @@ function evaluateRequirement(card, apis, tests, entities, results) {
     };
 }
 
-function buildModel(cards, apis, tests, entities, results) {
+function buildModel(cards, apis, tests, entities, results, terminologyReport) {
     const knownRequirementIds = new Set(cards.map((card) => card.id));
-    const requirements = cards.map((card) => evaluateRequirement(card, apis, tests, entities, results));
+    const terminologyBucket = bucketTerminologyFindings(terminologyReport, knownRequirementIds);
+    const requirements = cards
+        .map((card) => evaluateRequirement(card, apis, tests, entities, results))
+        .map((req) => attachTerminology(req, terminologyBucket));
     const hasUnknown = (refs) => refs.length === 0 || refs.some((ref) => !knownRequirementIds.has(ref));
     const unknownApis = apis.filter((api) => hasUnknown(api.requirements));
     const unknownTests = tests.filter((test) => hasUnknown(test.requirements));
@@ -233,8 +322,22 @@ function buildModel(cards, apis, tests, entities, results) {
         requirements,
         unknownApis,
         unknownTests,
-        unknownEntities
+        unknownEntities,
+        terminology: {
+            present: terminologyBucket.present,
+            mode: terminologyBucket.mode,
+            generatedAt: terminologyBucket.generatedAt,
+            totals: terminologyBucket.totals,
+            unattributed: terminologyBucket.unattributed
+        }
     };
+}
+
+function formatCountsLine(counts) {
+    const byKindStr = Object.keys(counts.byKind).length === 0
+        ? ''
+        : ` (by kind: ${Object.entries(counts.byKind).map(([k, v]) => `${k}=${v}`).join(', ')})`;
+    return `Findings: error=${counts.error}, warning=${counts.warning}, strictError=${counts.strictError}${byKindStr}`;
 }
 
 function buildMarkdown(model) {
@@ -248,6 +351,16 @@ function buildMarkdown(model) {
     lines.push(`- Unknown API references: ${model.summary.unknownApis}`);
     lines.push(`- Unknown test references: ${model.summary.unknownTests}`);
     lines.push(`- Unknown entity references: ${model.summary.unknownEntities}`);
+    if (model.terminology.present) {
+        const t = model.terminology;
+        lines.push(`- Terminology mode: ${t.mode}`);
+        lines.push(`- Terminology findings: error=${t.totals.error}, warning=${t.totals.warning}, strictError=${t.totals.strictError}`);
+        if (t.totals.strictError > 0) {
+            lines.push(`  (잠재 strict 실패 ${t.totals.strictError}건 — validateHarness 판정에는 영향 없음. validateTerminologyStrict로 별도 검증.)`);
+        }
+    } else {
+        lines.push('- Terminology report: 없음 (`./gradlew validateTerminology` 실행 필요)');
+    }
     lines.push('');
 
     for (const requirement of model.requirements) {
@@ -304,6 +417,19 @@ function buildMarkdown(model) {
             }
         }
         lines.push('');
+
+        if (model.terminology.present) {
+            lines.push('### Terminology', '');
+            const t = requirement.terminology;
+            lines.push(formatCountsLine(t.counts));
+            if (t.findings.length > 0) {
+                lines.push('');
+                for (const finding of t.findings) {
+                    lines.push(formatFindingLine(finding));
+                }
+            }
+            lines.push('');
+        }
     }
 
     const formatUnknownRefs = (refs) => {
@@ -344,6 +470,16 @@ function buildMarkdown(model) {
         lines.push('');
     }
 
+    if (model.terminology.present && model.terminology.unattributed.length > 0) {
+        lines.push('## Unattributed Terminology Findings', '');
+        lines.push(formatCountsLine(tallyFindings(model.terminology.unattributed)));
+        lines.push('');
+        for (const finding of model.terminology.unattributed) {
+            lines.push(formatFindingLine(finding));
+        }
+        lines.push('');
+    }
+
     return lines.join('\n');
 }
 
@@ -353,7 +489,8 @@ const apis = sourceIndex.apis;
 const tests = sourceIndex.tests;
 const entities = sourceIndex.entities;
 const results = readTestResults();
-const model = buildModel(cards, apis, tests, entities, results);
+const terminologyReport = readTerminologyReport();
+const model = buildModel(cards, apis, tests, entities, results, terminologyReport);
 const markdown = buildMarkdown(model);
 
 fs.mkdirSync(outputDir, { recursive: true });

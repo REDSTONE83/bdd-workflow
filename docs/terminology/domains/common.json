@@ -1,0 +1,55 @@
+{
+    "$schema": "../schema.json",
+    "note": "공통 인프라 명칭. 도메인 무관하게 자주 쓰이는 식별자/필드를 등록해 UNREGISTERED_CODE_NAME 잡음을 줄인다.",
+    "terms": {
+        "common.id": {
+            "ko": "식별자",
+            "en": "id",
+            "meaning": "엔티티를 고유하게 가리키는 데이터베이스 식별자.",
+            "names": {
+                "field": ["id"],
+                "column": ["id"],
+                "json": ["id"]
+            }
+        },
+        "common.code": {
+            "ko": "코드",
+            "en": "code",
+            "meaning": "오류 분류나 상태를 나타내는 짧은 식별 문자열.",
+            "allow": ["오류 코드"],
+            "names": {
+                "field": ["code"],
+                "json": ["code"]
+            }
+        },
+        "common.message": {
+            "ko": "메시지",
+            "en": "message",
+            "meaning": "사용자나 호출자에게 전달되는 설명 문자열.",
+            "allow": ["오류 메시지"],
+            "names": {
+                "field": ["message"],
+                "json": ["message"]
+            }
+        },
+        "common.field": {
+            "ko": "필드",
+            "en": "field",
+            "meaning": "검증 오류가 발생한 입력 필드의 이름.",
+            "allow": ["오류가 발생한 필드"],
+            "names": {
+                "field": ["field"],
+                "json": ["field"]
+            }
+        },
+        "common.apiError": {
+            "ko": "API 오류 응답",
+            "en": "API error response",
+            "meaning": "검증 실패나 비즈니스 오류를 호출자에게 전달하는 응답 본문 구조.",
+            "allow": ["API 오류"],
+            "names": {
+                "java": ["ApiError"]
+            }
+        }
+    }
+}

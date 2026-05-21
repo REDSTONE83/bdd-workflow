@@ -15,6 +15,17 @@
 - 이미 등록된 이메일은 다시 사용할 수 없다.
 - 비밀번호는 최소 8자 이상이어야 한다.
 
+## 표준 용어
+
+- account.signup
+- account.duplicateEmail
+- user.account
+- user.id
+- user.name
+- user.email
+- user.password
+- user.passwordHash
+
 ## 제외 범위
 
 - 소셜 로그인

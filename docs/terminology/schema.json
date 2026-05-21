@@ -1,0 +1,94 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://example.com/bdd-workflow/terminology.schema.json",
+    "title": "BDD Workflow Terminology",
+    "description": "용어 정의 파일 스키마. domains/*.json과 draft.json 모두 동일한 구조를 사용한다.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["terms"],
+    "properties": {
+        "$schema": {
+            "type": "string",
+            "description": "JSON Schema 참조 경로. IDE 자동완성에 사용된다."
+        },
+        "note": {
+            "type": "string",
+            "description": "파일 단위 메모. 운영 메타데이터로만 쓰이며 검증 대상이 아니다."
+        },
+        "terms": {
+            "type": "object",
+            "description": "용어 사전. 키는 {domain}.{concept}[.{subConcept}] 형식의 안정 식별자이다.",
+            "propertyNames": {
+                "pattern": "^[a-z][a-zA-Z0-9]*(\\.[a-z][a-zA-Z0-9]*){1,2}$"
+            },
+            "additionalProperties": {
+                "$ref": "#/$defs/term"
+            }
+        }
+    },
+    "$defs": {
+        "term": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ko", "en", "meaning"],
+            "properties": {
+                "ko": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "정식 한국어 표기. 자동으로 전역 allow surface에 포함된다."
+                },
+                "en": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "정식 영어 표기. 자동으로 전역 allow surface에 포함된다."
+                },
+                "meaning": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "용어의 의미. ban 검사 대상에서 제외된다."
+                },
+                "allow": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "uniqueItems": true,
+                    "default": [],
+                    "description": "허용 동의어. 전역 allow surface에 추가된다."
+                },
+                "ban": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "uniqueItems": true,
+                    "default": [],
+                    "description": "금지 표현. 검사 텍스트에서 매치되면 BAN_VIOLATION. 단, allow surface 범위 안에 완전히 포함되면 무시된다."
+                },
+                "names": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "코드/스키마에서 사용하는 명칭. 카테고리는 enum으로 고정된다.",
+                    "properties": {
+                        "java":   { "$ref": "#/$defs/nameList", "description": "class / record / interface 이름" },
+                        "method": { "$ref": "#/$defs/nameList", "description": "method 이름 (record accessor 포함)" },
+                        "field":  { "$ref": "#/$defs/nameList", "description": "인스턴스 field 및 record component" },
+                        "column": { "$ref": "#/$defs/nameList", "description": "DB 컬럼" },
+                        "table":  { "$ref": "#/$defs/nameList", "description": "DB 테이블" },
+                        "json":   { "$ref": "#/$defs/nameList", "description": "JSON 필드" },
+                        "path":   { "$ref": "#/$defs/nameList", "description": "URL path segment. 단/복수 자동 추론 없음. 실제 사용되는 segment만 등록한다." }
+                    }
+                },
+                "note": {
+                    "type": "string",
+                    "description": "용어 운영 메모. 검증 대상이 아니다."
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "이 표기를 선택한 이유. 검증 대상이 아니다."
+                }
+            }
+        },
+        "nameList": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+        }
+    }
+}

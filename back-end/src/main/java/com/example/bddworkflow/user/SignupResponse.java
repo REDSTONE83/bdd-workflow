@@ -1,7 +1,9 @@
 package com.example.bddworkflow.user;
 
+import com.example.bddworkflow.harness.Requirement;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+@Requirement("REQ-001")
 @Schema(description = "회원 가입 응답")
 public record SignupResponse(
         @Schema(description = "생성된 사용자 ID", example = "1")

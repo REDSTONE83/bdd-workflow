@@ -1,0 +1,26 @@
+{
+    "$schema": "../schema.json",
+    "note": "계정 가입 행위 도메인. 회원 가입 흐름과 관련된 행위/예외를 등록한다.",
+    "terms": {
+        "account.signup": {
+            "ko": "회원 가입",
+            "en": "signup",
+            "meaning": "신규 사용자가 이메일과 비밀번호로 계정을 생성하는 행위.",
+            "allow": ["가입", "계정 생성"],
+            "names": {
+                "java": ["SignupRequest", "SignupResponse"],
+                "method": ["signup"],
+                "path": ["signup"]
+            },
+            "note": "행위 동의어는 표준어/허용어로 관리하고 ban은 두지 않는다. 가입 요청/응답 DTO는 행위 단위로 account.signup 산하에 둔다."
+        },
+        "account.duplicateEmail": {
+            "ko": "중복 이메일",
+            "en": "duplicate email",
+            "meaning": "이미 등록된 이메일로 가입을 시도하는 상태.",
+            "names": {
+                "java": ["DuplicateEmailException"]
+            }
+        }
+    }
+}

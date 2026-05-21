@@ -13,6 +13,12 @@
 
 - 포함할 동작을 작성한다.
 
+## 표준 용어
+
+- domain.concept
+
+`docs/terminology/`에 정의된 term key만 적는다. 검색은 `node back-end/tools/terminology.mjs search <표현>`을 사용한다. 새 용어가 필요하면 `docs/terminology/draft.json`에 후보를 추가한 뒤 key를 적는다. draft 상태는 `validateHarness`(safe)는 통과하지만 `validateTerminologyStrict`에서는 error로 잡힌다.
+
 ## 제외 범위
 
 - 이번 요건에서 제외할 동작을 작성한다.

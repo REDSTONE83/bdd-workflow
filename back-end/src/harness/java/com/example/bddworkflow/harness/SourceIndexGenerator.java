@@ -3,9 +3,12 @@ package com.example.bddworkflow.harness;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.Parameter;
+import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.ArrayInitializerExpr;
@@ -18,6 +21,7 @@ import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
+import com.github.javaparser.ast.expr.TextBlockLiteralExpr;
 import com.github.javaparser.ast.nodeTypes.NodeWithAnnotations;
 import com.github.javaparser.ast.type.Type;
 
@@ -33,7 +37,20 @@ import java.util.stream.Stream;
 
 public class SourceIndexGenerator {
 
-    private record ApiEntry(List<String> requirements, String http, String controller, String file) {
+    private record ApiEntry(
+            List<String> requirements,
+            String http,
+            String controller,
+            String file,
+            String operationSummary,
+            int operationSummaryLine,
+            String operationDescription,
+            int operationDescriptionLine,
+            List<ResponseEntry> responses
+    ) {
+    }
+
+    private record ResponseEntry(String responseCode, String description, int line) {
     }
 
     private record TestEntry(
@@ -69,6 +86,29 @@ public class SourceIndexGenerator {
     ) {
     }
 
+    private record DtoField(String name, String javaType, String schemaDescription, int line) {
+    }
+
+    private record DtoEntry(
+            List<String> requirements,
+            String className,
+            String file,
+            String schemaDescription,
+            int schemaLine,
+            List<DtoField> fields
+    ) {
+    }
+
+    private record TextChannel(
+            String channel,
+            String content,
+            String file,
+            int line,
+            String source,
+            List<String> requirements
+    ) {
+    }
+
     private record Mapping(String method, String path) {
     }
 
@@ -88,27 +128,33 @@ public class SourceIndexGenerator {
 
         List<ApiEntry> apis = new ArrayList<>();
         List<EntityEntry> entities = new ArrayList<>();
-        readMain(workspaceRoot, mainJavaRoot, apis, entities);
-        List<TestEntry> tests = readTests(workspaceRoot, testJavaRoot);
+        List<DtoEntry> dtos = new ArrayList<>();
+        List<TextChannel> textChannels = new ArrayList<>();
+        readMain(workspaceRoot, mainJavaRoot, apis, entities, dtos, textChannels);
+        List<TestEntry> tests = readTests(workspaceRoot, testJavaRoot, textChannels);
 
         Files.createDirectories(outputFile.getParent());
-        Files.writeString(outputFile, toJson(apis, tests, entities), StandardCharsets.UTF_8);
+        Files.writeString(outputFile, toJson(apis, tests, entities, dtos, textChannels), StandardCharsets.UTF_8);
     }
 
     private static void readMain(
             Path workspaceRoot,
             Path mainJavaRoot,
             List<ApiEntry> apis,
-            List<EntityEntry> entities
+            List<EntityEntry> entities,
+            List<DtoEntry> dtos,
+            List<TextChannel> textChannels
     ) throws IOException {
         for (Path file : javaFiles(mainJavaRoot)) {
             CompilationUnit unit = StaticJavaParser.parse(file);
+            String relativeFile = relative(workspaceRoot, file);
+
             for (ClassOrInterfaceDeclaration type : unit.findAll(ClassOrInterfaceDeclaration.class)) {
                 String className = type.getNameAsString();
                 List<String> classRequirements = requirementValues(type);
 
                 if (hasAnnotation(type, "Entity")) {
-                    entities.add(buildEntity(type, className, classRequirements, relative(workspaceRoot, file)));
+                    entities.add(buildEntity(type, className, classRequirements, relativeFile));
                 }
 
                 String basePath = annotation(type, "RequestMapping")
@@ -121,7 +167,7 @@ public class SourceIndexGenerator {
                         throw new IllegalStateException(
                                 "Method-level @RequestMapping must declare method=...: "
                                         + className + "." + method.getNameAsString()
-                                        + " in " + relative(workspaceRoot, file)
+                                        + " in " + relativeFile
                         );
                     }
                     if (mapping.isEmpty()) {
@@ -133,13 +179,154 @@ public class SourceIndexGenerator {
                         continue;
                     }
 
+                    String controller = className + "." + method.getNameAsString();
+                    String operationSummary = "";
+                    int operationSummaryLine = 0;
+                    String operationDescription = "";
+                    int operationDescriptionLine = 0;
+                    Optional<AnnotationExpr> operation = annotation(method, "Operation");
+                    if (operation.isPresent()) {
+                        AnnotationExpr op = operation.get();
+                        Optional<Expression> summaryExpr = memberValue(op, "summary");
+                        if (summaryExpr.isPresent()) {
+                            operationSummary = firstString(summaryExpr.get());
+                            operationSummaryLine = lineOf(summaryExpr.get());
+                            if (!operationSummary.isEmpty()) {
+                                textChannels.add(new TextChannel(
+                                        "@Operation.summary",
+                                        operationSummary,
+                                        relativeFile,
+                                        operationSummaryLine,
+                                        controller,
+                                        requirements
+                                ));
+                            }
+                        }
+                        Optional<Expression> descriptionExpr = memberValue(op, "description");
+                        if (descriptionExpr.isPresent()) {
+                            operationDescription = firstString(descriptionExpr.get());
+                            operationDescriptionLine = lineOf(descriptionExpr.get());
+                            if (!operationDescription.isEmpty()) {
+                                textChannels.add(new TextChannel(
+                                        "@Operation.description",
+                                        operationDescription,
+                                        relativeFile,
+                                        operationDescriptionLine,
+                                        controller,
+                                        requirements
+                                ));
+                            }
+                        }
+                    }
+
+                    List<ResponseEntry> responses = new ArrayList<>();
+                    for (AnnotationExpr apiResponse : collectApiResponses(method)) {
+                        String responseCode = memberValue(apiResponse, "responseCode")
+                                .map(SourceIndexGenerator::firstString)
+                                .orElse("");
+                        Optional<Expression> descExpr = memberValue(apiResponse, "description");
+                        String description = descExpr.map(SourceIndexGenerator::firstString).orElse("");
+                        int line = descExpr.map(SourceIndexGenerator::lineOf).orElse(lineOf(apiResponse));
+                        responses.add(new ResponseEntry(responseCode, description, line));
+                        if (!description.isEmpty()) {
+                            textChannels.add(new TextChannel(
+                                    "@ApiResponse.description",
+                                    description,
+                                    relativeFile,
+                                    line,
+                                    controller + "#" + (responseCode.isEmpty() ? "?" : responseCode),
+                                    requirements
+                            ));
+                        }
+                    }
+
                     apis.add(new ApiEntry(
                             requirements,
                             mapping.get().method() + " " + joinPaths(basePath, mapping.get().path()),
-                            className + "." + method.getNameAsString(),
-                            relative(workspaceRoot, file)
+                            controller,
+                            relativeFile,
+                            operationSummary,
+                            operationSummaryLine,
+                            operationDescription,
+                            operationDescriptionLine,
+                            responses
                     ));
                 }
+            }
+
+            for (RecordDeclaration record : unit.findAll(RecordDeclaration.class)) {
+                String className = record.getNameAsString();
+                List<String> classRequirements = requirementValues(record);
+
+                Optional<AnnotationExpr> classSchema = annotation(record, "Schema");
+                String classSchemaDescription = "";
+                int classSchemaLine = 0;
+                if (classSchema.isPresent()) {
+                    Optional<Expression> descExpr = memberValue(classSchema.get(), "description");
+                    if (descExpr.isPresent()) {
+                        classSchemaDescription = firstString(descExpr.get());
+                        classSchemaLine = lineOf(descExpr.get());
+                    }
+                }
+
+                List<DtoField> fields = new ArrayList<>();
+                boolean anyComponentSchema = false;
+                for (Parameter parameter : record.getParameters()) {
+                    String parameterName = parameter.getNameAsString();
+                    Type parameterType = parameter.getType();
+                    String javaType = parameterType.isClassOrInterfaceType()
+                            ? parameterType.asClassOrInterfaceType().getNameAsString()
+                            : parameterType.asString();
+                    Optional<AnnotationExpr> paramSchema = annotation(parameter, "Schema");
+                    String fieldSchemaDescription = "";
+                    int fieldSchemaLine = lineOf(parameter);
+                    if (paramSchema.isPresent()) {
+                        anyComponentSchema = true;
+                        Optional<Expression> descExpr = memberValue(paramSchema.get(), "description");
+                        if (descExpr.isPresent()) {
+                            fieldSchemaDescription = firstString(descExpr.get());
+                            fieldSchemaLine = lineOf(descExpr.get());
+                        }
+                    }
+                    fields.add(new DtoField(parameterName, javaType, fieldSchemaDescription, fieldSchemaLine));
+                }
+
+                boolean isDto = classSchema.isPresent() || anyComponentSchema;
+                if (!isDto) {
+                    continue;
+                }
+
+                if (!classSchemaDescription.isEmpty()) {
+                    textChannels.add(new TextChannel(
+                            "@Schema.description",
+                            classSchemaDescription,
+                            relativeFile,
+                            classSchemaLine,
+                            className,
+                            classRequirements
+                    ));
+                }
+                for (DtoField field : fields) {
+                    if (!field.schemaDescription().isEmpty()) {
+                        textChannels.add(new TextChannel(
+                                "@Schema.description",
+                                field.schemaDescription(),
+                                relativeFile,
+                                field.line(),
+                                className + "." + field.name(),
+                                classRequirements
+                        ));
+                    }
+                }
+
+                dtos.add(new DtoEntry(
+                        classRequirements,
+                        className,
+                        relativeFile,
+                        classSchemaDescription,
+                        classSchemaLine,
+                        fields
+                ));
             }
         }
     }
@@ -209,10 +396,15 @@ public class SourceIndexGenerator {
         return new EntityEntry(classRequirements, className, table, columns, file);
     }
 
-    private static List<TestEntry> readTests(Path workspaceRoot, Path testJavaRoot) throws IOException {
+    private static List<TestEntry> readTests(
+            Path workspaceRoot,
+            Path testJavaRoot,
+            List<TextChannel> textChannels
+    ) throws IOException {
         List<TestEntry> tests = new ArrayList<>();
         for (Path file : javaFiles(testJavaRoot)) {
             CompilationUnit unit = StaticJavaParser.parse(file);
+            String relativeFile = relative(workspaceRoot, file);
             for (ClassOrInterfaceDeclaration type : unit.findAll(ClassOrInterfaceDeclaration.class)) {
                 String className = type.getNameAsString();
                 List<String> classRequirements = requirementValues(type);
@@ -224,11 +416,13 @@ public class SourceIndexGenerator {
                     }
 
                     List<String> covers = new ArrayList<>();
-                    annotation(method, "Covers")
+                    Optional<AnnotationExpr> coversAnnotation = annotation(method, "Covers");
+                    coversAnnotation
                             .map(SourceIndexGenerator::stringValues)
                             .ifPresent(covers::addAll);
 
-                    String displayName = annotation(method, "DisplayName")
+                    Optional<AnnotationExpr> displayAnnotation = annotation(method, "DisplayName");
+                    String displayName = displayAnnotation
                             .map(SourceIndexGenerator::stringValues)
                             .flatMap(values -> values.stream().findFirst())
                             .orElse("");
@@ -237,19 +431,71 @@ public class SourceIndexGenerator {
                     }
 
                     String methodName = method.getNameAsString();
+                    String identity = className + "." + methodName;
                     tests.add(new TestEntry(
                             requirements,
                             className,
                             methodName,
-                            className + "." + methodName,
+                            identity,
                             displayName,
                             covers,
-                            relative(workspaceRoot, file)
+                            relativeFile
                     ));
+
+                    if (coversAnnotation.isPresent()) {
+                        int coversLine = lineOf(coversAnnotation.get());
+                        for (String coversValue : covers) {
+                            textChannels.add(new TextChannel(
+                                    "@Covers",
+                                    coversValue,
+                                    relativeFile,
+                                    coversLine,
+                                    identity,
+                                    requirements
+                            ));
+                        }
+                    }
+                    if (displayAnnotation.isPresent() && !displayName.isBlank()) {
+                        textChannels.add(new TextChannel(
+                                "@DisplayName",
+                                displayName,
+                                relativeFile,
+                                lineOf(displayAnnotation.get()),
+                                identity,
+                                requirements
+                        ));
+                    }
                 }
             }
         }
         return tests;
+    }
+
+    private static List<AnnotationExpr> collectApiResponses(MethodDeclaration method) {
+        List<AnnotationExpr> responses = new ArrayList<>();
+        annotation(method, "ApiResponses").ifPresent(wrapper -> {
+            Expression value = null;
+            if (wrapper instanceof SingleMemberAnnotationExpr single) {
+                value = single.getMemberValue();
+            } else if (wrapper instanceof NormalAnnotationExpr normal) {
+                value = normal.getPairs().stream()
+                        .filter(pair -> pair.getNameAsString().equals("value"))
+                        .map(MemberValuePair::getValue)
+                        .findFirst()
+                        .orElse(null);
+            }
+            if (value instanceof ArrayInitializerExpr array) {
+                for (Expression element : array.getValues()) {
+                    if (element instanceof AnnotationExpr annotation) {
+                        responses.add(annotation);
+                    }
+                }
+            } else if (value instanceof AnnotationExpr annotation) {
+                responses.add(annotation);
+            }
+        });
+        annotation(method, "ApiResponse").ifPresent(responses::add);
+        return responses;
     }
 
     private static List<Path> javaFiles(Path root) throws IOException {
@@ -397,6 +643,10 @@ public class SourceIndexGenerator {
             return List.of(stringLiteral.getValue());
         }
 
+        if (expression instanceof TextBlockLiteralExpr textBlock) {
+            return List.of(textBlock.asString());
+        }
+
         if (expression instanceof ArrayInitializerExpr arrayInitializer) {
             return arrayInitializer.getValues().stream()
                     .flatMap(value -> stringValues(value).stream())
@@ -404,6 +654,15 @@ public class SourceIndexGenerator {
         }
 
         return List.of();
+    }
+
+    private static String firstString(Expression expression) {
+        List<String> values = stringValues(expression);
+        return values.isEmpty() ? "" : values.get(0);
+    }
+
+    private static int lineOf(Node node) {
+        return node.getRange().map(range -> range.begin.line).orElse(0);
     }
 
     private static String joinPaths(String left, String right) {
@@ -445,9 +704,29 @@ public class SourceIndexGenerator {
         return builder.toString();
     }
 
-    private static String toJson(List<ApiEntry> apis, List<TestEntry> tests, List<EntityEntry> entities) {
+    private static String toJson(
+            List<ApiEntry> apis,
+            List<TestEntry> tests,
+            List<EntityEntry> entities,
+            List<DtoEntry> dtos,
+            List<TextChannel> textChannels
+    ) {
         StringBuilder builder = new StringBuilder();
         builder.append("{\n");
+        appendApis(builder, apis);
+        builder.append(",\n");
+        appendTests(builder, tests);
+        builder.append(",\n");
+        appendEntities(builder, entities);
+        builder.append(",\n");
+        appendDtos(builder, dtos);
+        builder.append(",\n");
+        appendTextChannels(builder, textChannels);
+        builder.append("\n}\n");
+        return builder.toString();
+    }
+
+    private static void appendApis(StringBuilder builder, List<ApiEntry> apis) {
         builder.append("  \"apis\": [\n");
         for (int i = 0; i < apis.size(); i++) {
             ApiEntry api = apis.get(i);
@@ -455,11 +734,30 @@ public class SourceIndexGenerator {
             builder.append("      \"requirements\": ").append(jsonArray(api.requirements())).append(",\n");
             builder.append("      \"http\": ").append(json(api.http())).append(",\n");
             builder.append("      \"controller\": ").append(json(api.controller())).append(",\n");
-            builder.append("      \"file\": ").append(json(api.file())).append("\n");
+            builder.append("      \"file\": ").append(json(api.file())).append(",\n");
+            builder.append("      \"operationSummary\": ").append(json(api.operationSummary())).append(",\n");
+            builder.append("      \"operationSummaryLine\": ").append(api.operationSummaryLine()).append(",\n");
+            builder.append("      \"operationDescription\": ").append(json(api.operationDescription())).append(",\n");
+            builder.append("      \"operationDescriptionLine\": ").append(api.operationDescriptionLine()).append(",\n");
+            builder.append("      \"responses\": [\n");
+            List<ResponseEntry> responses = api.responses();
+            for (int j = 0; j < responses.size(); j++) {
+                ResponseEntry response = responses.get(j);
+                builder.append("        {\n");
+                builder.append("          \"responseCode\": ").append(json(response.responseCode())).append(",\n");
+                builder.append("          \"description\": ").append(json(response.description())).append(",\n");
+                builder.append("          \"line\": ").append(response.line()).append("\n");
+                builder.append("        }");
+                builder.append(j + 1 < responses.size() ? "," : "").append("\n");
+            }
+            builder.append("      ]\n");
             builder.append("    }");
             builder.append(i + 1 < apis.size() ? "," : "").append("\n");
         }
-        builder.append("  ],\n");
+        builder.append("  ]");
+    }
+
+    private static void appendTests(StringBuilder builder, List<TestEntry> tests) {
         builder.append("  \"tests\": [\n");
         for (int i = 0; i < tests.size(); i++) {
             TestEntry test = tests.get(i);
@@ -474,7 +772,10 @@ public class SourceIndexGenerator {
             builder.append("    }");
             builder.append(i + 1 < tests.size() ? "," : "").append("\n");
         }
-        builder.append("  ],\n");
+        builder.append("  ]");
+    }
+
+    private static void appendEntities(StringBuilder builder, List<EntityEntry> entities) {
         builder.append("  \"entities\": [\n");
         for (int i = 0; i < entities.size(); i++) {
             EntityEntry entity = entities.get(i);
@@ -504,9 +805,53 @@ public class SourceIndexGenerator {
             builder.append("    }");
             builder.append(i + 1 < entities.size() ? "," : "").append("\n");
         }
-        builder.append("  ]\n");
-        builder.append("}\n");
-        return builder.toString();
+        builder.append("  ]");
+    }
+
+    private static void appendDtos(StringBuilder builder, List<DtoEntry> dtos) {
+        builder.append("  \"dtos\": [\n");
+        for (int i = 0; i < dtos.size(); i++) {
+            DtoEntry dto = dtos.get(i);
+            builder.append("    {\n");
+            builder.append("      \"requirements\": ").append(jsonArray(dto.requirements())).append(",\n");
+            builder.append("      \"className\": ").append(json(dto.className())).append(",\n");
+            builder.append("      \"file\": ").append(json(dto.file())).append(",\n");
+            builder.append("      \"schemaDescription\": ").append(json(dto.schemaDescription())).append(",\n");
+            builder.append("      \"schemaLine\": ").append(dto.schemaLine()).append(",\n");
+            builder.append("      \"fields\": [\n");
+            List<DtoField> fields = dto.fields();
+            for (int j = 0; j < fields.size(); j++) {
+                DtoField field = fields.get(j);
+                builder.append("        {\n");
+                builder.append("          \"name\": ").append(json(field.name())).append(",\n");
+                builder.append("          \"javaType\": ").append(json(field.javaType())).append(",\n");
+                builder.append("          \"schemaDescription\": ").append(json(field.schemaDescription())).append(",\n");
+                builder.append("          \"line\": ").append(field.line()).append("\n");
+                builder.append("        }");
+                builder.append(j + 1 < fields.size() ? "," : "").append("\n");
+            }
+            builder.append("      ]\n");
+            builder.append("    }");
+            builder.append(i + 1 < dtos.size() ? "," : "").append("\n");
+        }
+        builder.append("  ]");
+    }
+
+    private static void appendTextChannels(StringBuilder builder, List<TextChannel> textChannels) {
+        builder.append("  \"textChannels\": [\n");
+        for (int i = 0; i < textChannels.size(); i++) {
+            TextChannel channel = textChannels.get(i);
+            builder.append("    {\n");
+            builder.append("      \"channel\": ").append(json(channel.channel())).append(",\n");
+            builder.append("      \"content\": ").append(json(channel.content())).append(",\n");
+            builder.append("      \"file\": ").append(json(channel.file())).append(",\n");
+            builder.append("      \"line\": ").append(channel.line()).append(",\n");
+            builder.append("      \"source\": ").append(json(channel.source())).append(",\n");
+            builder.append("      \"requirements\": ").append(jsonArray(channel.requirements())).append("\n");
+            builder.append("    }");
+            builder.append(i + 1 < textChannels.size() ? "," : "").append("\n");
+        }
+        builder.append("  ]");
     }
 
     private static String jsonArray(List<String> values) {

@@ -1,10 +1,12 @@
 package com.example.bddworkflow.user;
 
+import com.example.bddworkflow.harness.Requirement;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+@Requirement("REQ-001")
 @Schema(description = "회원 가입 요청")
 public record SignupRequest(
         @Schema(description = "사용자 이름", example = "홍길동")

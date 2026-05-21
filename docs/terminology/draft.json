@@ -1,0 +1,17 @@
+{
+    "$schema": "./schema.json",
+    "note": "아직 도메인 합의가 끝나지 않은 후보 용어. 어느 카드도 참조하지 않으면 finding 0개로 termStatus만 표시된다. 카드의 표준 용어에 추가되면 DRAFT_TERM blue-blocker가 발생한다.",
+    "terms": {
+        "account.invitationCode": {
+            "ko": "초대 코드",
+            "en": "invitation code",
+            "meaning": "초대 기반 회원 가입에 사용하는 미확정 코드. 도입 여부와 발급/검증 정책이 아직 합의되지 않았다.",
+            "names": {
+                "field": ["invitationCode"],
+                "json": ["invitationCode"],
+                "column": ["invitation_code"]
+            },
+            "reason": "BLUE blocker 경로를 항상 살아 있게 하기 위한 샘플 draft term이다."
+        }
+    }
+}
