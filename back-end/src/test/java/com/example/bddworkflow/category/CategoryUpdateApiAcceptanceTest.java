@@ -6,10 +6,12 @@ import com.example.bddworkflow.category.repository.CategoryRepository;
 import com.example.bddworkflow.harness.AcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
+import com.example.bddworkflow.harness.TestJwt;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -26,7 +28,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Requirement("REQ-003")
 class CategoryUpdateApiAcceptanceTest {
 
-    private static final String USER_HEADER = "X-Authenticated-User-Id";
     private static final java.util.UUID USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-000000000064");
     private static final java.util.UUID OTHER_USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-0000000000c8");
 
@@ -55,7 +56,7 @@ class CategoryUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/categories/{id}", existing.id())
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
@@ -80,7 +81,7 @@ class CategoryUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/categories/{id}", existing.id())
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
@@ -105,7 +106,7 @@ class CategoryUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/categories/{id}", existing.id())
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
@@ -130,7 +131,7 @@ class CategoryUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/categories/{id}", existing.id())
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -153,7 +154,7 @@ class CategoryUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/categories/{id}", existing.id())
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -176,7 +177,7 @@ class CategoryUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/categories/{id}", existing.id())
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -198,7 +199,7 @@ class CategoryUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/categories/{id}", existing.id())
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -221,7 +222,7 @@ class CategoryUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/categories/{id}", existing.id())
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isConflict())
@@ -243,7 +244,7 @@ class CategoryUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/categories/{id}", missingId)
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isNotFound())
@@ -264,7 +265,7 @@ class CategoryUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/categories/{id}", othersCategory.id())
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isNotFound())

@@ -274,7 +274,7 @@ test/{domain}/
 {Feature}ApiAcceptanceTest.java
 ```
 
-테스트 클래스에는 `@AcceptanceTest`와 `@Requirement("REQ-000")`를 붙인다. 테스트 메서드는 수용 기준 문장을 `@Covers`에 그대로 사용하고, `@DisplayName`은 승인된 `docs/scenarios/REQ-XXX-*.feature`의 `Scenario:` 제목과 일치시킨다.
+테스트 클래스에는 `@AcceptanceTest`와 `@Requirement("REQ-000")`를 붙인다. 테스트 메서드는 수용 기준 문장을 `@Covers`에 그대로 사용하고, `@DisplayName`은 JUnit 표시용 자유 레이블로 작성한다.
 
 ## 생성 산출물
 
@@ -295,7 +295,7 @@ back-end/build/harness/schema-preview.sql
 
 ## 새 기능 추가 위치
 
-새 요건을 추가할 때는 다음 순서로 파일을 만든다. 시나리오 단위 Mock-up 승인 → BDD 테스트 작성 → 구현 순서다. 자세한 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
+새 요건을 추가할 때는 다음 순서로 파일을 만든다. 검증 설계 → 요건 Skeleton → 사용자 승인 → 실행 테스트 → 구현 → 검증 순서다. 자세한 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
 
 ```text
 docs/requirements/REQ-002-some-feature.md                                            # 요건 카드
@@ -310,7 +310,7 @@ back-end/src/main/java/com/example/bddworkflow/{domain}/repository/SomeRepositor
 back-end/src/test/java/com/example/bddworkflow/{domain}/SomeApiAcceptanceTest.java
 ```
 
-Mock-up 단계에는 시나리오 `.feature` + Controller/DTO/Entity 골격 + `previewSchema`까지만 만들고, BDD 테스트와 Service 업무 로직은 시나리오 승인 후 작성한다. DB 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과를 사용자에게 확인 받는다.
+Skeleton 단계에는 검증 설계(`.feature`) + Controller/DTO/Entity/Repository/Service 골격 + `previewSchema`까지만 만들고, 실행 테스트와 Service 업무 로직은 요건 Skeleton 승인 후 같은 요건에서 작성한다. 동작 설계는 Service/Controller 내부 코멘트로만 남긴다. DB 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과까지 포함해 사용자 승인을 받는다.
 
 ## 금지 사항
 

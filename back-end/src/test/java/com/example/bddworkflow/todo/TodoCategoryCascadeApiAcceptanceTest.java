@@ -9,10 +9,12 @@ import com.example.bddworkflow.category.repository.CategoryRepository;
 import com.example.bddworkflow.harness.AcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
+import com.example.bddworkflow.harness.TestJwt;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,7 +29,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Requirement("REQ-002")
 class TodoCategoryCascadeApiAcceptanceTest {
 
-    private static final String USER_HEADER = "X-Authenticated-User-Id";
     private static final java.util.UUID USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-000000000064");
 
     @Autowired
@@ -55,7 +56,7 @@ class TodoCategoryCascadeApiAcceptanceTest {
                 Priority.MEDIUM, false, category.id());
 
         // When: 카테고리를 삭제한다
-        mockMvc.perform(delete("/categories/{id}", category.id()).header(USER_HEADER, USER_ID))
+        mockMvc.perform(delete("/categories/{id}", category.id()).header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)))
                 .andExpect(status().isNoContent());
 
         // Then: 할 일은 그대로 존재하고, categoryId만 null로 해제된다

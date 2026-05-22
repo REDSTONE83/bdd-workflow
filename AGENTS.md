@@ -76,10 +76,10 @@ src/test/java/**/*AcceptanceTest.java
 3. 답변이 확정되면 그 내용을 `범위`/`제외 범위`/`수용 기준` 중 해당 위치에 반영하고, 정책 선택이 따로 필요한 결정은 `의사결정 로그`에 남긴다. 해당 항목은 `열린 질문`에서 제거한다.
 4. 표준 용어 검색/등록은 `node back-end/tools/terminology.mjs ...`로 한다 (`draft.json` 직접 편집 금지).
 5. 수용 기준을 검증 가능한 문장으로 정리한다.
-6. 시나리오 1개를 골라 `docs/scenarios/REQ-XXX-*.feature`에 Gherkin 시나리오를 추가하고, 컨트롤러/DTO/Entity는 Mock-up 골격(`previewSchema` 가능 수준)까지만 작성한다. 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과로 사용자 확인을 받는다.
-7. 시나리오 + API/DB Mock-up을 사용자에게 묶어 승인 요청한다. Mock-up 결과는 요건 카드의 `BDD 테스트 리뷰 > 시나리오 승인 이력`에 남긴다.
-8. 승인 후 `.feature`의 `Covers:` AC를 검증하는 Acceptance Test를 작성(한 시나리오에 입력 변형/경계값별 테스트 여러 개 가능)하고, Service 업무 로직과 컨트롤러 본문을 구현한다. `@Covers`는 카드 AC와 정확 일치, `@DisplayName`은 자유.
-9. BDD 테스트 코드 리뷰를 받는다. 다음 시나리오는 6번으로 돌아간다.
+6. 요건 하나를 선택해 검증 설계(`.feature` 시나리오 묶음)와 요건 Skeleton(API/DB/Service 골격)을 한 번에 작성한다. Controller/DTO/Entity/Repository/Service의 인터페이스와 계약에 집중하고, 업무 로직은 구현하지 않는다. 동작 설계는 Service/Controller 내부 코멘트로만 남긴다.
+7. Skeleton 단계에서 `compileJava`, `generateHarnessSourceIndex`, 필요 시 `previewSchema`, `traceRequirementCard -Preq=REQ-XXX`로 인터페이스와 추적 상태를 확인한다. 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과까지 포함해 사용자 승인을 받는다. 사용자 승인 결과는 요건 카드의 `BDD 테스트 리뷰 > 요건 Skeleton 승인 이력`에 남긴다.
+8. 승인된 같은 요건에 대해 `.feature`의 `Covers:` AC를 검증하는 실행 테스트(Acceptance Test)를 작성하고 Service 업무 로직과 컨트롤러 본문을 구현한다. `@Covers`는 카드 AC와 정확 일치, `@DisplayName`은 자유.
+9. BDD 테스트 코드 리뷰를 받는다.
 10. `./gradlew validateHarness`로 요건/표준 용어(safe)/API/Entity/테스트/결과 연결을 확인한다.
 11. 카드를 `승인`으로 올리거나 릴리스 전이라면 `./gradlew validateTerminologyStrict`로 strict error를 0으로 맞춘다.
 

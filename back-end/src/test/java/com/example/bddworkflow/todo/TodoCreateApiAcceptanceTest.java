@@ -8,10 +8,12 @@ import com.example.bddworkflow.category.repository.CategoryRepository;
 import com.example.bddworkflow.harness.AcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
+import com.example.bddworkflow.harness.TestJwt;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -28,7 +30,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Requirement("REQ-002")
 class TodoCreateApiAcceptanceTest {
 
-    private static final String USER_HEADER = "X-Authenticated-User-Id";
     private static final java.util.UUID USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-000000000064");
     private static final java.util.UUID OTHER_USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-0000000000c8");
 
@@ -63,7 +64,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -91,7 +92,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -117,7 +118,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -142,7 +143,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -167,7 +168,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -190,7 +191,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -216,7 +217,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated());
@@ -241,7 +242,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -264,7 +265,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -290,7 +291,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated());
@@ -315,7 +316,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -336,7 +337,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -359,7 +360,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -384,7 +385,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -409,7 +410,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -435,7 +436,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated());
@@ -461,7 +462,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -490,7 +491,7 @@ class TodoCreateApiAcceptanceTest {
 
         // When / Then: 타인 카테고리 ID는 INVALID_CATEGORY
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(foreignBody))
                 .andExpect(status().isBadRequest())
@@ -506,7 +507,7 @@ class TodoCreateApiAcceptanceTest {
                 }
                 """.formatted(missingCategoryId);
         mockMvc.perform(post("/todos")
-                        .header(USER_HEADER, USER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(missingBody))
                 .andExpect(status().isBadRequest())

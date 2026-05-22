@@ -5,6 +5,7 @@ import com.example.bddworkflow.category.repository.CategoryRepository;
 import com.example.bddworkflow.harness.AcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
+import com.example.bddworkflow.harness.TestJwt;
 import com.example.bddworkflow.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -29,7 +31,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Requirement("REQ-003")
 class CategoryDefaultSeedApiAcceptanceTest {
 
-    private static final String USER_HEADER = "X-Authenticated-User-Id";
 
     @Autowired
     private MockMvc mockMvc;
@@ -73,7 +74,7 @@ class CategoryDefaultSeedApiAcceptanceTest {
         String userId = signupJson.get("userId").asText();
 
         // Then
-        mockMvc.perform(get("/categories").header(USER_HEADER, userId))
+        mockMvc.perform(get("/categories").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(java.util.UUID.fromString(userId))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(3))
                 .andExpect(jsonPath("$.content[0].name").value("업무"))

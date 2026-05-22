@@ -12,7 +12,7 @@
 요건 카드
   REQ-001
   수용 기준 (AC, 카드 완료 여부 기계 판정)
-  시나리오 승인 이력 (BDD 테스트 리뷰 섹션 - Mock-up 결과)
+  요건 Skeleton 승인 이력 (BDD 테스트 리뷰 섹션 - Skeleton 결과)
 
 시나리오 문서 (Gherkin)
   docs/scenarios/REQ-001-*.feature
@@ -106,7 +106,7 @@ back-end/build/harness
 - 요건 카드 승인
 - 열린 질문 없음
 
-Mock-up 단계의 카드(시나리오 승인 전, `@Covers` 테스트 부재)는 정상적으로 RED로 표시된다. 이 시점에는 strict 게이트인 `validateHarness`를 돌리지 않고 `traceRequirements`나 `traceRequirementCard`로 현황만 본다. 작성 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
+Skeleton 단계의 카드(`@Covers` 테스트 부재)는 정상적으로 RED로 표시된다. 이 시점에는 strict 게이트인 `validateHarness`를 돌리지 않고 `compileJava`, `generateHarnessSourceIndex`, `previewSchema`, `traceRequirementCard`로 인터페이스와 현황만 본다. 작성 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
 
 ## 품질 게이트
 
@@ -132,8 +132,10 @@ cd back-end
 
 요건 카드는 사용자에게 질문하며 구체화한다. 질문은 기본적으로 한 번에 하나씩 진행하고, 아직 확정되지 않은 질문은 `열린 질문`에 둔다. 답변이 확정되면 그 내용을 `범위`/`제외 범위`/`수용 기준`/`의사결정 로그` 중 해당 위치에 반영하고 `열린 질문`에서 제거한 뒤 다음 질문으로 넘어간다.
 
-수용 기준이 확정되면 한 번에 전체 테스트로 가지 않고 **BDD 시나리오 1개 단위**로 잘라 진행한다. 시나리오마다 Gherkin `.feature` 문서 + API/DB Mock-up 코드 골격을 만들어 사용자 승인을 받는다. 승인된 시나리오의 `Covers:`에 포함된 AC를 검증하는 BDD 테스트와 구현으로 넘어가며, 한 시나리오에 입력 변형/경계값별 여러 테스트가 귀속되는 것이 일반적이다. 다음 시나리오는 다시 Mock-up 단계로 돌아간다.
+수용 기준이 확정되면 **요건 1개 단위**로 진행한다. 검증 설계(`.feature` 시나리오 묶음)와 요건 Skeleton(API/DB/Service 골격)을 한 번에 만들어 사용자 승인을 받는다. Skeleton 단계에서는 Controller/DTO/Entity/Repository/Service의 인터페이스와 계약에 집중하고, 업무 로직은 구현하지 않는다. 필요한 동작 설계는 Service/Controller 내부 코멘트로만 남긴다.
+
+사용자 승인을 받은 같은 요건은 승인된 `.feature`의 `Covers:`에 포함된 AC를 검증하는 실행 테스트와 실제 Service 업무 로직, 컨트롤러 본문을 작성한다. 한 시나리오에 입력 변형/경계값별 여러 테스트가 귀속되는 것이 일반적이다.
 
 테스트 코드 리뷰에서는 모든 수용 기준이 `@Covers`로 커버되는지, BDD 테스트의 `@Covers` AC가 같은 요건의 어떤 `.feature` 시나리오 `Covers:`에 포함되는지 (`TEST_COVERS_NO_SCENARIO_COVERS` WARNING 없음), 정상/예외/경계 조건이 충분한지, API 계약을 검증하는지 확인한다.
 
-요건 카드에는 API와 테스트 목록을 수기로 적지 않는다. 실제 연결은 JavaParser 기반 source index에서 추출해 `build/harness/source-index.json`, `build/harness/trace-report.md`, `build/harness/trace-report.json`에 기록한다. 시나리오 승인 이력만 사람이 카드의 `BDD 테스트 리뷰` 섹션에 남긴다.
+요건 카드에는 API와 테스트 목록을 수기로 적지 않는다. 실제 연결은 JavaParser 기반 source index에서 추출해 `build/harness/source-index.json`, `build/harness/trace-report.md`, `build/harness/trace-report.json`에 기록한다. 요건 Skeleton 승인 이력만 사람이 카드의 `BDD 테스트 리뷰` 섹션에 남긴다.

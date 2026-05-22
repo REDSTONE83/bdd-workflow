@@ -1,3 +1,12 @@
+app:
+  auth:
+    jwt:
+      # REQ-004: 로컬/테스트용 기본값. 운영 배포에서는 외부 설정으로 덮어쓴다.
+      secret: "local-development-only-secret-32bytes!!"
+      issuer: "bdd-workflow"
+      audience: "bdd-workflow-api"
+      clock-skew-seconds: 60
+
 spring:
   application:
     name: bdd-workflow-example

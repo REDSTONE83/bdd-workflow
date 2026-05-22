@@ -8,7 +8,6 @@ import com.example.bddworkflow.todo.dto.UpdateTodoRequest;
 import com.example.bddworkflow.common.ApiError;
 import com.example.bddworkflow.common.PageResponse;
 import com.example.bddworkflow.common.auth.AuthenticatedUser;
-import com.example.bddworkflow.common.auth.CurrentUser;
 import com.example.bddworkflow.harness.Requirement;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -19,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -36,11 +36,13 @@ import java.util.UUID;
 @RequestMapping("/todos")
 @Tag(name = "Todo")
 @RequiredArgsConstructor
+@ApiResponses(@ApiResponse(responseCode = "401", description = "인증 누락 또는 실패",
+        content = @Content(schema = @Schema(implementation = ApiError.class))))
 public class TodoController {
 
     private final TodoService todoService;
 
-    @Requirement("REQ-002")
+    @Requirement({"REQ-002", "REQ-004"})
     @Operation(
             summary = "할 일 생성",
             description = """
@@ -57,14 +59,14 @@ public class TodoController {
     })
     @PostMapping
     public ResponseEntity<TodoResponse> createTodo(
-            @CurrentUser AuthenticatedUser principal,
+            @AuthenticationPrincipal AuthenticatedUser principal,
             @Valid @RequestBody CreateTodoRequest request) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(todoService.createTodo(principal.id(), request));
     }
 
-    @Requirement("REQ-002")
+    @Requirement({"REQ-002", "REQ-004"})
     @Operation(
             summary = "할 일 목록 조회",
             description = """
@@ -79,12 +81,12 @@ public class TodoController {
     })
     @GetMapping
     public ResponseEntity<PageResponse<TodoResponse>> listTodos(
-            @CurrentUser AuthenticatedUser principal,
+            @AuthenticationPrincipal AuthenticatedUser principal,
             Pageable pageable) {
         return ResponseEntity.ok(todoService.listTodos(principal.id(), pageable));
     }
 
-    @Requirement("REQ-002")
+    @Requirement({"REQ-002", "REQ-004"})
     @Operation(
             summary = "할 일 수정",
             description = """
@@ -104,13 +106,13 @@ public class TodoController {
     })
     @PatchMapping("/{todoId}")
     public ResponseEntity<TodoResponse> updateTodo(
-            @CurrentUser AuthenticatedUser principal,
+            @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID todoId,
             @Valid @RequestBody UpdateTodoRequest body) {
         return ResponseEntity.ok(todoService.updateTodo(principal.id(), todoId, body));
     }
 
-    @Requirement("REQ-002")
+    @Requirement({"REQ-002", "REQ-004"})
     @Operation(
             summary = "할 일 삭제",
             description = """
@@ -126,7 +128,7 @@ public class TodoController {
     })
     @DeleteMapping("/{todoId}")
     public ResponseEntity<Void> deleteTodo(
-            @CurrentUser AuthenticatedUser principal,
+            @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID todoId) {
         todoService.deleteTodo(principal.id(), todoId);
         return ResponseEntity.noContent().build();

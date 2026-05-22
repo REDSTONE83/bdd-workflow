@@ -9,7 +9,6 @@ import com.example.bddworkflow.category.dto.UpdateCategoryRequest;
 import com.example.bddworkflow.common.ApiError;
 import com.example.bddworkflow.common.PageResponse;
 import com.example.bddworkflow.common.auth.AuthenticatedUser;
-import com.example.bddworkflow.common.auth.CurrentUser;
 import com.example.bddworkflow.harness.Requirement;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -20,6 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -37,11 +37,13 @@ import java.util.UUID;
 @RequestMapping("/categories")
 @Tag(name = "Category")
 @RequiredArgsConstructor
+@ApiResponses(@ApiResponse(responseCode = "401", description = "인증 누락 또는 실패",
+        content = @Content(schema = @Schema(implementation = ApiError.class))))
 public class CategoryController {
 
     private final CategoryService categoryService;
 
-    @Requirement("REQ-003")
+    @Requirement({"REQ-003", "REQ-004"})
     @Operation(
             summary = "카테고리 생성",
             description = """
@@ -60,14 +62,14 @@ public class CategoryController {
     })
     @PostMapping
     public ResponseEntity<CreateCategoryResponse> createCategory(
-            @CurrentUser AuthenticatedUser principal,
+            @AuthenticationPrincipal AuthenticatedUser principal,
             @Valid @RequestBody CreateCategoryRequest request) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(categoryService.createCategory(principal.id(), request));
     }
 
-    @Requirement("REQ-003")
+    @Requirement({"REQ-003", "REQ-004"})
     @Operation(
             summary = "카테고리 목록 조회",
             description = """
@@ -82,12 +84,12 @@ public class CategoryController {
     })
     @GetMapping
     public ResponseEntity<PageResponse<CategoryResponse>> listCategories(
-            @CurrentUser AuthenticatedUser principal,
+            @AuthenticationPrincipal AuthenticatedUser principal,
             Pageable pageable) {
         return ResponseEntity.ok(categoryService.listCategories(principal.id(), pageable));
     }
 
-    @Requirement("REQ-003")
+    @Requirement({"REQ-003", "REQ-004"})
     @Operation(
             summary = "카테고리 수정",
             description = """
@@ -109,13 +111,13 @@ public class CategoryController {
     })
     @PatchMapping("/{categoryId}")
     public ResponseEntity<CategoryResponse> updateCategory(
-            @CurrentUser AuthenticatedUser principal,
+            @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID categoryId,
             @Valid @RequestBody UpdateCategoryRequest body) {
         return ResponseEntity.ok(categoryService.updateCategory(principal.id(), categoryId, body));
     }
 
-    @Requirement("REQ-003")
+    @Requirement({"REQ-003", "REQ-004"})
     @Operation(
             summary = "카테고리 삭제",
             description = """
@@ -131,7 +133,7 @@ public class CategoryController {
     })
     @DeleteMapping("/{categoryId}")
     public ResponseEntity<Void> deleteCategory(
-            @CurrentUser AuthenticatedUser principal,
+            @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID categoryId) {
         categoryService.deleteCategory(principal.id(), categoryId);
         return ResponseEntity.noContent().build();
