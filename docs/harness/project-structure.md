@@ -23,6 +23,10 @@ bdd-workflow/
       api-contract.md
       persistence-schema.md
       acceptance-test.md
+      front-end-project-structure.md
+      front-end-api-contract.md
+      front-end-ui.md
+      front-end-testing.md
       id-policy.md
       datetime.md
       terminology.md
@@ -83,6 +87,33 @@ bdd-workflow/
         trace-report.md
         trace-report.json
         schema-preview.sql
+  front-end/
+    package.json
+    vite.config.ts
+    components.json
+    playwright.config.ts
+    .storybook/
+      main.ts
+      preview.ts
+    src/
+      main.tsx
+      App.tsx
+      index.css
+      api/
+      app/
+      components/
+        ui/
+      features/
+        {domain}/
+          components/
+          hooks/
+          pages/
+          routes.tsx
+          types.ts
+      lib/
+      test/
+    tests/
+      e2e/
 ```
 
 ## 루트
@@ -147,6 +178,10 @@ docs/standards/
 - `api-contract.md`: 컨트롤러/DTO/OpenAPI/전역 오류 응답
 - `persistence-schema.md`: JPA Entity와 schema preview
 - `acceptance-test.md`: Acceptance Test와 리뷰 체크리스트
+- `front-end-project-structure.md`: React/Vite/shadcn 기반 FE 폴더 구조
+- `front-end-api-contract.md`: OpenAPI 기반 FE API 연동 규칙
+- `front-end-ui.md`: shadcn/ui, Tailwind token, 반응형, 접근성, Storybook 상태 규칙
+- `front-end-testing.md`: FE TDD/BDD/Visual Regression/E2E 테스트 규칙
 - `terminology.md`: 표준 용어 safe/strict 게이트 운영
 
 ```text
@@ -245,6 +280,57 @@ harness/
 - 컨트롤러/DTO는 [`api-contract.md`](../standards/api-contract.md), Entity는 [`persistence-schema.md`](../standards/persistence-schema.md)를 따른다.
 - 식별자는 시간 정렬 UUID ([`id-policy.md`](../standards/id-policy.md)), 시각은 `Instant` UTC ([`datetime.md`](../standards/datetime.md)).
 
+## Front-end 소스 구조
+
+프런트엔드는 `front-end/` 아래 React/Vite/TypeScript 프로젝트로 둔다. 자세한 규칙은 [`front-end-project-structure.md`](../standards/front-end-project-structure.md), [`front-end-ui.md`](../standards/front-end-ui.md), [`front-end-api-contract.md`](../standards/front-end-api-contract.md)를 따른다.
+
+```text
+front-end/src/
+  app/
+  api/
+  components/
+    ui/
+  features/
+    {domain}/
+      components/
+      hooks/
+      pages/
+      routes.tsx
+      types.ts
+  lib/
+  test/
+```
+
+```text
+components/ui/
+```
+
+shadcn/ui primitive 컴포넌트를 둔다. `components.json`의 alias와 맞춰 `@/components/ui/*`로 import한다.
+
+```text
+features/{domain}/
+```
+
+업무 도메인 단위 화면, hook, 도메인 전용 컴포넌트를 둔다. 도메인 이름은 요건 카드와 `.feature` 시나리오의 업무 용어와 맞춘다.
+
+```text
+api/
+```
+
+OpenAPI 생성 타입과 공통 HTTP client, 도메인 API 함수를 둔다. 화면 컴포넌트에서 직접 `fetch`를 호출하지 않는다.
+
+```text
+.storybook/
+```
+
+Storybook 설정을 둔다. 공통 컴포넌트는 주요 상태 story를 작성한다.
+
+```text
+tests/e2e/
+```
+
+Playwright E2E, 반응형 smoke, axe 접근성 smoke test를 둔다.
+
 ## 테스트 구조
 
 ```text
@@ -276,6 +362,18 @@ test/{domain}/
 
 테스트 클래스에는 `@AcceptanceTest`와 `@Requirement("REQ-000")`를 붙인다. 테스트 메서드는 수용 기준 문장을 `@Covers`에 그대로 사용하고, `@DisplayName`은 JUnit 표시용 자유 레이블로 작성한다.
 
+## Front-end 테스트 구조
+
+```text
+front-end/src/**/*.test.{ts,tsx}
+front-end/src/**/*.stories.tsx
+front-end/tests/e2e/**/*.spec.ts
+```
+
+- `*.test.tsx`: Vitest/Testing Library 기반 TDD/보조 테스트. AC 커버리지에는 포함하지 않는다.
+- `*.stories.tsx`: Storybook 상태 카탈로그. visual regression의 기준 화면이다.
+- `*.spec.ts`: Playwright 기반 FE BDD/E2E 테스트. 하네스 인덱서 도입 후 `REQ`와 `Covers` 메타데이터로 카드 AC와 연결한다.
+
 ## 생성 산출물
 
 ```text
@@ -293,6 +391,17 @@ back-end/build/harness/schema-preview.sql
 
 요건, API, Entity, 테스트, 테스트 결과를 연결한 자동 생성 산출물이다. `schema-preview.sql`은 구현 전 사용자 검토용 DDL 미리보기다.
 
+```text
+front-end/dist/
+front-end/storybook-static/
+front-end/playwright-report/
+front-end/test-results/
+front-end/coverage/
+front-end/.cache/
+```
+
+프런트엔드 빌드/테스트/Storybook 생성 산출물이다. 사람이 직접 수정하지 않는다.
+
 ## 새 기능 추가 위치
 
 새 요건을 추가할 때는 다음 순서로 파일을 만든다. 검증 설계 → 요건 Skeleton → 사용자 승인 → 실행 테스트 → 구현 → 검증 순서다. 자세한 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
@@ -308,14 +417,22 @@ back-end/src/main/java/com/example/bddworkflow/{domain}/domain/SomeEntity.java  
 back-end/src/main/java/com/example/bddworkflow/{domain}/exception/SomeException.java # 필요 시
 back-end/src/main/java/com/example/bddworkflow/{domain}/repository/SomeRepository.java
 back-end/src/test/java/com/example/bddworkflow/{domain}/SomeApiAcceptanceTest.java
+front-end/src/features/{domain}/pages/SomePage.tsx                                  # FE 대상 요건인 경우
+front-end/src/features/{domain}/components/SomeForm.tsx                             # 필요 시
+front-end/src/features/{domain}/routes.tsx                                          # route가 생기거나 바뀌는 경우
+front-end/src/features/{domain}/Some.test.tsx                                       # TDD/보조 테스트
+front-end/src/features/{domain}/Some.stories.tsx                                    # 공통/주요 상태 story
+front-end/tests/e2e/some-feature.spec.ts                                            # FE BDD/E2E 테스트
 ```
 
-Skeleton 단계에는 검증 설계(`.feature`) + Controller/DTO/Entity/Repository/Service 골격 + `previewSchema`까지만 만들고, 실행 테스트와 Service 업무 로직은 요건 Skeleton 승인 후 같은 요건에서 작성한다. 동작 설계는 Service/Controller 내부 코멘트로만 남긴다. DB 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과까지 포함해 사용자 승인을 받는다.
+Skeleton 단계에는 검증 설계(`.feature`) + Controller/DTO/Entity/Repository/Service 골격 + 화면/라우팅 Skeleton + `previewSchema`까지만 만들고, 실행 테스트와 Service 업무 로직, 실제 FE 컴포넌트 구현은 요건 Skeleton 승인 후 같은 요건에서 작성한다. 동작 설계는 Service/Controller 내부 코멘트와 카드의 Skeleton 승인 이력으로만 남긴다. DB 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과까지 포함해 사용자 승인을 받는다.
 
 ## 금지 사항
 
 - 요건 카드에 API 목록, Entity 목록, 테스트 목록을 수기로 유지하지 않는다.
-- 별도 시나리오 ID, API ID, 테이블 ID를 만들지 않는다.
+- 별도 시나리오 ID, API ID, 테이블 ID, 화면 ID, 컴포넌트 ID를 만들지 않는다.
 - `build/` 아래 생성물을 직접 편집하지 않는다.
+- `front-end/dist`, `storybook-static`, `playwright-report`, `test-results` 아래 생성물을 직접 편집하지 않는다.
 - 수용 기준 문장과 `@Covers` 값을 다르게 쓰지 않는다.
 - `@Requirement`에 카드에 없는 요건 ID를 남기지 않는다. (validateHarness가 실패한다)
+- 프런트엔드에서도 별도 화면 ID, 컴포넌트 ID, 시나리오 ID를 만들지 않는다.

@@ -2,7 +2,7 @@
 
 ## 목표
 
-요건 카드, Spring Boot API, JPA Entity, Acceptance Test, 테스트 결과를 `REQ ID` 하나로 연결한다. 사람이 관리하는 ID는 요건 ID만 유지하고, API ID, 테이블 ID, 시나리오 ID는 코드 식별자로 대체한다.
+요건 카드, Spring Boot API, JPA Entity, React/Vite 화면, Acceptance Test, 테스트 결과를 `REQ ID` 하나로 연결한다. 사람이 관리하는 ID는 요건 ID만 유지하고, API ID, 테이블 ID, 화면 ID, 시나리오 ID는 코드 식별자로 대체한다.
 
 요건 ID는 하나 또는 여러 개를 동시에 부여할 수 있다 (`@Requirement({"REQ-001","REQ-005"})`). 컬럼 단위 추적이 필요한 Entity에서는 필드에도 `@Requirement`를 붙인다.
 
@@ -38,6 +38,12 @@ Acceptance Test
   @DisplayName("케이스 단위 자유 레이블")     // JUnit 표시용. 시나리오 제목과 일치할 필요 없음
   SignupApiAcceptanceTest.signupWithValidRequestReturnsCreated
 
+Front-end
+  front-end/src/features/{domain}/pages/*
+  front-end/tests/e2e/*.spec.ts
+  Requirement / Covers 메타데이터             // 하네스 인덱서 도입 예정
+  Storybook story                            // 상태 카탈로그, visual regression 기준
+
 검증 리포트
   REQ-001 -> AC -> Scenario(.feature) -> Test -> PASS/FAIL -> RED/GREEN/BLUE
   (Scenario ↔ Test 연결은 Scenario.Covers ∩ Test.@Covers 로 판단)
@@ -71,8 +77,17 @@ back-end/src/main/java
 back-end/src/test/java
   승인된 시나리오를 실행 가능한 검증으로 옮긴 Acceptance Test
 
+front-end/src
+  React/Vite/shadcn 기반 화면, route, component, API client
+
+front-end/tests/e2e
+  승인된 시나리오를 실제 화면 흐름으로 옮긴 FE BDD/E2E 테스트
+
 back-end/src/harness/java
   JavaParser 기반 API/Entity/test source index 생성기
+
+front-end/tools
+  (예정) TypeScript 기반 route/page/story/FE BDD test source index 생성기
 
 back-end/tools/trace-requirements.mjs
   요건 카드, JavaParser source index, 테스트 결과 병합
@@ -108,6 +123,8 @@ back-end/build/harness
 
 Skeleton 단계의 카드(`@Covers` 테스트 부재)는 정상적으로 RED로 표시된다. 이 시점에는 strict 게이트인 `validateHarness`를 돌리지 않고 `compileJava`, `generateHarnessSourceIndex`, `previewSchema`, `traceRequirementCard`로 인터페이스와 현황만 본다. 작성 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
 
+프런트엔드 하네스 인덱서 도입 전까지 RED/GREEN/BLUE 자동 판정은 백엔드 API 기준이 우선이다. 신규 FE 대상 카드는 `구현 대상: front-end | full-stack`을 카드에 적고, `npm run validate:full` 결과와 화면/라우팅 Skeleton 승인 이력을 수동 리뷰 증거로 남긴다. FE 인덱서가 도입되면 구현 대상에 따라 API 연결 또는 화면 연결을 판정한다.
+
 ## 품질 게이트
 
 릴리스 후보로 넘기려면 최소한 다음 명령이 성공해야 한다.
@@ -132,10 +149,10 @@ cd back-end
 
 요건 카드는 사용자에게 질문하며 구체화한다. 질문은 기본적으로 한 번에 하나씩 진행하고, 아직 확정되지 않은 질문은 `열린 질문`에 둔다. 답변이 확정되면 그 내용을 `범위`/`제외 범위`/`수용 기준`/`의사결정 로그` 중 해당 위치에 반영하고 `열린 질문`에서 제거한 뒤 다음 질문으로 넘어간다.
 
-수용 기준이 확정되면 **요건 1개 단위**로 진행한다. 검증 설계(`.feature` 시나리오 묶음)와 요건 Skeleton(API/DB/Service 골격)을 한 번에 만들어 사용자 승인을 받는다. Skeleton 단계에서는 Controller/DTO/Entity/Repository/Service의 인터페이스와 계약에 집중하고, 업무 로직은 구현하지 않는다. 필요한 동작 설계는 Service/Controller 내부 코멘트로만 남긴다.
+수용 기준이 확정되면 **요건 1개 단위**로 진행한다. 검증 설계(`.feature` 시나리오 묶음)와 요건 Skeleton(API/DB/Service 골격, 필요 시 화면/라우팅 Skeleton)을 한 번에 만들어 사용자 승인을 받는다. Skeleton 단계에서는 Controller/DTO/Entity/Repository/Service의 인터페이스와 계약, 화면 이름/업무 진입점/route 초안/접근 권한/주요 표시 정보에 집중하고, 업무 로직과 실제 FE 컴포넌트 구현은 하지 않는다. 필요한 동작 설계는 Service/Controller 내부 코멘트와 카드 Skeleton 승인 이력으로 남긴다.
 
-사용자 승인을 받은 같은 요건은 승인된 `.feature`의 `Covers:`에 포함된 AC를 검증하는 실행 테스트와 실제 Service 업무 로직, 컨트롤러 본문을 작성한다. 한 시나리오에 입력 변형/경계값별 여러 테스트가 귀속되는 것이 일반적이다.
+사용자 승인을 받은 같은 요건은 승인된 `.feature`의 `Covers:`에 포함된 AC를 검증하는 실행 테스트와 실제 Service 업무 로직, 컨트롤러 본문, FE 화면/라우팅/API 연동을 작성한다. 한 시나리오에 입력 변형/경계값별 여러 테스트가 귀속되는 것이 일반적이다.
 
-테스트 코드 리뷰에서는 모든 수용 기준이 `@Covers`로 커버되는지, BDD 테스트의 `@Covers` AC가 같은 요건의 어떤 `.feature` 시나리오 `Covers:`에 포함되는지 (`TEST_COVERS_NO_SCENARIO_COVERS` WARNING 없음), 정상/예외/경계 조건이 충분한지, API 계약을 검증하는지 확인한다.
+테스트 코드 리뷰에서는 모든 수용 기준이 `@Covers` 또는 FE `Covers` 메타데이터로 커버되는지, BDD 테스트의 Covers AC가 같은 요건의 어떤 `.feature` 시나리오 `Covers:`에 포함되는지 (`TEST_COVERS_NO_SCENARIO_COVERS` WARNING 없음), 정상/예외/경계 조건이 충분한지, API 계약과 화면 결과를 필요한 만큼 검증하는지 확인한다.
 
 요건 카드에는 API와 테스트 목록을 수기로 적지 않는다. 실제 연결은 JavaParser 기반 source index에서 추출해 `build/harness/source-index.json`, `build/harness/trace-report.md`, `build/harness/trace-report.json`에 기록한다. 요건 Skeleton 승인 이력만 사람이 카드의 `BDD 테스트 리뷰` 섹션에 남긴다.

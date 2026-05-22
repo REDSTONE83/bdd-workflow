@@ -25,4 +25,4 @@ Feature: 요건 카드 제목과 동등한 업무 언어 문장
   #   그런 경로를 설명할 수 없으면 BDD 시나리오가 아니라 API 방어 계약으로 분류한다.
   # - Cucumber 실행 도구는 도입하지 않는다. 이 파일은 공유 BDD 명세 + 하네스 추적 입력으로만 사용한다.
   # - `Covers:` 블록은 Gherkin 표준 키워드가 아니라 Scenario description(free text) 영역이며,
-  #   하네스가 파싱해 Acceptance Test의 `@Covers`와 연결한다.
+  #   하네스가 파싱해 Acceptance Test 또는 FE BDD 테스트의 `Covers`와 연결한다.

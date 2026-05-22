@@ -22,6 +22,10 @@
 - [`persistence-schema.md`](./persistence-schema.md): JPA Entity, 컬럼 매핑, Repository / Pageable 패턴, schema preview
 - [`acceptance-test.md`](./acceptance-test.md): Acceptance Test 작성과 리뷰
 - [`java-code-style.md`](./java-code-style.md): Lombok 허용/금지 범위와 금지 애너테이션 목록
+- [`front-end-project-structure.md`](./front-end-project-structure.md): React/Vite/shadcn 기반 FE 폴더 구조, 생성 산출물, 검증 명령
+- [`front-end-api-contract.md`](./front-end-api-contract.md): OpenAPI 기반 FE 타입/클라이언트, 인증, 오류, 페이징 연동
+- [`front-end-ui.md`](./front-end-ui.md): shadcn/ui, Tailwind token, 레이아웃, 반응형, 접근성, Storybook 상태 표준
+- [`front-end-testing.md`](./front-end-testing.md): FE TDD, BDD, Playwright, Storybook visual regression, 접근성 테스트 계층
 
 런타임 정책:
 
@@ -55,3 +59,4 @@
 - `Long id` + `GenerationType.IDENTITY` → 시간 정렬 UUID ([`id-policy.md`](./id-policy.md))
 - 비페이징 목록 응답 → `PageResponse<T>` + `Pageable` ([`api-contract.md`](./api-contract.md))
 - `application.yml`의 `spring.jackson.*` → `Jackson2ObjectMapperBuilderCustomizer` ([`api-contract.md`](./api-contract.md))
+- 프런트엔드가 필요한 기존 BLUE 요건 → 별도 FE 마이그레이션 REQ 발급 후 `front-end` 또는 `full-stack` 구현 대상으로 진행 ([`front-end-project-structure.md`](./front-end-project-structure.md))

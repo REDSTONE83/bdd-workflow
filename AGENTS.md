@@ -1,6 +1,6 @@
 # BDD Workflow Harness Agent Guide
 
-이 저장소는 Spring Boot API 개발을 코드 중심 BDD 방식으로 진행하기 위한 하네스 예제다. 별도 시나리오 ID와 API ID는 만들지 않고, 사람이 관리하는 ID는 `REQ-001` 같은 요건 ID만 둔다.
+이 저장소는 Spring Boot API와 React/Vite 프런트엔드 개발을 코드 중심 BDD 방식으로 진행하기 위한 하네스 예제다. 별도 시나리오 ID, API ID, 화면 ID는 만들지 않고, 사람이 관리하는 ID는 `REQ-001` 같은 요건 ID만 둔다.
 
 이 문서는 인덱스다. 본문 규칙은 아래 링크된 표준/하네스 문서에 둔다.
 
@@ -10,6 +10,7 @@
 - BDD 시나리오는 `/docs/scenarios`의 Gherkin `.feature`로 관리한다. PO/QA/기획자/프론트엔드/백엔드가 함께 검토하는 공유 명세이자 하네스 추적 입력이며, Cucumber 실행 도구는 도입하지 않는다.
 - API 명세는 Spring Boot 컨트롤러와 DTO 애너테이션에 둔다.
 - DB 스키마는 JPA `@Entity` 클래스에 둔다. 컬럼 단위 추적이 필요하면 필드에도 `@Requirement`를 붙인다.
+- 프런트엔드 화면/라우팅/컴포넌트는 `front-end/src`에 둔다. UI는 React/Vite/TypeScript/shadcn/ui/Tailwind CSS를 기준으로 한다.
 - Acceptance Test는 승인된 `.feature` 시나리오가 다루는 AC를 실행 가능한 검증 코드로 옮긴다. Scenario는 사용자 행위 단위, Test는 AC 검증 단위이며, 둘의 연결은 `Scenario.Covers ∩ Test.@Covers`로 판단한다. `@Covers`는 카드 수용 기준 문장과 정확히 일치하고, `@DisplayName`은 JUnit 표시용 자유 레이블이다.
 - 수용 기준 커버리지는 테스트 메서드의 `@Covers` 값으로 판단한다.
 - API, DTO, Entity, 테스트는 `@Requirement("REQ-001")` 또는 `@Requirement({"REQ-001","REQ-002"})`로 하나 이상의 요건에 연결한다. 공통 응답 DTO처럼 도메인 무관한 클래스는 비워둔다.
@@ -31,11 +32,14 @@
 docs/requirements/*.md
 docs/scenarios/*.feature
 docs/standards/*.md
-src/main/java/**/*
-src/test/java/**/*AcceptanceTest.java
+back-end/src/main/java/**/*
+back-end/src/test/java/**/*AcceptanceTest.java
+front-end/src/**/*
+front-end/tests/e2e/**/*
+front-end/.storybook/**/*
 ```
 
-`back-end/build/harness/*` 리포트는 생성 산출물이다.
+`back-end/build/harness/*`, `front-end/dist`, `front-end/storybook-static`, `front-end/playwright-report`, `front-end/test-results` 리포트는 생성 산출물이다.
 
 전체 폴더 구조는 [`docs/harness/project-structure.md`](docs/harness/project-structure.md)를 따른다.
 
@@ -55,6 +59,10 @@ src/test/java/**/*AcceptanceTest.java
 - [`persistence-schema.md`](docs/standards/persistence-schema.md): JPA Entity, 컬럼 매핑, Repository / Pageable 패턴, schema preview
 - [`acceptance-test.md`](docs/standards/acceptance-test.md): Acceptance Test 작성과 리뷰 체크리스트
 - [`java-code-style.md`](docs/standards/java-code-style.md): Lombok 허용 범위와 금지 애너테이션 목록
+- [`front-end-project-structure.md`](docs/standards/front-end-project-structure.md): React/Vite/shadcn 기반 FE 폴더 구조, 생성 산출물, 검증 명령
+- [`front-end-api-contract.md`](docs/standards/front-end-api-contract.md): OpenAPI 기반 FE 타입/클라이언트, 인증, 오류, 페이징 연동
+- [`front-end-ui.md`](docs/standards/front-end-ui.md): shadcn/ui, Tailwind token, 반응형, 접근성, Storybook 상태 표준
+- [`front-end-testing.md`](docs/standards/front-end-testing.md): FE TDD, BDD, Visual Regression, E2E, 접근성 테스트 표준
 
 런타임 정책:
 
@@ -76,9 +84,9 @@ src/test/java/**/*AcceptanceTest.java
 3. 답변이 확정되면 그 내용을 `범위`/`제외 범위`/`수용 기준` 중 해당 위치에 반영하고, 정책 선택이 따로 필요한 결정은 `의사결정 로그`에 남긴다. 해당 항목은 `열린 질문`에서 제거한다.
 4. 표준 용어 검색/등록은 `node back-end/tools/terminology.mjs ...`로 한다 (`draft.json` 직접 편집 금지).
 5. 수용 기준을 검증 가능한 문장으로 정리한다.
-6. 요건 하나를 선택해 검증 설계(`.feature` 시나리오 묶음)와 요건 Skeleton(API/DB/Service 골격)을 한 번에 작성한다. Controller/DTO/Entity/Repository/Service의 인터페이스와 계약에 집중하고, 업무 로직은 구현하지 않는다. 동작 설계는 Service/Controller 내부 코멘트로만 남긴다.
-7. Skeleton 단계에서 `compileJava`, `generateHarnessSourceIndex`, 필요 시 `previewSchema`, `traceRequirementCard -Preq=REQ-XXX`로 인터페이스와 추적 상태를 확인한다. 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과까지 포함해 사용자 승인을 받는다. 사용자 승인 결과는 요건 카드의 `BDD 테스트 리뷰 > 요건 Skeleton 승인 이력`에 남긴다.
-8. 승인된 같은 요건에 대해 `.feature`의 `Covers:` AC를 검증하는 실행 테스트(Acceptance Test)를 작성하고 Service 업무 로직과 컨트롤러 본문을 구현한다. `@Covers`는 카드 AC와 정확 일치, `@DisplayName`은 자유.
+6. 요건 하나를 선택해 검증 설계(`.feature` 시나리오 묶음)와 요건 Skeleton(API/DB/Service 골격, 필요 시 화면/라우팅 Skeleton)을 한 번에 작성한다. Controller/DTO/Entity/Repository/Service의 인터페이스와 계약, 화면 이름/업무 진입점/route 초안/접근 권한/주요 표시 정보에 집중하고, 업무 로직과 실제 FE 컴포넌트 구현은 하지 않는다.
+7. Skeleton 단계에서 `compileJava`, `generateHarnessSourceIndex`, 필요 시 `previewSchema`, `traceRequirementCard -Preq=REQ-XXX`로 인터페이스와 추적 상태를 확인한다. FE 대상이면 `npm run typecheck`, `npm run lint`도 확인한다. 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과까지 포함해 사용자 승인을 받는다. 사용자 승인 결과는 요건 카드의 `BDD 테스트 리뷰 > 요건 Skeleton 승인 이력`에 남긴다.
+8. 승인된 같은 요건에 대해 `.feature`의 `Covers:` AC를 검증하는 실행 테스트(Acceptance Test 또는 FE BDD 테스트)를 작성하고 Service 업무 로직, 컨트롤러 본문, 실제 FE 화면/라우팅/API 연동을 구현한다. `@Covers` 또는 FE `Covers` 메타데이터는 카드 AC와 정확 일치, 표시용 테스트 이름은 자유.
 9. BDD 테스트 코드 리뷰를 받는다.
 10. `./gradlew validateHarness`로 요건/표준 용어(safe)/API/Entity/테스트/결과 연결을 확인한다.
 11. 카드를 `승인`으로 올리거나 릴리스 전이라면 `./gradlew validateTerminologyStrict`로 strict error를 0으로 맞춘다.
@@ -91,11 +99,11 @@ src/test/java/**/*AcceptanceTest.java
 
 ```text
 RED
-- 관련 API 없음 / 수용 기준 커버 테스트 없음 / 테스트 미실행 / 실패 또는 스킵
+- 관련 구현 연결 없음(API 또는 화면) / 수용 기준 커버 테스트 없음 / 테스트 미실행 / 실패 또는 스킵
 - 알려지지 않은 요건 ID가 코드에 남아 있음
 
 GREEN
-- API 연결 있음, 수용 기준 모두 커버됨, 테스트 모두 PASS
+- 구현 대상에 맞는 API 또는 화면 연결 있음, 수용 기준 모두 커버됨, 테스트 모두 PASS
 - 단, 카드가 아직 승인되지 않았거나 열린 질문이 남아 있음
 
 BLUE
@@ -122,4 +130,17 @@ cd back-end
 ./gradlew validateTerminology        # 용어만 safe 검증
 ./gradlew validateTerminologyStrict  # 최종 승인 / 릴리스 전 strict 게이트
 ./gradlew check                      # 전체 확인
+```
+
+```bash
+cd front-end
+
+npm run typecheck       # TypeScript 정적 검증
+npm run lint            # ESLint
+npm run test            # Vitest unit/component test
+npm run build           # Vite production build
+npm run build-storybook # Storybook static build
+npm run e2e             # Playwright E2E/accessibility smoke
+npm run validate        # 빠른 FE 게이트
+npm run validate:full   # Storybook/E2E 포함 전체 FE 게이트
 ```
