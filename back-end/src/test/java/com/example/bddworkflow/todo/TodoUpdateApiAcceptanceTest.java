@@ -69,8 +69,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 요청에 포함된 필드만 변경되고 누락된 필드는 기존 값을 유지한다")
-    @DisplayName("수정 요청에 포함된 필드만 변경되고 누락된 필드는 기존 값을 유지한다")
+    @Covers("수정 시 입력한 항목만 변경되고 입력하지 않은 항목은 기존 값을 유지한다")
+    @DisplayName("수정 시 입력한 항목만 변경되고 입력하지 않은 항목은 기존 값을 유지한다")
     void updateKeepsMissingFields() throws Exception {
         // Given: completed=true와 카테고리 연결이 있는 Todo를 seed해, PATCH 도중 누락된
         // completed / categoryId가 초기화되는 회귀를 잡을 수 있게 한다.
@@ -107,8 +107,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 요청에서 설명에 null을 명시하면 설명이 비워진다")
-    @DisplayName("수정 요청에서 설명에 null을 명시하면 설명이 비워진다")
+    @Covers("수정 시 설명을 명시적으로 비우면 설명이 지워진다")
+    @DisplayName("수정 시 설명을 명시적으로 비우면 설명이 지워진다")
     void updateWithExplicitNullDescriptionClears() throws Exception {
         // Given
         Todo existing = seedTodo();
@@ -132,8 +132,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 요청에서 마감일에 null을 명시하면 마감일이 비워진다")
-    @DisplayName("수정 요청에서 마감일에 null을 명시하면 마감일이 비워진다")
+    @Covers("수정 시 마감일을 명시적으로 비우면 마감일이 지워진다")
+    @DisplayName("수정 시 마감일을 명시적으로 비우면 마감일이 지워진다")
     void updateWithExplicitNullDueDateClears() throws Exception {
         // Given
         Todo existing = seedTodo();
@@ -157,8 +157,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 요청에서 카테고리 ID에 null을 명시하면 카테고리 연결이 해제된다")
-    @DisplayName("수정 요청에서 카테고리 ID에 null을 명시하면 카테고리 연결이 해제된다")
+    @Covers("수정 시 카테고리를 명시적으로 비우면 카테고리 연결이 해제된다")
+    @DisplayName("수정 시 카테고리를 명시적으로 비우면 카테고리 연결이 해제된다")
     void updateWithExplicitNullCategoryUnlinks() throws Exception {
         // Given
         Category category = categoryRepository.save(USER_ID, "업무", "#2563EB", null, 1024);
@@ -183,8 +183,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 요청에서 제목에 null을 명시하면 수정이 거절된다")
-    @DisplayName("수정 요청에서 제목에 null을 명시하면 수정이 거절된다")
+    @Covers("수정 시 제목을 명시적으로 비우려고 하면 수정이 거절된다")
+    @DisplayName("수정 시 제목을 명시적으로 비우려고 하면 수정이 거절된다")
     void updateWithExplicitNullTitleReturnsBadRequest() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
@@ -198,8 +198,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 요청에서 우선순위에 null을 명시하면 수정이 거절된다")
-    @DisplayName("수정 요청에서 우선순위에 null을 명시하면 수정이 거절된다")
+    @Covers("수정 시 우선순위를 명시적으로 비우려고 하면 수정이 거절된다")
+    @DisplayName("수정 시 우선순위를 명시적으로 비우려고 하면 수정이 거절된다")
     void updateWithExplicitNullPriorityReturnsBadRequest() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
@@ -213,8 +213,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 요청에서 completed에 null을 명시하면 수정이 거절된다")
-    @DisplayName("수정 요청에서 completed에 null을 명시하면 수정이 거절된다")
+    @Covers("수정 시 완료 상태를 명시적으로 비우려고 하면 수정이 거절된다")
+    @DisplayName("수정 시 완료 상태를 명시적으로 비우려고 하면 수정이 거절된다")
     void updateWithExplicitNullCompletedReturnsBadRequest() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
@@ -228,8 +228,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 요청에서 제목 앞뒤 공백은 제거되어 저장된다")
-    @DisplayName("수정 요청에서 제목 앞뒤 공백은 제거되어 저장된다")
+    @Covers("수정 시 제목 앞뒤 공백은 제거되어 저장된다")
+    @DisplayName("수정 시 제목 앞뒤 공백은 제거되어 저장된다")
     void updateTrimsTitle() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
@@ -293,8 +293,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 시 마감일 형식이 ISO 8601 날짜가 아니면 수정이 거절된다")
-    @DisplayName("수정 시 마감일 형식이 ISO 8601 날짜가 아니면 수정이 거절된다")
+    @Covers("수정 시 마감일이 날짜 형식이 아니면 수정이 거절된다")
+    @DisplayName("수정 시 마감일이 날짜 형식이 아니면 수정이 거절된다")
     void updateWithInvalidDueDateFormatReturnsBadRequest() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
@@ -323,8 +323,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 시 본인의 카테고리 ID를 명시하면 해당 카테고리로 연결이 변경된다")
-    @DisplayName("수정 시 본인의 카테고리 ID를 명시하면 해당 카테고리로 연결이 변경된다")
+    @Covers("수정 시 본인의 카테고리를 선택하면 해당 카테고리로 연결이 변경된다")
+    @DisplayName("수정 시 본인의 카테고리를 선택하면 해당 카테고리로 연결이 변경된다")
     void updateWithOwnCategoryChangesLink() throws Exception {
         // Given
         Category before = categoryRepository.save(USER_ID, "업무", "#2563EB", null, 1024);
@@ -347,8 +347,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 시 존재하지 않거나 다른 사용자의 카테고리 ID를 명시하면 거절된다")
-    @DisplayName("수정 시 존재하지 않거나 다른 사용자의 카테고리 ID를 명시하면 거절된다")
+    @Covers("수정 시 본인이 사용할 수 없는 카테고리를 선택하면 거절된다")
+    @DisplayName("수정 시 본인이 사용할 수 없는 카테고리를 선택하면 거절된다")
     void updateWithInvalidCategoryReturnsBadRequest() throws Exception {
         // Given
         Todo existing = seedTodo();
@@ -377,8 +377,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 시 completed에 true를 명시하면 할 일이 완료 상태로 바뀐다")
-    @DisplayName("수정 시 completed에 true를 명시하면 할 일이 완료 상태로 바뀐다")
+    @Covers("수정 시 완료로 표시하면 할 일이 완료 상태로 바뀐다")
+    @DisplayName("수정 시 완료로 표시하면 할 일이 완료 상태로 바뀐다")
     void updateCompletedTrueMarksDone() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
@@ -395,8 +395,8 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 시 completed에 false를 명시하면 할 일이 미완료 상태로 되돌아간다")
-    @DisplayName("수정 시 completed에 false를 명시하면 할 일이 미완료 상태로 되돌아간다")
+    @Covers("수정 시 미완료로 되돌리면 할 일이 미완료 상태로 되돌아간다")
+    @DisplayName("수정 시 미완료로 되돌리면 할 일이 미완료 상태로 되돌아간다")
     void updateCompletedFalseMarksUndone() throws Exception {
         // Given: 이미 완료된 할 일
         Todo existing = todoRepository.save(USER_ID, "이미 완료", null, null, Priority.MEDIUM, true, null);

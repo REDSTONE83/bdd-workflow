@@ -62,8 +62,8 @@ class TodoListApiAcceptanceTest {
     }
 
     @Test
-    @Covers("클라이언트가 sort를 지정하지 않으면 본인의 할 일 목록은 미완료가 먼저, 같은 상태에서는 우선순위 HIGH, MEDIUM, LOW 순서, 동률은 식별자 오름차순으로 정렬되어 반환된다")
-    @DisplayName("클라이언트가 sort를 지정하지 않으면 본인의 할 일 목록은 미완료가 먼저, 같은 상태에서는 우선순위 HIGH, MEDIUM, LOW 순서, 동률은 식별자 오름차순으로 정렬되어 반환된다")
+    @Covers("정렬 기준을 따로 정하지 않으면 본인의 할 일 목록은 미완료 할 일이 먼저, 같은 상태 안에서는 우선순위 HIGH, MEDIUM, LOW 순서, 같은 우선순위면 먼저 등록한 할 일이 위로 정렬되어 보인다")
+    @DisplayName("정렬 기준을 따로 정하지 않으면 본인의 할 일 목록은 미완료 할 일이 먼저, 같은 상태 안에서는 우선순위 HIGH, MEDIUM, LOW 순서, 같은 우선순위면 먼저 등록한 할 일이 위로 정렬되어 보인다")
     void listSortsByCompletedThenPriorityThenId() throws Exception {
         // Given: 입력 순서를 의도적으로 섞어둔다
         //   id=1: completed=false, MEDIUM
@@ -93,8 +93,8 @@ class TodoListApiAcceptanceTest {
     }
 
     @Test
-    @Covers("할 일 응답에는 연결된 카테고리의 ID, 이름, 색상이 함께 반환되며, 연결이 없으면 카테고리 정보는 null이다")
-    @DisplayName("할 일 응답에는 연결된 카테고리의 ID, 이름, 색상이 함께 반환되며, 연결이 없으면 카테고리 정보는 null이다")
+    @Covers("할 일 목록에서 연결된 카테고리의 이름과 색상이 함께 보이며, 연결이 없으면 미분류로 보인다")
+    @DisplayName("할 일 목록에서 연결된 카테고리의 이름과 색상이 함께 보이며, 연결이 없으면 미분류로 보인다")
     void listIncludesNestedCategoryInfo() throws Exception {
         // Given
         Category category = categoryRepository.save(USER_ID, "업무", "#2563EB", null, 1024);

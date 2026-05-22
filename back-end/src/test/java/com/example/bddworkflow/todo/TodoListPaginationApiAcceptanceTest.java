@@ -41,7 +41,7 @@ class TodoListPaginationApiAcceptanceTest {
     }
 
     @Test
-    @Covers("본인의 할 일 목록은 page와 size 쿼리 파라미터로 페이지 단위로 조회된다")
+    @Covers("본인의 할 일 목록은 한 번에 보는 개수와 묶음 번호 단위로 본다")
     @DisplayName("page=0, size=2 / page=1, size=2 / page=2, size=2 : 페이지별 2건씩 슬라이싱된다")
     void pageAndSizeQueryParametersSliceContent() throws Exception {
         seedSixTodos();
@@ -66,8 +66,8 @@ class TodoListPaginationApiAcceptanceTest {
     }
 
     @Test
-    @Covers("응답에는 content, page, size, totalElements, totalPages가 포함된다")
-    @DisplayName("응답에는 content, page, size, totalElements, totalPages가 포함된다")
+    @Covers("할 일 목록을 볼 때 현재 묶음 번호, 한 번에 보는 개수, 전체 할 일 수, 전체 묶음 수를 알 수 있다")
+    @DisplayName("할 일 목록을 볼 때 현재 묶음 번호, 한 번에 보는 개수, 전체 할 일 수, 전체 묶음 수를 알 수 있다")
     void pageResponseShapeContainsAllFields() throws Exception {
         seedSixTodos();
 
@@ -81,7 +81,7 @@ class TodoListPaginationApiAcceptanceTest {
     }
 
     @Test
-    @Covers("size를 지정하지 않으면 기본값 20이 적용된다")
+    @Covers("한 번에 보는 개수를 정하지 않으면 기본값 20이 적용된다")
     @DisplayName("size 미지정 시 기본값 20이 적용된다")
     void defaultSizeIsTwenty() throws Exception {
         seedSixTodos();
@@ -96,7 +96,7 @@ class TodoListPaginationApiAcceptanceTest {
     }
 
     @Test
-    @Covers("size가 100을 초과하면 100으로 제한된다")
+    @Covers("한 번에 보는 개수가 100을 초과하면 100으로 제한된다")
     @DisplayName("size=500 요청해도 응답 size는 100으로 잘린다")
     void sizeOverHundredIsCappedToHundred() throws Exception {
         seedSixTodos();
@@ -107,7 +107,7 @@ class TodoListPaginationApiAcceptanceTest {
     }
 
     @Test
-    @Covers("데이터 개수를 초과한 page를 요청하면 빈 content가 반환되고 totalElements와 totalPages는 데이터에 따라 동일하게 유지된다")
+    @Covers("기억하고 있던 묶음이 더 이상 존재하지 않으면 그 묶음에는 할 일이 보이지 않고, 현재 남은 전체 할 일 수와 전체 묶음 수를 알 수 있다")
     @DisplayName("page=3, size=2 : 데이터를 넘는 페이지는 빈 content + 동일한 totals")
     void pageBeyondLastReturnsEmptyContentButKeepsTotals() throws Exception {
         seedSixTodos();
@@ -120,7 +120,7 @@ class TodoListPaginationApiAcceptanceTest {
     }
 
     @Test
-    @Covers("클라이언트가 sort 쿼리 파라미터를 지정하면 그 정렬이 기본 정렬을 덮어쓴다")
+    @Covers("사용자가 정렬 기준을 직접 정하면 그 정렬이 기본 정렬을 덮어쓴다")
     @DisplayName("sort=title,asc: 기본 정렬 대신 title 오름차순으로 정렬된다")
     void clientSortOverridesDefault() throws Exception {
         seedSixTodos();
