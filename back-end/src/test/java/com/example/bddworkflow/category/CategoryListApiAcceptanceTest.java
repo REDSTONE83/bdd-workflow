@@ -40,8 +40,8 @@ class CategoryListApiAcceptanceTest {
     }
 
     @Test
-    @Covers("본인의 카테고리 목록이 정렬 순서 오름차순, 동률이면 식별자 오름차순으로 조회된다")
-    @DisplayName("본인의 카테고리 목록이 정렬 순서 오름차순, 동률이면 식별자 오름차순으로 조회된다")
+    @Covers("본인의 카테고리는 정해진 정렬 순서대로 보이며, 같은 순서면 먼저 등록한 카테고리가 위로 정렬되어 보인다")
+    @DisplayName("본인의 카테고리는 정해진 정렬 순서대로 보이며, 같은 순서면 먼저 등록한 카테고리가 위로 정렬되어 보인다")
     void listReturnsOwnCategoriesOrderedByDisplayOrderThenId() throws Exception {
         // Given
         Category third = categoryRepository.save(USER_ID, "기타", "#6B7280", null, 3072);

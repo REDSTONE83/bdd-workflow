@@ -42,8 +42,8 @@ class CategoryUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 요청에 포함된 필드만 변경되고 누락된 필드는 기존 값을 유지한다")
-    @DisplayName("수정 요청에 포함된 필드만 변경되고 누락된 필드는 기존 값을 유지한다")
+    @Covers("수정 시 입력한 항목만 변경되고 입력하지 않은 항목은 기존 값을 유지한다")
+    @DisplayName("수정 시 입력한 항목만 변경되고 입력하지 않은 항목은 기존 값을 유지한다")
     void updateChangesOnlyIncludedFields() throws Exception {
         // Given
         Category existing = categoryRepository.save(USER_ID, "업무", "#2563EB", "회사 일", 1024);
@@ -67,8 +67,8 @@ class CategoryUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 요청에서 색상에 null을 명시하면 색상이 비워진다")
-    @DisplayName("수정 요청에서 색상에 null을 명시하면 색상이 비워진다")
+    @Covers("수정 시 색상을 명시적으로 비우면 색상이 지워진다")
+    @DisplayName("수정 시 색상을 명시적으로 비우면 색상이 지워진다")
     void updateWithExplicitNullColorClearsColor() throws Exception {
         // Given
         Category existing = categoryRepository.save(USER_ID, "업무", "#2563EB", "회사 일", 1024);
@@ -92,8 +92,8 @@ class CategoryUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 요청에서 설명에 null을 명시하면 설명이 비워진다")
-    @DisplayName("수정 요청에서 설명에 null을 명시하면 설명이 비워진다")
+    @Covers("수정 시 설명을 명시적으로 비우면 설명이 지워진다")
+    @DisplayName("수정 시 설명을 명시적으로 비우면 설명이 지워진다")
     void updateWithExplicitNullDescriptionClearsDescription() throws Exception {
         // Given
         Category existing = categoryRepository.save(USER_ID, "업무", "#2563EB", "회사 일", 1024);

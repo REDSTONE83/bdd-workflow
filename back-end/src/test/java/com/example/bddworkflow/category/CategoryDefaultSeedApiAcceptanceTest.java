@@ -50,8 +50,8 @@ class CategoryDefaultSeedApiAcceptanceTest {
     }
 
     @Test
-    @Covers("신규 사용자가 가입하면 업무(#2563EB, 1024), 개인(#16A34A, 2048), 기타(#6B7280, 3072) 세 개의 기본 카테고리가 자동 생성된다")
-    @DisplayName("신규 사용자가 가입하면 업무(#2563EB, 1024), 개인(#16A34A, 2048), 기타(#6B7280, 3072) 세 개의 기본 카테고리가 자동 생성된다")
+    @Covers("신규 사용자가 가입하면 업무(#2563EB), 개인(#16A34A), 기타(#6B7280) 세 개의 기본 카테고리가 준비된다")
+    @DisplayName("신규 사용자가 가입하면 업무(#2563EB), 개인(#16A34A), 기타(#6B7280) 세 개의 기본 카테고리가 준비된다")
     void signupSeedsDefaultCategories() throws Exception {
         // Given
         String signupBody = """

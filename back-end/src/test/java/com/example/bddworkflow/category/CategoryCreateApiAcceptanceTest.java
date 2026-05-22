@@ -213,8 +213,8 @@ class CategoryCreateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("정렬 순서를 입력하지 않으면 본인 카테고리의 최대 정렬 순서에 1024를 더한 값으로 할당된다")
-    @DisplayName("정렬 순서를 입력하지 않으면 본인 카테고리의 최대 정렬 순서에 1024를 더한 값으로 할당된다")
+    @Covers("정렬 순서를 정하지 않으면 본인 카테고리 목록의 가장 뒤에 추가된다")
+    @DisplayName("정렬 순서를 정하지 않으면 본인 카테고리 목록의 가장 뒤에 추가된다")
     void createWithoutDisplayOrderAssignsMaxPlusStep() throws Exception {
         // Given
         categoryRepository.save(USER_ID, "업무", "#2563EB", null, 2048);
