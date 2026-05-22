@@ -10,14 +10,89 @@ const docsRoot = path.join(workspaceRoot, 'docs', 'requirements');
 const outputDir = path.join(backendRoot, 'build', 'harness');
 const sourceIndexPath = path.join(outputDir, 'source-index.json');
 const terminologyReportPath = path.join(outputDir, 'terminology-report.json');
+const terminologyIndexPath = path.join(outputDir, 'terminology-index.json');
 const testResultRoots = [
     path.join(backendRoot, 'target', 'surefire-reports'),
     path.join(backendRoot, 'build', 'test-results', 'test')
 ];
 
-const args = new Set(process.argv.slice(2));
-const checkMode = args.has('--check');
-const requireBlue = args.has('--require-blue');
+function parseCliArgs(argv) {
+    const requirementIds = new Set();
+    const requirementFiles = new Set();
+    let checkMode = false;
+    let requireBlue = false;
+    let quiet = false;
+    let i = 0;
+    while (i < argv.length) {
+        const arg = argv[i];
+        if (arg === '--check') {
+            checkMode = true;
+            i += 1;
+            continue;
+        }
+        if (arg === '--require-blue') {
+            requireBlue = true;
+            i += 1;
+            continue;
+        }
+        if (arg === '--quiet') {
+            quiet = true;
+            i += 1;
+            continue;
+        }
+        if (arg === '--requirement') {
+            const value = argv[i + 1];
+            if (!value) {
+                throw new Error('--requirement requires a value');
+            }
+            requirementIds.add(value.trim());
+            i += 2;
+            continue;
+        }
+        if (arg.startsWith('--requirement=')) {
+            requirementIds.add(arg.slice('--requirement='.length).trim());
+            i += 1;
+            continue;
+        }
+        if (arg === '--requirement-file') {
+            const value = argv[i + 1];
+            if (!value) {
+                throw new Error('--requirement-file requires a value');
+            }
+            requirementFiles.add(path.resolve(process.cwd(), value));
+            i += 2;
+            continue;
+        }
+        if (arg.startsWith('--requirement-file=')) {
+            requirementFiles.add(path.resolve(process.cwd(), arg.slice('--requirement-file='.length)));
+            i += 1;
+            continue;
+        }
+        throw new Error(`Unknown argument: ${arg}`);
+    }
+    return { requirementIds, requirementFiles, checkMode, requireBlue, quiet };
+}
+
+const cli = parseCliArgs(process.argv.slice(2));
+const checkMode = cli.checkMode;
+const requireBlue = cli.requireBlue;
+const quiet = cli.quiet;
+
+const REQUIRED_SECTIONS = [
+    '사용자/목적',
+    '범위',
+    '표준 용어',
+    '제외 범위',
+    '수용 기준',
+    '의사결정 로그',
+    'BDD 테스트 리뷰',
+    '열린 질문'
+];
+const ALLOWED_STATUSES = ['초안', '검토중', '승인'];
+const ALLOWED_PRIORITIES = ['높음', '중간', '낮음'];
+const REQUIREMENT_ID_PATTERN = /^REQ-\d{3,}$/;
+const REQUIREMENT_FILENAME_PATTERN = /^(REQ-\d{3,})-[^/]+\.md$/;
+const TERM_KEY_PATTERN = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){1,2}$/;
 
 function walk(dir, predicate = () => true) {
     if (!fs.existsSync(dir)) {
@@ -59,26 +134,151 @@ function normalizeApprovalStatus(status) {
     return ['승인', 'approved', 'blue'].includes(normalized);
 }
 
-function readRequirementCards() {
+function readAllRequirementCards() {
     return walk(docsRoot, (file) => file.endsWith('.md')).map((file) => {
         const content = fs.readFileSync(file, 'utf8');
-        const id = content.match(/^요건 ID:\s*(REQ-\d+)/m)?.[1] ?? '';
-        const title = content.match(/^제목:\s*(.+)$/m)?.[1]?.trim() ?? '';
-        const status = content.match(/^상태:\s*(.+)$/m)?.[1]?.trim() ?? '';
+        const idRaw = content.match(/^요건 ID:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+        const id = REQUIREMENT_ID_PATTERN.test(idRaw) ? idRaw : '';
+        const title = content.match(/^제목:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+        const priority = content.match(/^우선순위:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+        const status = content.match(/^상태:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
         const acceptanceCriteria = bulletItems(section(content, '수용 기준'));
         const openQuestions = bulletItems(section(content, '열린 질문'))
             .filter((item) => !/^없음$/.test(item.trim()));
+        const terms = bulletItems(section(content, '표준 용어'));
+        const bddReview = section(content, 'BDD 테스트 리뷰');
+        const bddReviewIncomplete = /미완료/.test(bddReview);
+        const bddReviewApproved = /^[ \t]*결과:[ \t]*승인\s*$/m.test(bddReview);
+        const sectionPresent = {};
+        for (const sec of REQUIRED_SECTIONS) {
+            sectionPresent[sec] = new RegExp(`^## ${escapeRegExp(sec)}\\s*$`, 'm').test(content);
+        }
 
         return {
             id,
+            idRaw,
             title,
+            priority,
             status,
             approved: normalizeApprovalStatus(status),
             file,
+            content,
             acceptanceCriteria,
-            openQuestions
+            openQuestions,
+            terms,
+            bddReviewIncomplete,
+            bddReviewApproved,
+            sectionPresent
         };
-    }).filter((card) => card.id);
+    });
+}
+
+function duplicateItems(items) {
+    const seen = new Map();
+    const dupes = new Set();
+    for (const item of items) {
+        const key = item.trim();
+        if (seen.has(key)) {
+            dupes.add(key);
+        } else {
+            seen.set(key, true);
+        }
+    }
+    return [...dupes];
+}
+
+function referencedRequirementIds(content) {
+    const matches = content?.match(/\bREQ-\d{3,}\b/g) ?? [];
+    return [...new Set(matches)];
+}
+
+function validateRequirementCardStructure(card, allCards, terminologyIndex) {
+    const issues = [];
+    const fname = path.basename(card.file);
+    const fnameMatch = fname.match(REQUIREMENT_FILENAME_PATTERN);
+
+    if (!card.idRaw) {
+        issues.push('요건 ID 누락');
+    } else if (!REQUIREMENT_ID_PATTERN.test(card.idRaw)) {
+        issues.push(`요건 ID 형식이 REQ-NNN 아님: "${card.idRaw}"`);
+    }
+
+    if (!fnameMatch) {
+        issues.push(`파일명이 REQ-NNN-*.md 형식 아님: ${fname}`);
+    } else if (card.id && fnameMatch[1] !== card.id) {
+        issues.push(`파일명 ID(${fnameMatch[1]})와 카드 ID(${card.id}) 불일치`);
+    }
+
+    if (!card.title) {
+        issues.push('제목 누락');
+    }
+    if (!card.priority) {
+        issues.push('우선순위 누락');
+    } else if (!ALLOWED_PRIORITIES.includes(card.priority)) {
+        issues.push(`우선순위 값이 허용 목록(${ALLOWED_PRIORITIES.join(', ')}) 외: "${card.priority}"`);
+    }
+    if (!card.status) {
+        issues.push('상태 누락');
+    } else if (!ALLOWED_STATUSES.includes(card.status)) {
+        issues.push(`상태 값이 허용 목록(${ALLOWED_STATUSES.join(', ')}) 외: "${card.status}"`);
+    }
+
+    for (const sec of REQUIRED_SECTIONS) {
+        if (!card.sectionPresent[sec]) {
+            issues.push(`필수 섹션 누락: ## ${sec}`);
+        }
+    }
+
+    if (card.acceptanceCriteria.length === 0) {
+        issues.push('수용 기준 비어 있음');
+    }
+    for (const dupe of duplicateItems(card.acceptanceCriteria)) {
+        issues.push(`중복 수용 기준: "${dupe}"`);
+    }
+
+    for (const term of card.terms) {
+        if (!TERM_KEY_PATTERN.test(term)) {
+            issues.push(`표준 용어가 term key 형식 아님: "${term}"`);
+            continue;
+        }
+        if (terminologyIndex && !hasRegisteredTerm(terminologyIndex, term)) {
+            issues.push(`표준 용어가 등록되어 있지 않음: "${term}"`);
+        }
+    }
+    for (const dupe of duplicateItems(card.terms)) {
+        issues.push(`중복 표준 용어: "${dupe}"`);
+    }
+
+    if (card.id) {
+        const dupes = allCards.filter((other) => other.id === card.id && other.file !== card.file);
+        if (dupes.length > 0) {
+            const others = dupes.map((c) => path.relative(workspaceRoot, c.file)).join(', ');
+            issues.push(`중복 요건 ID: ${others}`);
+        }
+    }
+
+    if (card.content) {
+        const knownIds = new Set(allCards.map((c) => c.id).filter(Boolean));
+        for (const ref of referencedRequirementIds(card.content)) {
+            if (!knownIds.has(ref)) {
+                issues.push(`존재하지 않는 요건 ID 참조: ${ref}`);
+            }
+        }
+    }
+
+    if (card.approved) {
+        if (card.openQuestions.length > 0) {
+            issues.push('상태=승인이지만 열린 질문이 남아 있음');
+        }
+        if (card.bddReviewIncomplete) {
+            issues.push('상태=승인이지만 BDD 테스트 리뷰에 "미완료" 표기 있음');
+        }
+        if (!card.bddReviewApproved) {
+            issues.push('상태=승인이지만 BDD 테스트 리뷰에 "결과: 승인" 줄이 없음');
+        }
+    }
+
+    return issues;
 }
 
 function readSourceIndex() {
@@ -106,6 +306,22 @@ function readTerminologyReport() {
     } catch (err) {
         return null;
     }
+}
+
+function readTerminologyIndex() {
+    if (!fs.existsSync(terminologyIndexPath)) {
+        return null;
+    }
+    try {
+        const parsed = JSON.parse(fs.readFileSync(terminologyIndexPath, 'utf8'));
+        return { terms: parsed.terms ?? {} };
+    } catch (err) {
+        return null;
+    }
+}
+
+function hasRegisteredTerm(index, termKey) {
+    return Boolean(index?.terms?.[termKey]);
 }
 
 function emptyTerminologyCounts() {
@@ -293,22 +509,57 @@ function evaluateRequirement(card, apis, tests, entities, results) {
     };
 }
 
-function buildModel(cards, apis, tests, entities, results, terminologyReport) {
+function buildModel(allCards, cards, apis, tests, entities, results, terminologyReport, terminologyIndex, selectedIds, flags = {}) {
     const knownRequirementIds = new Set(cards.map((card) => card.id));
     const terminologyBucket = bucketTerminologyFindings(terminologyReport, knownRequirementIds);
-    const requirements = cards
+    const isSelected = (id) => !selectedIds || selectedIds.has(id);
+    const allRequirements = cards
         .map((card) => evaluateRequirement(card, apis, tests, entities, results))
         .map((req) => attachTerminology(req, terminologyBucket));
+    const requirements = allRequirements.filter((req) => isSelected(req.id));
     const hasUnknown = (refs) => refs.length === 0 || refs.some((ref) => !knownRequirementIds.has(ref));
-    const unknownApis = apis.filter((api) => hasUnknown(api.requirements));
-    const unknownTests = tests.filter((test) => hasUnknown(test.requirements));
-    const unknownEntities = entities.filter((entity) => {
-        const refs = [
-            ...entity.requirements,
-            ...entity.columns.flatMap((column) => column.requirements)
-        ];
-        return hasUnknown(refs);
-    });
+    const intersectsSelection = (refs) => !selectedIds || refs.some((ref) => selectedIds.has(ref));
+    const unknownApis = apis
+        .filter((api) => hasUnknown(api.requirements))
+        .filter((api) => intersectsSelection(api.requirements));
+    const unknownTests = tests
+        .filter((test) => hasUnknown(test.requirements))
+        .filter((test) => intersectsSelection(test.requirements));
+    const unknownEntities = entities
+        .filter((entity) => {
+            const refs = [
+                ...entity.requirements,
+                ...entity.columns.flatMap((column) => column.requirements)
+            ];
+            return hasUnknown(refs);
+        })
+        .filter((entity) => {
+            const refs = [
+                ...entity.requirements,
+                ...entity.columns.flatMap((column) => column.requirements)
+            ];
+            return intersectsSelection(refs);
+        });
+
+    const candidateCards = selectedIds
+        ? allCards.filter((card) => selectedIds.has(card.id))
+        : allCards;
+    const structureReports = candidateCards.map((card) => ({
+        file: card.file,
+        id: card.id || card.idRaw || '(no id)',
+        title: card.title,
+        issues: validateRequirementCardStructure(card, allCards, terminologyIndex)
+    }));
+    if (!terminologyIndex && (flags.checkMode || flags.requireBlue)) {
+        structureReports.unshift({
+            file: terminologyIndexPath,
+            id: '(global)',
+            title: 'terminology-index.json 누락',
+            issues: ['terminology-index.json이 없어 표준 용어 등록 검사를 수행하지 못함 — `./gradlew indexTerminology` 또는 `./gradlew validateTerminology` 먼저 실행']
+        });
+    }
+    const structureIssueCount = structureReports.reduce((sum, report) => sum + report.issues.length, 0);
+
     const summary = {
         total: requirements.length,
         red: requirements.filter((requirement) => requirement.state === 'RED').length,
@@ -316,14 +567,17 @@ function buildModel(cards, apis, tests, entities, results, terminologyReport) {
         blue: requirements.filter((requirement) => requirement.state === 'BLUE').length,
         unknownApis: unknownApis.length,
         unknownTests: unknownTests.length,
-        unknownEntities: unknownEntities.length
+        unknownEntities: unknownEntities.length,
+        structureIssues: structureIssueCount
     };
 
     return {
         generatedAt: new Date().toISOString(),
+        filter: selectedIds ? [...selectedIds].sort() : null,
         summary,
         knownRequirementIds: [...knownRequirementIds],
         requirements,
+        structureReports,
         unknownApis,
         unknownTests,
         unknownEntities,
@@ -347,6 +601,9 @@ function formatCountsLine(counts) {
 function buildMarkdown(model) {
     const lines = ['# Requirement Trace Report', ''];
     lines.push(`Generated: ${model.generatedAt}`, '');
+    if (model.filter) {
+        lines.push(`Filter: ${model.filter.join(', ')}`, '');
+    }
     lines.push('## Summary', '');
     lines.push(`- Total: ${model.summary.total}`);
     lines.push(`- RED: ${model.summary.red}`);
@@ -355,6 +612,7 @@ function buildMarkdown(model) {
     lines.push(`- Unknown API references: ${model.summary.unknownApis}`);
     lines.push(`- Unknown test references: ${model.summary.unknownTests}`);
     lines.push(`- Unknown entity references: ${model.summary.unknownEntities}`);
+    lines.push(`- Card structure issues: ${model.summary.structureIssues}`);
     if (model.terminology.present) {
         const t = model.terminology;
         lines.push(`- Terminology mode: ${t.mode}`);
@@ -443,6 +701,19 @@ function buildMarkdown(model) {
         return refs.map((ref) => model.knownRequirementIds.includes(ref) ? ref : `${ref}(!)`).join(', ');
     };
 
+    if (model.structureReports.some((report) => report.issues.length > 0)) {
+        lines.push('## Card Structure Issues', '');
+        for (const report of model.structureReports) {
+            if (report.issues.length === 0) continue;
+            lines.push(`### ${report.id}${report.title ? ' ' + report.title : ''}`);
+            lines.push(`Card: ${path.relative(workspaceRoot, report.file)}`);
+            for (const issue of report.issues) {
+                lines.push(`- ${issue}`);
+            }
+            lines.push('');
+        }
+    }
+
     if (model.unknownApis.length > 0) {
         lines.push('## Unknown API Requirement References', '');
         for (const api of model.unknownApis) {
@@ -487,29 +758,86 @@ function buildMarkdown(model) {
     return lines.join('\n');
 }
 
-const cards = readRequirementCards();
+const allCardsRaw = readAllRequirementCards();
+const cards = allCardsRaw.filter((card) => card.id);
 const sourceIndex = readSourceIndex();
 const apis = sourceIndex.apis;
 const tests = sourceIndex.tests;
 const entities = sourceIndex.entities;
 const results = readTestResults();
 const terminologyReport = readTerminologyReport();
-const model = buildModel(cards, apis, tests, entities, results, terminologyReport);
+const terminologyIndex = readTerminologyIndex();
+
+function resolveSelectedIds(cli, allCards) {
+    if (cli.requirementIds.size === 0 && cli.requirementFiles.size === 0) {
+        return null;
+    }
+    const selected = new Set();
+    const errors = [];
+    for (const reqId of cli.requirementIds) {
+        if (!REQUIREMENT_ID_PATTERN.test(reqId)) {
+            errors.push(`--requirement 값이 REQ-NNN 형식 아님: "${reqId}"`);
+            continue;
+        }
+        const match = allCards.find((card) => card.id === reqId);
+        if (!match) {
+            errors.push(`--requirement ${reqId}: ${path.relative(workspaceRoot, docsRoot)}에서 카드를 찾을 수 없음`);
+            continue;
+        }
+        selected.add(reqId);
+    }
+    for (const reqFile of cli.requirementFiles) {
+        if (!fs.existsSync(reqFile)) {
+            errors.push(`--requirement-file 경로가 존재하지 않음: ${reqFile}`);
+            continue;
+        }
+        const resolvedFile = fs.realpathSync(reqFile);
+        const match = allCards.find((card) => fs.realpathSync(card.file) === resolvedFile);
+        if (!match) {
+            errors.push(`--requirement-file: ${path.relative(workspaceRoot, reqFile)}에 일치하는 카드 없음`);
+            continue;
+        }
+        if (!match.id) {
+            errors.push(`--requirement-file: ${path.relative(workspaceRoot, reqFile)} 카드에 유효한 요건 ID 없음`);
+            continue;
+        }
+        selected.add(match.id);
+    }
+    if (errors.length > 0) {
+        for (const err of errors) {
+            console.error(`error: ${err}`);
+        }
+        process.exit(2);
+    }
+    return selected;
+}
+
+const selectedIds = resolveSelectedIds(cli, allCardsRaw);
+const model = buildModel(allCardsRaw, cards, apis, tests, entities, results, terminologyReport, terminologyIndex, selectedIds, { checkMode, requireBlue });
 const markdown = buildMarkdown(model);
 
 fs.mkdirSync(outputDir, { recursive: true });
-fs.writeFileSync(path.join(outputDir, 'trace-report.md'), markdown);
-fs.writeFileSync(path.join(outputDir, 'trace-report.json'), `${JSON.stringify(model, null, 2)}\n`);
+const reportSuffix = selectedIds ? `-${[...selectedIds].sort().join('-')}` : '';
+const mdPath = path.join(outputDir, `trace-report${reportSuffix}.md`);
+const jsonPath = path.join(outputDir, `trace-report${reportSuffix}.json`);
+fs.writeFileSync(mdPath, markdown);
+fs.writeFileSync(jsonPath, `${JSON.stringify(model, null, 2)}\n`);
 
-console.log(markdown);
+if (quiet) {
+    const summary = model.summary;
+    console.log(`Trace report written to ${path.relative(process.cwd(), mdPath)} — total=${summary.total} red=${summary.red} green=${summary.green} blue=${summary.blue} structureIssues=${summary.structureIssues}`);
+} else {
+    console.log(markdown);
+}
 
 const hasUnknownReferences =
     model.summary.unknownApis > 0 ||
     model.summary.unknownTests > 0 ||
     model.summary.unknownEntities > 0;
-if (checkMode && (model.summary.total === 0 || model.summary.red > 0 || hasUnknownReferences)) {
+const hasStructureIssues = model.summary.structureIssues > 0;
+if (checkMode && (model.summary.total === 0 || model.summary.red > 0 || hasUnknownReferences || hasStructureIssues)) {
     process.exitCode = 1;
 }
-if (requireBlue && (model.summary.total === 0 || model.summary.red > 0 || model.summary.green > 0 || hasUnknownReferences)) {
+if (requireBlue && (model.summary.total === 0 || model.summary.red > 0 || model.summary.green > 0 || hasUnknownReferences || hasStructureIssues)) {
     process.exitCode = 1;
 }

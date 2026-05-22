@@ -65,6 +65,13 @@ tasks.register('traceRequirements', Exec) {
     commandLine 'node', 'tools/trace-requirements.mjs'
 }
 
+tasks.register('traceRequirementsAfterTest', Exec) {
+    group = 'verification'
+    description = 'Quiet finalizer: refresh trace-report files after test without re-printing the full trace.'
+    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('validateTerminology')
+    commandLine 'node', 'tools/trace-requirements.mjs', '--quiet'
+}
+
 tasks.register('previewSchema', Exec) {
     group = 'verification'
     description = 'Generate DDL preview from JPA @Entity classes for human review before migration.'
@@ -108,11 +115,12 @@ tasks.register('validateStandardsStrict', Exec) {
 
 // Order the strict standards check before tests inside validateHarness so that
 // structural violations surface even when tests fail.
-// Also make traceRequirements run as a finalizer of `test` so the trace report
-// always reflects the latest test run, even when tests fail.
+// Use the quiet finalizer so the trace report files always reflect the latest
+// test run without re-printing the full markdown alongside other gates that
+// emit their own trace output (validateHarness, validateRequirementCard, etc.).
 tasks.named('test').configure {
     mustRunAfter tasks.named('validateStandardsStrict'), tasks.named('validateStandards')
-    finalizedBy tasks.named('traceRequirements')
+    finalizedBy tasks.named('traceRequirementsAfterTest')
 }
 
 tasks.register('validateHarness', Exec) {
@@ -123,6 +131,48 @@ tasks.register('validateHarness', Exec) {
             tasks.named('validateTerminology'),
             tasks.named('test')
     commandLine 'node', 'tools/trace-requirements.mjs', '--check'
+}
+
+def perCardTaskNames = ['traceRequirementCard', 'validateRequirementCard', 'validateRequirementCardBlue']
+
+gradle.taskGraph.whenReady { graph ->
+    def requested = perCardTaskNames.find { name -> graph.allTasks.any { it.name == name } }
+    if (requested && !project.hasProperty('req')) {
+        throw new GradleException("Usage: ./gradlew ${requested} -Preq=REQ-XXX")
+    }
+}
+
+tasks.register('traceRequirementCard', Exec) {
+    group = 'verification'
+    description = 'Per-card trace report (-Preq=REQ-XXX, always exit 0).'
+    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('validateTerminology')
+    doFirst {
+        commandLine 'node', 'tools/trace-requirements.mjs', '--requirement', project.property('req')
+    }
+}
+
+tasks.register('validateRequirementCard', Exec) {
+    group = 'verification'
+    description = 'Strict per-card gate: standards + safe-terminology + tests + RED check for one card (-Preq=REQ-XXX).'
+    dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('validateStandardsStrict'),
+            tasks.named('validateTerminology'),
+            tasks.named('test')
+    doFirst {
+        commandLine 'node', 'tools/trace-requirements.mjs', '--check', '--requirement', project.property('req')
+    }
+}
+
+tasks.register('validateRequirementCardBlue', Exec) {
+    group = 'verification'
+    description = 'Strict per-card BLUE gate: like validateRequirementCard but also fails on GREEN (-Preq=REQ-XXX).'
+    dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('validateStandardsStrict'),
+            tasks.named('validateTerminology'),
+            tasks.named('test')
+    doFirst {
+        commandLine 'node', 'tools/trace-requirements.mjs', '--check', '--require-blue', '--requirement', project.property('req')
+    }
 }
 
 tasks.register('harnessReport') {

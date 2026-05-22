@@ -69,8 +69,8 @@ src/test/java/**/*AcceptanceTest.java
 요건 작성과 BDD 테스트 리뷰 절차는 [`docs/harness/requirement-authoring.md`](docs/harness/requirement-authoring.md)에 둔다. 핵심 순서만 옮기면 다음과 같다.
 
 1. 사용자 요청을 요건 카드 초안으로 정리한다.
-2. 모호한 범위, 예외, 정책, 권한, 상태 변화를 사용자에게 질문한다. 한 번에 1-3개만 한다.
-3. 답변은 카드의 `확인 질문 로그`에, 확정된 정책은 `의사결정 로그`에 남긴다.
+2. 모호한 범위, 예외, 정책, 권한, 상태 변화를 사용자에게 질문한다. 한 번에 1-3개만 한다. 미해결 질문은 `열린 질문`에 둔다.
+3. 답변이 확정되면 그 내용을 `범위`/`제외 범위`/`수용 기준` 중 해당 위치에 반영하고, 정책 선택이 따로 필요한 결정은 `의사결정 로그`에 남긴다. 해당 항목은 `열린 질문`에서 제거한다.
 4. 표준 용어 검색/등록은 `node back-end/tools/terminology.mjs ...`로 한다 (`draft.json` 직접 편집 금지).
 5. 수용 기준을 검증 가능한 문장으로 정리한다.
 6. 동일 문장을 `@Covers`로 사용해 Acceptance Test를 먼저 작성한다.
@@ -108,6 +108,9 @@ cd back-end
 ./gradlew generateHarnessSourceIndex # JavaParser source index만 생성
 ./gradlew previewSchema              # Entity 기반 DDL 미리보기
 ./gradlew traceRequirements          # 추적 리포트 생성 (always exit 0)
+./gradlew traceRequirementCard -Preq=REQ-XXX        # 단일 카드 추적 리포트 (always exit 0)
+./gradlew validateRequirementCard -Preq=REQ-XXX     # 단일 카드 strict 게이트 (RED 또는 카드 구조 위반 시 실패)
+./gradlew validateRequirementCardBlue -Preq=REQ-XXX # 단일 카드 BLUE 게이트 (BLUE 미달 시 실패)
 ./gradlew validateStandards          # docs/standards 정적 검사 리포트 (always exit 0)
 ./gradlew validateStandardsStrict    # docs/standards strict 게이트 (위반 시 실패)
 ./gradlew harnessReport              # 표준/용어/테스트/추적 리포트 모두 생성 (집계용)
