@@ -144,6 +144,20 @@ Gherkin 키워드는 영어(`Feature`/`Scenario`/`Given`/`When`/`Then`/`And`)를
 
 `Covers:` 블록은 Gherkin 파서가 description(free text)으로 다루는 영역이므로 표준 도구 호환을 깨지 않는다. 하네스는 이 영역에서 `Covers:` 헤더 다음의 `- ...` 라인을 AC 문장 목록으로 수집한다.
 
+본문은 사용자 시점의 업무 흐름으로 적는다. 화면 라우트(`/todos` 등), HTTP 메서드/상태 코드, DTO 키, CSS selector 같은 구현 어휘는 시나리오 밖에서 다룬다 ([`acceptance-test.md`](../standards/acceptance-test.md) "Given / When / Then 문장 작성 규칙"). 라우팅 자체가 AC인 경우에 한해 예외적으로 시나리오에 포함한다.
+
+### 시나리오 승인 전 체크리스트
+
+Mock-up 승인을 요청하기 전에 다음을 한 줄씩 확인한다.
+
+- 사용자는 누구인가? (역할/소유 관계가 분명한가)
+- 로그인/비로그인/권한 상태가 명확한가? `로그인한 사용자` 같은 상태 표현이 누락되지 않았는가
+- 사용자가 어떤 업무 화면 또는 기능에 진입하는가? 어떤 업무 행위를 시작하는가
+- 그 진입을 URL이나 엔드포인트가 아니라 업무 진입점(`할 일 목록을 연다`, `정렬 기준을 바꾼다`)으로 표현했는가
+- 라우팅 자체가 AC인지, 아니면 단순 구현 상세인지 구분되어 있는가
+- 기대 결과(Then)가 사용자가 관찰 가능한 형태인가 (JSON 키나 상태 코드 그대로 노출 금지)
+- 이 행위가 정상 UI 흐름인가? 정상 흐름이 아니라면 북마크, 딥링크, 브라우저 뒤로가기/새로고침, 다중 기기에서 데이터가 줄어든 상태, 외부 통합 URL처럼 사용자가 실제로 마주칠 수 있는 경로를 `Given`에 명시했는가? 그런 경로를 설명할 수 없는 행위는 BDD 시나리오로 두지 말고 API 방어 계약으로 분류한다. ([`../standards/acceptance-test.md`](../standards/acceptance-test.md) "발생 경로가 설명되지 않는 행위는 시나리오로 두지 않는다")
+
 ### Mock-up 단계 산출물 범위
 
 승인 전까지는 "명세"까지만 만든다.
@@ -154,6 +168,7 @@ Gherkin 키워드는 영어(`Feature`/`Scenario`/`Given`/`When`/`Then`/`And`)를
 - Controller mapping, 요청/응답 DTO, Bean Validation, OpenAPI 애너테이션
 - `@Entity`, 컬럼, 관계, `nullable`/`unique`/`length`, 클래스 및 필드 레벨 `@Requirement`
 - `previewSchema` 산출물
+- 화면/라우팅 Mock-up: 화면 이름, 업무 진입점, 예상 route 초안, 접근 권한, 주요 표시 정보. 카드의 `BDD 테스트 리뷰 > 시나리오 승인 이력`에 한두 줄로 남긴다.
 
 금지:
 
@@ -162,6 +177,8 @@ Gherkin 키워드는 영어(`Feature`/`Scenario`/`Given`/`When`/`Then`/`And`)를
 - Service 업무 로직 구현
 - Controller의 실제 성공 응답 구현
 - Repository 쿼리 메서드 선언 (`findBy...` 등 메서드 시그니처는 본문이 없어도 Spring Data가 조회 계약을 만든다. 단, Entity 연결 확인용 빈 `JpaRepository` extends 선언은 필요 시 허용한다)
+- 실제 FE 컴포넌트 구현, CSS selector, 버튼/DOM 구조 상세
+- 라우팅이 AC가 아닌데 시나리오에 구체 URL을 고정하는 것
 
 컴파일이 필요한 경우 다음 정도로 둔다.
 

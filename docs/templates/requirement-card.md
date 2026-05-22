@@ -52,6 +52,7 @@
   연결 AC: 이 시나리오가 검증하는 수용 기준 문장 목록 (`.feature`의 `Covers:` 블록과 동일).
   API Mock-up: 엔드포인트, 요청/응답 예시, 상태 코드, 오류 코드. 확인 완료 여부.
   DB Mock-up: 변경되는 Entity/컬럼/관계. `previewSchema` 확인 완료 여부.
+  화면/라우팅 Mock-up: (해당 시) 화면 이름, 업무 진입점, 예상 route 초안, 접근 권한, 주요 표시 정보. CSS selector·컴포넌트 구조는 포함하지 않는다.
   승인자: Product Owner, Tech Lead
   Mock-up 결과: 승인 또는 수정 요청
 

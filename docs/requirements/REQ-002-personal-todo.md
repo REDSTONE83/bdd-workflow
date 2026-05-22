@@ -212,7 +212,7 @@
 
 ## BDD 테스트 리뷰
 
-- 시나리오 문서: docs/scenarios/REQ-002-personal-todo.feature (현재 create API 11개 행위 시나리오에 18개 테스트가 귀속, list/update/delete는 후속 마이그레이션 단계)
+- 시나리오 문서: docs/scenarios/REQ-002-personal-todo.feature (현재 create API 11개 + list API 8개 행위 시나리오에 27개 테스트가 귀속, update/delete는 후속 마이그레이션 단계)
 
 - 리뷰일: 2026-05-22
   리뷰자: Product Owner, Tech Lead
