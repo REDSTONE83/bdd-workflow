@@ -7,9 +7,10 @@
 ## 핵심 원칙
 
 - 요건 카드는 `/docs/requirements`에 둔다.
+- BDD 시나리오는 `/docs/scenarios`의 Gherkin `.feature`로 관리한다. PO/QA/기획자/프론트엔드/백엔드가 함께 검토하는 공유 명세이자 하네스 추적 입력이며, Cucumber 실행 도구는 도입하지 않는다.
 - API 명세는 Spring Boot 컨트롤러와 DTO 애너테이션에 둔다.
 - DB 스키마는 JPA `@Entity` 클래스에 둔다. 컬럼 단위 추적이 필요하면 필드에도 `@Requirement`를 붙인다.
-- BDD 시나리오는 별도 `.feature` 파일이 아니라 Acceptance Test 코드로 표현한다.
+- Acceptance Test는 승인된 `.feature` 시나리오를 실행 가능한 검증 코드로 옮긴다. `@Covers`는 `.feature`의 `Covers:` 블록과, `@DisplayName`은 `.feature`의 `Scenario:` 제목과 일치시킨다.
 - 수용 기준 커버리지는 테스트 메서드의 `@Covers` 값으로 판단한다.
 - API, DTO, Entity, 테스트는 `@Requirement("REQ-001")` 또는 `@Requirement({"REQ-001","REQ-002"})`로 하나 이상의 요건에 연결한다. 공통 응답 DTO처럼 도메인 무관한 클래스는 비워둔다.
 - 추적표와 검증 리포트는 사람이 직접 관리하지 않고 하네스가 생성한다.
@@ -17,6 +18,7 @@
 ## 문서 구조
 
 - `docs/requirements`: 무엇을 만들어야 하는가 (요건 카드)
+- `docs/scenarios`: 사용자가 어떻게 경험하는가 (Gherkin `.feature` 시나리오)
 - `docs/standards`: 어떤 방식으로 만들어야 하는가 (구현 표준)
 - `docs/harness`: 그걸 어떻게 검사하고 추적하는가 (하네스 운영)
 - `docs/terminology`: 표준 용어 사전과 검사 알고리즘
@@ -27,6 +29,7 @@
 
 ```text
 docs/requirements/*.md
+docs/scenarios/*.feature
 docs/standards/*.md
 src/main/java/**/*
 src/test/java/**/*AcceptanceTest.java
@@ -73,10 +76,10 @@ src/test/java/**/*AcceptanceTest.java
 3. 답변이 확정되면 그 내용을 `범위`/`제외 범위`/`수용 기준` 중 해당 위치에 반영하고, 정책 선택이 따로 필요한 결정은 `의사결정 로그`에 남긴다. 해당 항목은 `열린 질문`에서 제거한다.
 4. 표준 용어 검색/등록은 `node back-end/tools/terminology.mjs ...`로 한다 (`draft.json` 직접 편집 금지).
 5. 수용 기준을 검증 가능한 문장으로 정리한다.
-6. 동일 문장을 `@Covers`로 사용해 Acceptance Test를 먼저 작성한다.
-7. BDD 테스트 코드가 요건을 충분히 커버하는지 리뷰한다.
-8. 컨트롤러/DTO/Entity에 `@Requirement`와 API 계약을 명시한다. 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과로 사용자 확인을 받는다.
-9. 구현한다.
+6. 시나리오 1개를 골라 `docs/scenarios/REQ-XXX-*.feature`에 Gherkin 시나리오를 추가하고, 컨트롤러/DTO/Entity는 Mock-up 골격(`previewSchema` 가능 수준)까지만 작성한다. 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과로 사용자 확인을 받는다.
+7. 시나리오 + API/DB Mock-up을 사용자에게 묶어 승인 요청한다. Mock-up 결과는 요건 카드의 `BDD 테스트 리뷰 > 시나리오 승인 이력`에 남긴다.
+8. 승인 후 `@Covers` + `@DisplayName`이 `.feature`의 `Covers:`/`Scenario:`와 정합한 Acceptance Test를 작성하고, Service 업무 로직과 컨트롤러 본문을 구현한다.
+9. BDD 테스트 코드 리뷰를 받는다. 다음 시나리오는 6번으로 돌아간다.
 10. `./gradlew validateHarness`로 요건/표준 용어(safe)/API/Entity/테스트/결과 연결을 확인한다.
 11. 카드를 `승인`으로 올리거나 릴리스 전이라면 `./gradlew validateTerminologyStrict`로 strict error를 0으로 맞춘다.
 
@@ -106,6 +109,7 @@ cd back-end
 
 ./gradlew test                       # JUnit 테스트
 ./gradlew generateHarnessSourceIndex # JavaParser source index만 생성
+./gradlew generateScenarioIndex      # Gherkin .feature 시나리오 인덱스 생성
 ./gradlew previewSchema              # Entity 기반 DDL 미리보기
 ./gradlew traceRequirements          # 추적 리포트 생성 (always exit 0)
 ./gradlew traceRequirementCard -Preq=REQ-XXX        # 단일 카드 추적 리포트 (always exit 0)

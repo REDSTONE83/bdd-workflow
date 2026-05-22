@@ -4,6 +4,8 @@ DB 스키마는 JPA `@Entity` 클래스로 정의한다. 별도 ERD, DDL, 마이
 
 Entity 클래스는 `{domain}/domain/` 패키지에 둔다 ([`package-structure.md`](./package-structure.md)). 식별자는 [`id-policy.md`](./id-policy.md), 시각 컬럼은 [`datetime.md`](./datetime.md)를 따른다.
 
+시나리오 단위 Mock-up 승인 전에 어디까지 작성할 수 있는지(`@Entity` 필드/컬럼/관계 + `previewSchema`까지 허용, Repository 쿼리 메서드 선언과 Service 업무 로직은 금지)는 [`../harness/requirement-authoring.md`](../harness/requirement-authoring.md)의 Mock-up 단계 산출물 범위를 따른다.
+
 ## Entity
 
 ```java

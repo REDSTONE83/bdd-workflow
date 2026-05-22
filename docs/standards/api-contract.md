@@ -4,6 +4,8 @@ API 명세는 Spring Boot 컨트롤러와 DTO 애너테이션에 둔다. 별도 
 
 컨트롤러와 DTO의 패키지 위치는 [`package-structure.md`](./package-structure.md)를 따른다. 식별자/시각 타입 표준은 [`id-policy.md`](./id-policy.md)와 [`datetime.md`](./datetime.md)에 둔다.
 
+시나리오 단위 Mock-up 승인 전에 어디까지 작성할 수 있는지(컨트롤러 mapping/DTO/Bean Validation/OpenAPI 애너테이션은 허용, 실제 성공 응답 구현은 금지)는 [`../harness/requirement-authoring.md`](../harness/requirement-authoring.md)의 Mock-up 단계 산출물 범위를 따른다.
+
 ## 컨트롤러
 
 컨트롤러 메서드는 관련 요건을 명시한다.

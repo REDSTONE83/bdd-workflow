@@ -61,14 +61,14 @@ tasks.register('generateHarnessSourceIndex', JavaExec) {
 tasks.register('traceRequirements', Exec) {
     group = 'verification'
     description = 'Generate requirement/API/test trace report from cards, source index, and safe terminology report.'
-    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('validateTerminology')
+    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
     commandLine 'node', 'tools/trace-requirements.mjs'
 }
 
 tasks.register('traceRequirementsAfterTest', Exec) {
     group = 'verification'
     description = 'Quiet finalizer: refresh trace-report files after test without re-printing the full trace.'
-    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('validateTerminology')
+    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
     commandLine 'node', 'tools/trace-requirements.mjs', '--quiet'
 }
 
@@ -77,6 +77,12 @@ tasks.register('previewSchema', Exec) {
     description = 'Generate DDL preview from JPA @Entity classes for human review before migration.'
     dependsOn tasks.named('generateHarnessSourceIndex')
     commandLine 'node', 'tools/preview-schema.mjs'
+}
+
+tasks.register('generateScenarioIndex', Exec) {
+    group = 'verification'
+    description = 'Parse docs/scenarios/*.feature files into build/harness/scenario-index.json.'
+    commandLine 'node', 'tools/scenario-index.mjs'
 }
 
 tasks.register('indexTerminology', Exec) {
@@ -127,6 +133,7 @@ tasks.register('validateHarness', Exec) {
     group = 'verification'
     description = 'Strict gate: standards + safe-terminology + tests + RED/GREEN/BLUE trace.'
     dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('generateScenarioIndex'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')
@@ -145,7 +152,7 @@ gradle.taskGraph.whenReady { graph ->
 tasks.register('traceRequirementCard', Exec) {
     group = 'verification'
     description = 'Per-card trace report (-Preq=REQ-XXX, always exit 0).'
-    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('validateTerminology')
+    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
     doFirst {
         commandLine 'node', 'tools/trace-requirements.mjs', '--requirement', project.property('req')
     }
@@ -155,6 +162,7 @@ tasks.register('validateRequirementCard', Exec) {
     group = 'verification'
     description = 'Strict per-card gate: standards + safe-terminology + tests + RED check for one card (-Preq=REQ-XXX).'
     dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('generateScenarioIndex'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')
@@ -167,6 +175,7 @@ tasks.register('validateRequirementCardBlue', Exec) {
     group = 'verification'
     description = 'Strict per-card BLUE gate: like validateRequirementCard but also fails on GREEN (-Preq=REQ-XXX).'
     dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('generateScenarioIndex'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')

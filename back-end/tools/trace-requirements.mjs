@@ -9,6 +9,7 @@ const workspaceRoot = path.resolve(backendRoot, '..');
 const docsRoot = path.join(workspaceRoot, 'docs', 'requirements');
 const outputDir = path.join(backendRoot, 'build', 'harness');
 const sourceIndexPath = path.join(outputDir, 'source-index.json');
+const scenarioIndexPath = path.join(outputDir, 'scenario-index.json');
 const terminologyReportPath = path.join(outputDir, 'terminology-report.json');
 const terminologyIndexPath = path.join(outputDir, 'terminology-index.json');
 const testResultRoots = [
@@ -297,6 +298,27 @@ function readSourceIndex() {
     };
 }
 
+function readScenarioIndex() {
+    if (!fs.existsSync(scenarioIndexPath)) {
+        return { present: false, features: [], issues: [] };
+    }
+    try {
+        const data = JSON.parse(fs.readFileSync(scenarioIndexPath, 'utf8'));
+        return {
+            present: true,
+            features: data.features ?? [],
+            issues: data.issues ?? [],
+            generatedAt: data.generatedAt ?? null
+        };
+    } catch (err) {
+        return {
+            present: false,
+            features: [],
+            issues: [{ line: 0, message: `scenario-index.json 파싱 실패: ${err.message}` }]
+        };
+    }
+}
+
 function readTerminologyReport() {
     if (!fs.existsSync(terminologyReportPath)) {
         return null;
@@ -416,27 +438,52 @@ function readTestResults() {
     return results;
 }
 
-function statusForCriterion(criterion, tests, results) {
+function scenarioCovers(scenario) {
+    return (scenario.covers ?? []).map((c) => (typeof c === 'string' ? c : c.text));
+}
+
+function statusForCriterion(criterion, tests, scenarios, results) {
     const matchingTests = tests.filter((test) => test.covers.includes(criterion));
-    if (matchingTests.length === 0) {
-        return { status: 'MISSING', tests: [] };
-    }
+    const matchingScenarios = scenarios.filter((scenario) =>
+        scenarioCovers(scenario).includes(criterion)
+    );
 
     const testStatuses = matchingTests.map((test) => ({
         ...test,
         result: results.get(test.identity) ?? results.get(`${test.className}.${test.displayName}`) ?? 'NOT_RUN'
     }));
 
-    if (testStatuses.some((test) => test.result === 'FAIL')) {
-        return { status: 'FAIL', tests: testStatuses };
+    const annotatedScenarios = matchingScenarios.map((scenario) => {
+        const linkedTests = testStatuses.filter((test) => test.displayName === scenario.title);
+        return {
+            title: scenario.title,
+            file: scenario.file,
+            line: scenario.line,
+            stepCount: (scenario.steps ?? []).length,
+            covers: scenarioCovers(scenario),
+            linkedTestIdentities: linkedTests.map((test) => test.identity)
+        };
+    });
+    const linkedTestIds = new Set(annotatedScenarios.flatMap((s) => s.linkedTestIdentities));
+    const annotatedTests = testStatuses.map((test) => ({
+        ...test,
+        scenarioLinked: linkedTestIds.has(test.identity)
+    }));
+
+    let status;
+    if (annotatedTests.length === 0) {
+        status = 'MISSING';
+    } else if (annotatedTests.some((test) => test.result === 'FAIL')) {
+        status = 'FAIL';
+    } else if (annotatedTests.some((test) => test.result === 'SKIP')) {
+        status = 'SKIP';
+    } else if (annotatedTests.some((test) => test.result === 'NOT_RUN')) {
+        status = 'NOT_RUN';
+    } else {
+        status = 'PASS';
     }
-    if (testStatuses.some((test) => test.result === 'SKIP')) {
-        return { status: 'SKIP', tests: testStatuses };
-    }
-    if (testStatuses.some((test) => test.result === 'NOT_RUN')) {
-        return { status: 'NOT_RUN', tests: testStatuses };
-    }
-    return { status: 'PASS', tests: testStatuses };
+
+    return { status, tests: annotatedTests, scenarios: annotatedScenarios };
 }
 
 function attachTerminology(requirement, bucket) {
@@ -450,9 +497,12 @@ function attachTerminology(requirement, bucket) {
     };
 }
 
-function evaluateRequirement(card, apis, tests, entities, results) {
+function evaluateRequirement(card, apis, tests, scenarios, entities, results) {
     const requirementApis = apis.filter((api) => api.requirements.includes(card.id));
     const requirementTests = tests.filter((test) => test.requirements.includes(card.id));
+    const requirementScenarios = scenarios.filter((scenario) =>
+        (scenario.requirementIds ?? []).includes(card.id)
+    );
     const requirementEntities = entities
         .map((entity) => ({
             ...entity,
@@ -461,7 +511,7 @@ function evaluateRequirement(card, apis, tests, entities, results) {
         .filter((entity) => entity.requirements.includes(card.id) || entity.columns.length > 0);
     const coverage = card.acceptanceCriteria.map((criterion) => ({
         criterion,
-        ...statusForCriterion(criterion, requirementTests, results)
+        ...statusForCriterion(criterion, requirementTests, requirementScenarios, results)
     }));
 
     const redReasons = [];
@@ -484,6 +534,7 @@ function evaluateRequirement(card, apis, tests, entities, results) {
             redReasons,
             apis: requirementApis,
             tests: requirementTests,
+            scenarios: requirementScenarios,
             entities: requirementEntities,
             coverage
         };
@@ -504,17 +555,111 @@ function evaluateRequirement(card, apis, tests, entities, results) {
         blueBlockedBy,
         apis: requirementApis,
         tests: requirementTests,
+        scenarios: requirementScenarios,
         entities: requirementEntities,
         coverage
     };
 }
 
-function buildModel(allCards, cards, apis, tests, entities, results, terminologyReport, terminologyIndex, selectedIds, flags = {}) {
+function flattenScenarios(scenarioIndex) {
+    return (scenarioIndex.features ?? []).flatMap((feature) =>
+        (feature.scenarios ?? []).map((scenario) => ({
+            ...scenario,
+            file: feature.file,
+            featureTitle: feature.title,
+            featureTags: feature.tags ?? [],
+            requirementIds: feature.requirementIds ?? []
+        }))
+    );
+}
+
+function computeScenarioWarnings(scenarioIndex, cards, tests, knownRequirementIds) {
+    const warnings = [];
+    const cardById = new Map(cards.map((card) => [card.id, card]));
+    const features = scenarioIndex.features ?? [];
+    const allScenarios = flattenScenarios(scenarioIndex);
+
+    // Warning 1: BDD 테스트(@Covers 있음)의 @DisplayName이 어떤 .feature Scenario:와도 일치하지 않음.
+    for (const test of tests) {
+        if (!Array.isArray(test.covers) || test.covers.length === 0) continue;
+        const testReqs = test.requirements ?? [];
+        const candidateScenarios = allScenarios.filter((scenario) =>
+            (scenario.requirementIds ?? []).some((id) => testReqs.includes(id))
+        );
+        const matched = candidateScenarios.some((scenario) => scenario.title === test.displayName);
+        if (!matched) {
+            warnings.push({
+                kind: 'TEST_DISPLAYNAME_NO_SCENARIO',
+                severity: 'warning',
+                requirementIds: testReqs,
+                message: `@DisplayName "${test.displayName ?? ''}" 가 어떤 .feature Scenario: 제목과도 일치하지 않음`,
+                location: {
+                    identity: test.identity,
+                    file: test.file ?? null
+                }
+            });
+        }
+    }
+
+    // Warning 2: .feature Scenario의 Covers: 항목이 카드 수용 기준과 정확히 일치하지 않음.
+    for (const feature of features) {
+        const featureCards = (feature.requirementIds ?? [])
+            .map((id) => cardById.get(id))
+            .filter(Boolean);
+        if (featureCards.length === 0) continue;
+        for (const scenario of feature.scenarios ?? []) {
+            for (const acText of scenarioCovers(scenario)) {
+                const found = featureCards.some((card) =>
+                    (card.acceptanceCriteria ?? []).includes(acText)
+                );
+                if (!found) {
+                    warnings.push({
+                        kind: 'SCENARIO_COVERS_NO_CARD_AC',
+                        severity: 'warning',
+                        requirementIds: feature.requirementIds ?? [],
+                        covers: acText,
+                        scenarioTitle: scenario.title,
+                        message: `.feature Covers: "${acText}" 가 카드 수용 기준과 일치하지 않음`,
+                        location: {
+                            file: feature.file,
+                            line: scenario.line ?? null,
+                            scenarioTitle: scenario.title
+                        }
+                    });
+                }
+            }
+        }
+    }
+
+    // Warning 3: .feature @REQ-XXX 태그가 카드에 없음.
+    for (const feature of features) {
+        for (const ref of feature.requirementIds ?? []) {
+            if (!knownRequirementIds.has(ref)) {
+                warnings.push({
+                    kind: 'FEATURE_UNKNOWN_REQ_TAG',
+                    severity: 'warning',
+                    requirementIds: feature.requirementIds ?? [],
+                    unknownRef: ref,
+                    message: `.feature @${ref} 태그가 카드에 없음`,
+                    location: {
+                        file: feature.file,
+                        line: feature.line ?? null
+                    }
+                });
+            }
+        }
+    }
+
+    return warnings;
+}
+
+function buildModel(allCards, cards, apis, tests, entities, results, terminologyReport, terminologyIndex, scenarioIndex, selectedIds, flags = {}) {
     const knownRequirementIds = new Set(cards.map((card) => card.id));
     const terminologyBucket = bucketTerminologyFindings(terminologyReport, knownRequirementIds);
+    const scenarios = flattenScenarios(scenarioIndex);
     const isSelected = (id) => !selectedIds || selectedIds.has(id);
     const allRequirements = cards
-        .map((card) => evaluateRequirement(card, apis, tests, entities, results))
+        .map((card) => evaluateRequirement(card, apis, tests, scenarios, entities, results))
         .map((req) => attachTerminology(req, terminologyBucket));
     const requirements = allRequirements.filter((req) => isSelected(req.id));
     const hasUnknown = (refs) => refs.length === 0 || refs.some((ref) => !knownRequirementIds.has(ref));
@@ -540,6 +685,25 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
             ];
             return intersectsSelection(refs);
         });
+    const unknownFeatures = (scenarioIndex.features ?? [])
+        .filter((feature) => hasUnknown(feature.requirementIds ?? []))
+        .filter((feature) => {
+            const refs = feature.requirementIds ?? [];
+            // Features with no @REQ-* tag stay only in global reports.
+            if (refs.length === 0) {
+                return !selectedIds;
+            }
+            return intersectsSelection(refs);
+        });
+    const scenarioIssueFeatures = (scenarioIndex.features ?? [])
+        .filter((feature) => (feature.issues ?? []).length > 0)
+        .filter((feature) => {
+            const refs = feature.requirementIds ?? [];
+            if (refs.length === 0) {
+                return !selectedIds;
+            }
+            return intersectsSelection(refs);
+        });
 
     const candidateCards = selectedIds
         ? allCards.filter((card) => selectedIds.has(card.id))
@@ -560,6 +724,21 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
     }
     const structureIssueCount = structureReports.reduce((sum, report) => sum + report.issues.length, 0);
 
+    const scenarioFeatureIssueCount = scenarioIssueFeatures.reduce(
+        (sum, feature) => sum + (feature.issues ?? []).length,
+        0
+    );
+    const globalScenarioIssues = selectedIds ? [] : (scenarioIndex.issues ?? []);
+
+    const allScenarioWarnings = computeScenarioWarnings(scenarioIndex, cards, tests, knownRequirementIds);
+    const scenarioWarnings = allScenarioWarnings.filter((warning) =>
+        intersectsSelection(warning.requirementIds ?? [])
+    );
+    const scenarioWarningsByKind = scenarioWarnings.reduce((acc, warning) => {
+        acc[warning.kind] = (acc[warning.kind] ?? 0) + 1;
+        return acc;
+    }, {});
+
     const summary = {
         total: requirements.length,
         red: requirements.filter((requirement) => requirement.state === 'RED').length,
@@ -568,6 +747,10 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
         unknownApis: unknownApis.length,
         unknownTests: unknownTests.length,
         unknownEntities: unknownEntities.length,
+        unknownFeatures: unknownFeatures.length,
+        scenarioIssues: scenarioFeatureIssueCount + globalScenarioIssues.length,
+        scenarioWarnings: scenarioWarnings.length,
+        scenarioWarningsByKind,
         structureIssues: structureIssueCount
     };
 
@@ -581,6 +764,18 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
         unknownApis,
         unknownTests,
         unknownEntities,
+        unknownFeatures,
+        scenarioIndex: {
+            present: scenarioIndex.present !== false,
+            generatedAt: scenarioIndex.generatedAt ?? null,
+            globalIssues: globalScenarioIssues,
+            featureIssues: scenarioIssueFeatures.map((feature) => ({
+                file: feature.file,
+                requirementIds: feature.requirementIds ?? [],
+                issues: feature.issues ?? []
+            }))
+        },
+        scenarioWarnings,
         terminology: {
             present: terminologyBucket.present,
             mode: terminologyBucket.mode,
@@ -612,6 +807,14 @@ function buildMarkdown(model) {
     lines.push(`- Unknown API references: ${model.summary.unknownApis}`);
     lines.push(`- Unknown test references: ${model.summary.unknownTests}`);
     lines.push(`- Unknown entity references: ${model.summary.unknownEntities}`);
+    lines.push(`- Unknown feature references: ${model.summary.unknownFeatures}`);
+    lines.push(`- Scenario index issues: ${model.summary.scenarioIssues}`);
+    const sw = model.summary.scenarioWarnings;
+    const swByKind = model.summary.scenarioWarningsByKind || {};
+    const swKindStr = Object.keys(swByKind).length === 0
+        ? ''
+        : ` (by kind: ${Object.entries(swByKind).map(([k, v]) => `${k}=${v}`).join(', ')})`;
+    lines.push(`- Scenario warnings: ${sw}${swKindStr} (report-only; --check 미반영)`);
     lines.push(`- Card structure issues: ${model.summary.structureIssues}`);
     if (model.terminology.present) {
         const t = model.terminology;
@@ -671,11 +874,43 @@ function buildMarkdown(model) {
         }
         lines.push('');
 
+        lines.push('### Scenarios', '');
+        if ((requirement.scenarios ?? []).length === 0) {
+            lines.push('- (없음)');
+        } else {
+            for (const scenario of requirement.scenarios) {
+                const loc = `${scenario.file}:${scenario.line}`;
+                const coversList = scenarioCovers(scenario);
+                lines.push(`- ${scenario.title} (${loc})`);
+                lines.push(`  - Covers: ${coversList.length}건`);
+                lines.push(`  - Steps: ${(scenario.steps ?? []).length}건`);
+            }
+        }
+        lines.push('');
+
         lines.push('### Acceptance Criteria Coverage', '');
         for (const row of requirement.coverage) {
             lines.push(`- ${row.status}: ${row.criterion}`);
-            for (const test of row.tests) {
-                lines.push(`  - ${test.identity}: ${test.result}`);
+            const scenariosForRow = row.scenarios ?? [];
+            if (scenariosForRow.length === 0 && row.tests.length === 0) {
+                lines.push(`  - (시나리오 없음, 테스트 없음)`);
+            }
+            for (const scenario of scenariosForRow) {
+                const loc = `${scenario.file}:${scenario.line}`;
+                lines.push(`  - Scenario: ${scenario.title} (${loc})`);
+                const linkedTests = row.tests.filter((test) =>
+                    scenario.linkedTestIdentities.includes(test.identity)
+                );
+                if (linkedTests.length === 0) {
+                    lines.push(`    - (@DisplayName 일치하는 테스트 없음)`);
+                }
+                for (const test of linkedTests) {
+                    lines.push(`    - ${test.identity}: ${test.result}`);
+                }
+            }
+            const unlinkedTests = row.tests.filter((test) => !test.scenarioLinked);
+            for (const test of unlinkedTests) {
+                lines.push(`  - (시나리오 미연결) ${test.identity}: ${test.result}`);
             }
         }
         lines.push('');
@@ -745,6 +980,54 @@ function buildMarkdown(model) {
         lines.push('');
     }
 
+    if (model.unknownFeatures.length > 0) {
+        lines.push('## Unknown Feature Requirement References', '');
+        for (const feature of model.unknownFeatures) {
+            const refs = (feature.requirementIds ?? []).length > 0
+                ? formatUnknownRefs(feature.requirementIds)
+                : '미지정';
+            lines.push(`- [${refs}] ${feature.file}`);
+        }
+        lines.push('');
+    }
+
+    if (
+        (model.scenarioIndex.globalIssues ?? []).length > 0 ||
+        (model.scenarioIndex.featureIssues ?? []).length > 0
+    ) {
+        lines.push('## Scenario Index Issues', '');
+        for (const issue of (model.scenarioIndex.globalIssues ?? [])) {
+            lines.push(`- (global) ${issue.message}`);
+        }
+        for (const feature of (model.scenarioIndex.featureIssues ?? [])) {
+            for (const issue of feature.issues) {
+                lines.push(`- ${feature.file}:${issue.line ?? 0} — ${issue.message}`);
+            }
+        }
+        lines.push('');
+    }
+
+    if ((model.scenarioWarnings ?? []).length > 0) {
+        lines.push('## Scenario Warnings', '');
+        lines.push(
+            '마이그레이션 진행 동안은 report-only다. 향후 ERROR로 승격 예정. ' +
+                '근거: docs/standards/acceptance-test.md, docs/harness/requirement-authoring.md.'
+        );
+        lines.push('');
+        for (const warning of model.scenarioWarnings) {
+            const loc = warning.location ?? {};
+            const locParts = [];
+            if (loc.file) locParts.push(loc.line ? `${loc.file}:${loc.line}` : loc.file);
+            if (loc.identity) locParts.push(loc.identity);
+            const locStr = locParts.length > 0 ? ` — ${locParts.join(' / ')}` : '';
+            const reqStr = (warning.requirementIds ?? []).length > 0
+                ? ` [${warning.requirementIds.join(', ')}]`
+                : '';
+            lines.push(`- [${warning.kind}]${reqStr} ${warning.message}${locStr}`);
+        }
+        lines.push('');
+    }
+
     if (model.terminology.present && model.terminology.unattributed.length > 0) {
         lines.push('## Unattributed Terminology Findings', '');
         lines.push(formatCountsLine(tallyFindings(model.terminology.unattributed)));
@@ -767,6 +1050,7 @@ const entities = sourceIndex.entities;
 const results = readTestResults();
 const terminologyReport = readTerminologyReport();
 const terminologyIndex = readTerminologyIndex();
+const scenarioIndex = readScenarioIndex();
 
 function resolveSelectedIds(cli, allCards) {
     if (cli.requirementIds.size === 0 && cli.requirementFiles.size === 0) {
@@ -813,7 +1097,7 @@ function resolveSelectedIds(cli, allCards) {
 }
 
 const selectedIds = resolveSelectedIds(cli, allCardsRaw);
-const model = buildModel(allCardsRaw, cards, apis, tests, entities, results, terminologyReport, terminologyIndex, selectedIds, { checkMode, requireBlue });
+const model = buildModel(allCardsRaw, cards, apis, tests, entities, results, terminologyReport, terminologyIndex, scenarioIndex, selectedIds, { checkMode, requireBlue });
 const markdown = buildMarkdown(model);
 
 fs.mkdirSync(outputDir, { recursive: true });

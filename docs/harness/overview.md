@@ -11,7 +11,16 @@
 ```text
 요건 카드
   REQ-001
-  수용 기준
+  수용 기준 (AC, 카드 완료 여부 기계 판정)
+  시나리오 승인 이력 (BDD 테스트 리뷰 섹션 - Mock-up 결과)
+
+시나리오 문서 (Gherkin)
+  docs/scenarios/REQ-001-*.feature
+  @REQ-001                                   // Feature 태그
+  Feature: 업무 언어 요건 제목
+  Scenario: 업무 언어 검토명                 // 사람이 검토하는 단위
+  Covers: AC 문장 목록                       // .feature ↔ @Covers 연결
+  Given / When / Then / And                  // 시나리오 본문 (FE/BE 공유)
 
 컨트롤러
   @Requirement("REQ-001")
@@ -25,12 +34,15 @@ JPA Entity
 
 Acceptance Test
   @Requirement("REQ-001")
-  @Covers("수용 기준 문장")
+  @Covers("수용 기준 문장")                   // AC 커버리지 신호
+  @DisplayName("승인된 시나리오 제목")        // .feature의 Scenario: 제목과 일치
   SignupApiAcceptanceTest.signupWithValidRequestReturnsCreated
 
 검증 리포트
-  REQ-001 -> API -> Entity -> 테스트 -> PASS/FAIL -> RED/GREEN/BLUE
+  REQ-001 -> AC -> Scenario(.feature) -> Test -> PASS/FAIL -> RED/GREEN/BLUE
 ```
+
+`@Covers`가 있는 테스트만 AC 커버리지에 포함된다. `@Covers`가 없는 테스트는 보조 테스트로 분류해 별도로 표시한다. `.feature`는 공유 BDD 명세 + 하네스 추적 입력으로만 사용하며 Cucumber 실행 도구는 도입하지 않는다.
 
 ## 하네스 구성 요소
 
@@ -47,11 +59,14 @@ docs/harness/project-structure.md
 docs/requirements
   사람이 관리하는 요건 카드
 
+docs/scenarios
+  Gherkin `.feature` 시나리오 원본. FE/BE/QA 공유 명세이자 하네스 추적 입력.
+
 back-end/src/main/java
   Spring Boot API, 컨트롤러 기반 API 명세, JPA @Entity 기반 DB 스키마
 
 back-end/src/test/java
-  BDD 시나리오 역할을 하는 Acceptance Test
+  승인된 시나리오를 실행 가능한 검증으로 옮긴 Acceptance Test
 
 back-end/src/harness/java
   JavaParser 기반 API/Entity/test source index 생성기
@@ -88,6 +103,8 @@ back-end/build/harness
 - 요건 카드 승인
 - 열린 질문 없음
 
+Mock-up 단계의 카드(시나리오 승인 전, `@Covers` 테스트 부재)는 정상적으로 RED로 표시된다. 이 시점에는 strict 게이트인 `validateHarness`를 돌리지 않고 `traceRequirements`나 `traceRequirementCard`로 현황만 본다. 작성 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
+
 ## 품질 게이트
 
 릴리스 후보로 넘기려면 최소한 다음 명령이 성공해야 한다.
@@ -112,6 +129,8 @@ cd back-end
 
 요건 카드는 사용자에게 질문하며 구체화한다. 질문은 기본적으로 한 번에 하나씩 진행하고, 아직 확정되지 않은 질문은 `열린 질문`에 둔다. 답변이 확정되면 그 내용을 `범위`/`제외 범위`/`수용 기준`/`의사결정 로그` 중 해당 위치에 반영하고 `열린 질문`에서 제거한 뒤 다음 질문으로 넘어간다.
 
-수용 기준이 확정되면 그 문장을 그대로 Acceptance Test의 `@Covers`에 사용한다. 테스트 코드 리뷰에서는 모든 수용 기준이 커버되는지, 정상/예외/경계 조건이 충분한지, API 계약을 검증하는지 확인한다.
+수용 기준이 확정되면 한 번에 전체 테스트로 가지 않고 **BDD 시나리오 1개 단위**로 잘라 진행한다. 시나리오마다 Gherkin `.feature` 문서 + API/DB Mock-up 코드 골격을 만들어 사용자 승인을 받고, 승인된 시나리오에 대해서만 `@Covers` + `@DisplayName`이 `.feature`의 `Covers:`와 `Scenario:` 제목에 정합한 BDD 테스트와 구현으로 넘어간다. 다음 시나리오는 다시 Mock-up 단계로 돌아간다.
 
-요건 카드에는 API와 테스트 목록을 수기로 적지 않는다. 실제 연결은 JavaParser 기반 source index에서 추출해 `build/harness/source-index.json`, `build/harness/trace-report.md`, `build/harness/trace-report.json`에 기록한다.
+테스트 코드 리뷰에서는 모든 수용 기준이 `@Covers`로 커버되는지, 각 BDD 테스트의 `@DisplayName`이 승인된 `.feature` 시나리오 제목과 일치하는지, 정상/예외/경계 조건이 충분한지, API 계약을 검증하는지 확인한다.
+
+요건 카드에는 API와 테스트 목록을 수기로 적지 않는다. 실제 연결은 JavaParser 기반 source index에서 추출해 `build/harness/source-index.json`, `build/harness/trace-report.md`, `build/harness/trace-report.json`에 기록한다. 시나리오 승인 이력만 사람이 카드의 `BDD 테스트 리뷰` 섹션에 남긴다.

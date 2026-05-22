@@ -12,11 +12,16 @@
 -> 사용자 확인 질문 (열린 질문에 기록)
 -> 답변을 범위/제외 범위/수용 기준/의사결정 로그로 분배 후 열린 질문에서 제거
 -> 수용 기준 확정
--> BDD Acceptance Test 작성
--> 테스트 코드 리뷰
+-> 시나리오 1개 선택
+-> 시나리오 문서 + API/DB Mock-up 작성
+-> 사용자 승인
+-> 승인된 시나리오를 @DisplayName과 @Covers로 연결한 BDD Acceptance Test 작성
 -> 구현
 -> 하네스 검증
+-> 다음 시나리오 반복
 ```
+
+수용 기준이 확정되었다고 해서 한 번에 모든 테스트와 구현으로 넘어가지 않는다. AC를 프론트엔드/백엔드/QA가 함께 검토 가능한 BDD 시나리오 단위로 잘라, 시나리오 하나마다 `시나리오 문서/API/DB Mock-up -> 승인 -> 테스트 -> 구현` 절차를 반복한다.
 
 ## 질문해야 하는 내용
 
@@ -101,34 +106,125 @@ D. 직접 입력
 - 사용자 경험을 개선한다
 ```
 
+## 시나리오 문서와 Mock-up
+
+AC가 확정되면 한 번에 하나의 BDD 시나리오만 골라 문서와 Mock-up을 만든다. 시나리오는 PO/QA/기획자/프론트엔드/백엔드가 함께 읽을 수 있는 업무 언어 단위이며, 원본은 Gherkin `.feature` 파일로 `docs/scenarios/REQ-XXX-*.feature`에 둔다.
+
+Cucumber 실행 도구는 도입하지 않는다. `.feature`는 "공유 BDD 명세 + 하네스 추적 입력"으로만 사용한다. 테스트 실행은 평소처럼 JUnit이 담당하며, `.feature`는 사람이 읽고 하네스가 파싱한다.
+
+요건 1건당 `.feature` 파일 1개를 두고 그 안에 시나리오를 추가해 나간다. 파일명은 요건 카드와 짝을 맞춘다 (예: 요건 `REQ-002-personal-todo.md`에 대응하는 시나리오 파일은 `REQ-002-personal-todo.feature`).
+
+시나리오 문서가 담는 정보:
+
+- **`@REQ-XXX` 태그**: Feature 레벨 태그. 어떤 요건의 시나리오인지 연결한다.
+- **Feature**: 요건 카드의 제목과 동등한 업무 언어 문장.
+- **Scenario 제목**: 업무 언어 문장. AC 문장을 그대로 복사하지 않는다. (예: `할 일이 많은 사용자가 두 번째 목록 묶음을 이어서 확인한다`)
+- **`Covers:` 블록**: 이 시나리오가 검증하는 수용 기준 문장 목록. Gherkin 표준 키워드는 아니며, Scenario 제목과 첫 Given 사이의 설명 블록(free-text description)에 둔다. 하네스는 이 블록을 파싱해 테스트의 `@Covers`와 같은 의미로 추적한다.
+- **Given / When / Then / And**: 자연어 문장. 사용자 상태, 핵심 행위, 관찰 가능한 결과를 프론트엔드와 백엔드가 함께 이해할 수 있게 적는다.
+
+API Mock-up과 DB Mock-up은 별도 문서가 아니라 코드 골격(Controller/DTO/Entity)과 `previewSchema` 산출물로 둔다. `.feature` 파일은 시나리오 본문에만 집중하고, API/DB 명세는 평소대로 `back-end/src/main/java`의 골격 코드에서 확인한다. 작성 기준은 [`api-contract.md`](../standards/api-contract.md)와 [`persistence-schema.md`](../standards/persistence-schema.md).
+
+```gherkin
+@REQ-002
+Feature: 개인 할 일 관리
+
+  Scenario: 할 일이 많은 사용자가 두 번째 목록 묶음을 이어서 확인한다
+    Covers:
+      - 본인의 할 일 목록은 page와 size 쿼리 파라미터로 페이지 단위로 조회된다
+      - 응답에는 content, page, size, totalElements, totalPages가 포함된다
+
+    Given 사용자는 정렬 기준으로 보여질 할 일 6개를 가지고 있다
+    And 다른 사용자의 할 일도 함께 존재한다
+    When 사용자가 한 번에 2개씩 보도록 설정하고 두 번째 묶음을 연다
+    Then 내 할 일 중 두 번째 묶음에 해당하는 2개만 보인다
+    And 사용자는 현재 묶음 번호, 한 번에 보는 개수, 전체 개수, 전체 묶음 수를 알 수 있다
+```
+
+Gherkin 키워드는 영어(`Feature`/`Scenario`/`Given`/`When`/`Then`/`And`)를 사용하고 본문은 한국어로 적는다. `# language: ko` 지시자는 사용하지 않는다. 표준 Gherkin 파서는 `# language: ko`가 있으면 한국어 dialect 키워드(`기능`, `시나리오`, `조건/먼저`, `만일`, `그러면`, `그리고`)를 기대하므로 영어 키워드와 섞으면 파서에 따라 인식하지 못할 수 있다.
+
+`Covers:` 블록은 Gherkin 파서가 description(free text)으로 다루는 영역이므로 표준 도구 호환을 깨지 않는다. 하네스는 이 영역에서 `Covers:` 헤더 다음의 `- ...` 라인을 AC 문장 목록으로 수집한다.
+
+### Mock-up 단계 산출물 범위
+
+승인 전까지는 "명세"까지만 만든다.
+
+허용:
+
+- `docs/scenarios/REQ-XXX-*.feature` 시나리오 문서 (Feature/Scenario/`Covers:`/Given/When/Then)
+- Controller mapping, 요청/응답 DTO, Bean Validation, OpenAPI 애너테이션
+- `@Entity`, 컬럼, 관계, `nullable`/`unique`/`length`, 클래스 및 필드 레벨 `@Requirement`
+- `previewSchema` 산출물
+
+금지:
+
+- `@Covers`가 붙은 테스트 메서드
+- 빈 PASS 테스트 (assertion 없는 `@Test` 메서드는 JUnit 기준 PASS로 잡혀 허위 GREEN을 만든다)
+- Service 업무 로직 구현
+- Controller의 실제 성공 응답 구현
+- Repository 쿼리 메서드 선언 (`findBy...` 등 메서드 시그니처는 본문이 없어도 Spring Data가 조회 계약을 만든다. 단, Entity 연결 확인용 빈 `JpaRepository` extends 선언은 필요 시 허용한다)
+
+컴파일이 필요한 경우 다음 정도로 둔다.
+
+- Controller: `@RequestMapping`/`@Operation`/시그니처는 작성하되 본문은 `throw new UnsupportedOperationException(...)` 또는 미구현 상태로 둔다.
+- Service: 인터페이스나 클래스 시그니처만 작성하고 본문은 위와 동일.
+- Entity: `previewSchema`를 돌리기 위해 필요한 만큼 완전한 형태로 작성한다.
+
+### 승인 게이트
+
+시나리오 문서 + API Mock-up + DB Mock-up을 묶어 한 번에 사용자에게 승인을 요청한다. 승인된 시나리오에 대해서만 BDD 테스트와 구현을 진행한다. 다음 시나리오는 다시 Mock-up 단계로 돌아간다.
+
+승인 이력은 요건 카드의 `BDD 테스트 리뷰 > 시나리오 승인 이력` 서브섹션에 시나리오 단위로 남긴다. `.feature` 파일 자체에는 승인 이력을 넣지 않는다. 표준 Gherkin 도구와의 호환을 유지하기 위해서다.
+
+### Mock-up 중의 검증 명령
+
+Mock-up 단계의 카드는 아직 `@Covers` 테스트가 없으므로 RED로 잡힌다. 이는 정상이다. 이 시점에는 strict 게이트인 `validateHarness`를 돌리지 않는다. 다음 두 명령으로 현황만 확인한다.
+
+```bash
+cd back-end
+./gradlew traceRequirements                          # 전체 카드 현황
+./gradlew traceRequirementCard -Preq=REQ-XXX         # 단일 카드 현황 (always exit 0)
+```
+
+승인 후 BDD 테스트와 구현이 들어가면 평상시처럼 `validateHarness`로 RED를 해소한다.
+
 ## BDD 테스트 코드 작성
 
-요건 카드의 수용 기준 문장을 `@Covers`에 그대로 사용한다.
+승인된 시나리오마다 다음을 만족하는 테스트 메서드를 작성한다.
+
+- `@Covers`: 요건 카드의 수용 기준 문장을 그대로 사용한다. 한 메서드가 여러 AC를 동시에 검증하면 배열로 적는다.
+- `@DisplayName`: 승인된 시나리오 문서의 제목을 그대로 사용한다.
+- 테스트 본문: 시나리오 문서의 Given/When/Then을 실행 가능한 준비/행위/검증으로 옮긴다.
+
+별도 시나리오 ID는 만들지 않는다. 사람이 검토하는 시나리오 단위는 시나리오 문서의 제목이며, 실행 식별자는 `TestClass.testMethod`다. 시나리오 제목은 추적 ID가 아니므로 검토 과정에서 자유롭게 다듬을 수 있다.
 
 ```java
 @Test
-@Covers("중복 이메일이면 가입이 거절된다")
-@DisplayName("중복 이메일이면 가입이 거절된다")
-void signupWithDuplicateEmailReturnsConflict() {
-    // Given
-    // When
-    // Then
+@Covers({
+    "본인의 할 일 목록은 page와 size 쿼리 파라미터로 페이지 단위로 조회된다",
+    "응답에는 content, page, size, totalElements, totalPages가 포함된다"
+})
+@DisplayName("할 일이 많은 사용자가 두 번째 목록 묶음을 이어서 확인한다")
+void pageAndSizeQueryParametersSliceContent() {
+    // 승인된 시나리오 문서의 Given/When/Then을 실행 가능한 테스트로 옮긴다.
 }
 ```
 
-`@DisplayName`은 사람이 읽는 시나리오 설명이고, 테스트 메서드명은 코드 식별자다. 별도 시나리오 ID는 만들지 않는다.
+시나리오 문서와 Acceptance Test 연결 규칙의 세부는 [`acceptance-test.md`](../standards/acceptance-test.md)에 둔다.
 
 ## 테스트 리뷰 체크리스트
 
 - 요건 카드의 모든 수용 기준이 `@Covers`로 연결되어 있는가?
 - `@Covers` 문장이 수용 기준과 정확히 일치하는가?
-- 정상, 예외, 경계 조건이 모두 테스트에 반영되었는가?
-- 목록 조회 API가 있으면 페이징 AC와 테스트가 포함되어 있고, `content` 슬라이스와 `page`/`size`/`totalElements`/`totalPages`를 검증하는가?
+- 모든 BDD 테스트의 `@DisplayName`이 승인된 시나리오 문서 제목과 일치하는가?
+- 시나리오 문서의 제목과 Given/When/Then이 업무 언어로 작성되었고 AC 문장을 그대로 복사하지 않았는가?
+- 테스트 본문이 시나리오 문서의 전제·핵심 행위·기대 결과를 빠짐없이 실행하는가?
+- 한 시나리오에 핵심 When이 여러 개로 묶여 흐름이 과도하게 커지지 않았는가?
+- 정상, 예외, 경계 조건이 모두 시나리오로 반영되었는가?
+- 목록 조회 API가 있으면 페이징 AC와 시나리오가 포함되어 있고, `content` 슬라이스와 `page`/`size`/`totalElements`/`totalPages`를 검증하는가?
 - API 상태 코드, 응답 본문, 저장 상태가 필요한 만큼 검증되는가?
 - 테스트가 구현 세부사항이 아니라 사용자 결과와 API 계약을 검증하는가?
-- 테스트명과 `@DisplayName`이 리뷰 가능한 문장인가?
 
-리뷰 결과는 요건 카드의 `BDD 테스트 리뷰` 섹션에 요약만 남긴다. 테스트 목록은 수기로 관리하지 않고 하네스 리포트에서 확인한다.
+리뷰 결과는 요건 카드의 `BDD 테스트 리뷰` 섹션에 시나리오 단위로 남긴다. 테스트 목록은 수기로 관리하지 않고 하네스 리포트에서 확인한다.
 
 ## 승인 기준
 
@@ -137,7 +233,8 @@ void signupWithDuplicateEmailReturnsConflict() {
 - 열린 질문이 없다.
 - 범위와 제외 범위가 명확하다.
 - 수용 기준이 테스트 가능한 문장이다.
-- BDD 테스트 코드 리뷰가 완료되었다.
+- 모든 수용 기준을 커버하는 BDD 시나리오 문서가 사용자 승인을 받았다.
+- 승인된 시나리오 전체에 대해 BDD 테스트 코드 리뷰가 완료되었다.
 - `./gradlew validateHarness`에서 RED가 없다.
 
-초안 단계에서는 `BDD 테스트 리뷰` 결과를 `미완료`로 둔다. Acceptance Test가 작성되고 리뷰되기 전까지 요건 카드 상태는 `초안` 또는 `검토중`으로 유지한다.
+초안 단계에서는 `BDD 테스트 리뷰` 결과를 `미완료`로 둔다. 시나리오 문서 승인과 Acceptance Test 작성·리뷰가 끝나기 전까지 요건 카드 상태는 `초안` 또는 `검토중`으로 유지한다.

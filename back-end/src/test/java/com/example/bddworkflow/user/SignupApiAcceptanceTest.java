@@ -38,7 +38,7 @@ class SignupApiAcceptanceTest {
 
     @Test
     @Covers("유효한 정보이면 계정이 생성된다")
-    @DisplayName("유효한 정보이면 계정이 생성된다")
+    @DisplayName("처음 가입하는 사용자가 정상적으로 계정을 만든다")
     void signupWithValidRequestReturnsCreated() throws Exception {
         // Given
         String requestBody = """
@@ -63,7 +63,7 @@ class SignupApiAcceptanceTest {
 
     @Test
     @Covers("중복 이메일이면 가입이 거절된다")
-    @DisplayName("중복 이메일이면 가입이 거절된다")
+    @DisplayName("이미 가입된 이메일로 다시 가입을 시도해 실패한다")
     void signupWithDuplicateEmailReturnsConflict() throws Exception {
         // Given
         userRepository.save("기존사용자", "hong@example.com", "hash");
@@ -86,7 +86,7 @@ class SignupApiAcceptanceTest {
 
     @Test
     @Covers("비밀번호가 8자 미만이면 가입이 거절된다")
-    @DisplayName("비밀번호가 8자 미만이면 가입이 거절된다")
+    @DisplayName("비밀번호가 짧아 가입을 거절당한다")
     void signupWithShortPasswordReturnsBadRequest() throws Exception {
         // Given
         String requestBody = """

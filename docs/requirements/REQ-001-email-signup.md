@@ -54,9 +54,11 @@
 
 ## BDD 테스트 리뷰
 
+- 시나리오 문서: docs/scenarios/REQ-001-email-signup.feature
+
 - 리뷰일: 2026-05-20
   리뷰자: Product Owner, Tech Lead
-  확인: 수용 기준 3개가 각각 `@Covers`와 `@DisplayName`으로 표현되었고, 정상/중복/짧은 비밀번호 조건과 검증 실패 필드를 확인한다.
+  확인: 수용 기준 3개가 각각 `@Covers`와 `.feature` Covers: 블록으로 표현되었고, 각 BDD 테스트의 `@DisplayName`이 승인된 `Scenario:` 제목과 일치한다. 정상/중복/짧은 비밀번호 조건과 검증 실패 필드를 확인한다.
   결과: 승인
 
 ## 열린 질문

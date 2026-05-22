@@ -14,6 +14,8 @@ bdd-workflow/
       requirement-authoring.md
     requirements/
       REQ-001-email-signup.md
+    scenarios/
+      REQ-001-email-signup.feature
     standards/
       README.md
       requirement-card.md
@@ -27,6 +29,7 @@ bdd-workflow/
     templates/
       README.md
       requirement-card.md
+      scenario-feature.feature
   back-end/
     README.md
     gradlew
@@ -122,6 +125,16 @@ docs/requirements/
 
 ```text
 REQ-001-email-signup.md
+```
+
+```text
+docs/scenarios/
+```
+
+승인 대상 BDD 시나리오 원본을 Gherkin `.feature`로 둔다. PO/QA/기획자/프론트엔드/백엔드가 함께 검토하는 공유 명세이며, 하네스가 파싱해 추적 입력으로도 사용한다. Cucumber 실행 도구는 도입하지 않는다. 파일명은 짝이 되는 요건 카드와 맞춘다.
+
+```text
+REQ-001-email-signup.feature
 ```
 
 ```text
@@ -261,7 +274,7 @@ test/{domain}/
 {Feature}ApiAcceptanceTest.java
 ```
 
-테스트 클래스에는 `@AcceptanceTest`와 `@Requirement("REQ-000")`를 붙인다. 테스트 메서드는 수용 기준 문장을 `@Covers`와 `@DisplayName`에 그대로 사용한다.
+테스트 클래스에는 `@AcceptanceTest`와 `@Requirement("REQ-000")`를 붙인다. 테스트 메서드는 수용 기준 문장을 `@Covers`에 그대로 사용하고, `@DisplayName`은 승인된 `docs/scenarios/REQ-XXX-*.feature`의 `Scenario:` 제목과 일치시킨다.
 
 ## 생성 산출물
 
@@ -282,10 +295,11 @@ back-end/build/harness/schema-preview.sql
 
 ## 새 기능 추가 위치
 
-새 요건을 추가할 때는 다음 순서로 파일을 만든다.
+새 요건을 추가할 때는 다음 순서로 파일을 만든다. 시나리오 단위 Mock-up 승인 → BDD 테스트 작성 → 구현 순서다. 자세한 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
 
 ```text
-docs/requirements/REQ-002-some-feature.md
+docs/requirements/REQ-002-some-feature.md                                            # 요건 카드
+docs/scenarios/REQ-002-some-feature.feature                                          # Gherkin 시나리오 (승인 대상)
 back-end/src/main/java/com/example/bddworkflow/{domain}/controller/SomeController.java
 back-end/src/main/java/com/example/bddworkflow/{domain}/service/SomeService.java
 back-end/src/main/java/com/example/bddworkflow/{domain}/dto/SomeRequest.java
@@ -296,7 +310,7 @@ back-end/src/main/java/com/example/bddworkflow/{domain}/repository/SomeRepositor
 back-end/src/test/java/com/example/bddworkflow/{domain}/SomeApiAcceptanceTest.java
 ```
 
-구현 전에는 요건 카드와 Acceptance Test를 먼저 작성하고 리뷰한다. DB 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과를 사용자에게 확인 받는다.
+Mock-up 단계에는 시나리오 `.feature` + Controller/DTO/Entity 골격 + `previewSchema`까지만 만들고, BDD 테스트와 Service 업무 로직은 시나리오 승인 후 작성한다. DB 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과를 사용자에게 확인 받는다.
 
 ## 금지 사항
 

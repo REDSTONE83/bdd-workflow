@@ -39,9 +39,27 @@
 
 ## BDD 테스트 리뷰
 
+시나리오 문서는 `docs/scenarios/REQ-XXX-*.feature`에 Gherkin 형식으로 별도로 작성하고 승인한다. 이 섹션에는 시나리오 단위 Mock-up 승인 이력과 전체 테스트 리뷰 결과만 요약한다.
+
+- 시나리오 문서: `docs/scenarios/REQ-000-feature.feature`
+
+### 시나리오 승인 이력
+
+각 시나리오마다 한 블록씩 추가한다. AC가 모두 커버될 때까지 시나리오를 늘려나간다.
+
+- 승인일: YYYY-MM-DD
+  시나리오: `.feature`의 `Scenario:` 제목. 업무 언어로 작성하며 AC 문장을 그대로 복사하지 않는다.
+  연결 AC: 이 시나리오가 검증하는 수용 기준 문장 목록 (`.feature`의 `Covers:` 블록과 동일).
+  API Mock-up: 엔드포인트, 요청/응답 예시, 상태 코드, 오류 코드. 확인 완료 여부.
+  DB Mock-up: 변경되는 Entity/컬럼/관계. `previewSchema` 확인 완료 여부.
+  승인자: Product Owner, Tech Lead
+  Mock-up 결과: 승인 또는 수정 요청
+
+### 테스트 리뷰
+
 - 리뷰일: YYYY-MM-DD
   리뷰자: Product Owner, Tech Lead, QA
-  확인: 수용 기준과 `@Covers` 일치 여부, 정상/예외/경계 조건 커버 여부, 목록 API의 페이징 AC/테스트 포함 여부.
+  확인: 모든 수용 기준이 승인된 `.feature` 시나리오와 `@Covers`로 커버, 각 BDD 테스트의 `@DisplayName`이 승인된 `Scenario:` 제목과 일치, 정상/예외/경계 조건 커버, 목록 API의 페이징 AC/테스트 포함.
   결과: 미완료, 승인, 또는 수정 필요.
 
 ## 열린 질문
