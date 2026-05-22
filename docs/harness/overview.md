@@ -34,15 +34,18 @@ JPA Entity
 
 Acceptance Test
   @Requirement("REQ-001")
-  @Covers("수용 기준 문장")                   // AC 커버리지 신호
-  @DisplayName("승인된 시나리오 제목")        // .feature의 Scenario: 제목과 일치
+  @Covers("수용 기준 문장")                   // AC 커버리지 신호, Scenario.Covers 와 연결
+  @DisplayName("케이스 단위 자유 레이블")     // JUnit 표시용. 시나리오 제목과 일치할 필요 없음
   SignupApiAcceptanceTest.signupWithValidRequestReturnsCreated
 
 검증 리포트
   REQ-001 -> AC -> Scenario(.feature) -> Test -> PASS/FAIL -> RED/GREEN/BLUE
+  (Scenario ↔ Test 연결은 Scenario.Covers ∩ Test.@Covers 로 판단)
 ```
 
 `@Covers`가 있는 테스트만 AC 커버리지에 포함된다. `@Covers`가 없는 테스트는 보조 테스트로 분류해 별도로 표시한다. `.feature`는 공유 BDD 명세 + 하네스 추적 입력으로만 사용하며 Cucumber 실행 도구는 도입하지 않는다.
+
+Scenario는 사용자 행위/업무 흐름 단위이고 Test는 AC 검증 단위다. 한 시나리오에 여러 테스트가 귀속되는 것이 일반적이다 (입력 변형/경계값별 분기).
 
 ## 하네스 구성 요소
 
@@ -129,8 +132,8 @@ cd back-end
 
 요건 카드는 사용자에게 질문하며 구체화한다. 질문은 기본적으로 한 번에 하나씩 진행하고, 아직 확정되지 않은 질문은 `열린 질문`에 둔다. 답변이 확정되면 그 내용을 `범위`/`제외 범위`/`수용 기준`/`의사결정 로그` 중 해당 위치에 반영하고 `열린 질문`에서 제거한 뒤 다음 질문으로 넘어간다.
 
-수용 기준이 확정되면 한 번에 전체 테스트로 가지 않고 **BDD 시나리오 1개 단위**로 잘라 진행한다. 시나리오마다 Gherkin `.feature` 문서 + API/DB Mock-up 코드 골격을 만들어 사용자 승인을 받고, 승인된 시나리오에 대해서만 `@Covers` + `@DisplayName`이 `.feature`의 `Covers:`와 `Scenario:` 제목에 정합한 BDD 테스트와 구현으로 넘어간다. 다음 시나리오는 다시 Mock-up 단계로 돌아간다.
+수용 기준이 확정되면 한 번에 전체 테스트로 가지 않고 **BDD 시나리오 1개 단위**로 잘라 진행한다. 시나리오마다 Gherkin `.feature` 문서 + API/DB Mock-up 코드 골격을 만들어 사용자 승인을 받는다. 승인된 시나리오의 `Covers:`에 포함된 AC를 검증하는 BDD 테스트와 구현으로 넘어가며, 한 시나리오에 입력 변형/경계값별 여러 테스트가 귀속되는 것이 일반적이다. 다음 시나리오는 다시 Mock-up 단계로 돌아간다.
 
-테스트 코드 리뷰에서는 모든 수용 기준이 `@Covers`로 커버되는지, 각 BDD 테스트의 `@DisplayName`이 승인된 `.feature` 시나리오 제목과 일치하는지, 정상/예외/경계 조건이 충분한지, API 계약을 검증하는지 확인한다.
+테스트 코드 리뷰에서는 모든 수용 기준이 `@Covers`로 커버되는지, BDD 테스트의 `@Covers` AC가 같은 요건의 어떤 `.feature` 시나리오 `Covers:`에 포함되는지 (`TEST_COVERS_NO_SCENARIO_COVERS` WARNING 없음), 정상/예외/경계 조건이 충분한지, API 계약을 검증하는지 확인한다.
 
 요건 카드에는 API와 테스트 목록을 수기로 적지 않는다. 실제 연결은 JavaParser 기반 source index에서 추출해 `build/harness/source-index.json`, `build/harness/trace-report.md`, `build/harness/trace-report.json`에 기록한다. 시나리오 승인 이력만 사람이 카드의 `BDD 테스트 리뷰` 섹션에 남긴다.

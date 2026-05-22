@@ -189,25 +189,33 @@ cd back-end
 
 ## BDD 테스트 코드 작성
 
-승인된 시나리오마다 다음을 만족하는 테스트 메서드를 작성한다.
+시나리오는 사용자 행위 단위이고 테스트는 AC 검증 단위다. 한 시나리오에 여러 테스트가 귀속될 수 있고, 같은 AC를 입력 변형/경계값마다 별도 테스트로 나누는 것이 권장된다.
+
+승인된 시나리오의 `Covers:`에 포함된 AC를 검증하는 테스트 메서드를 작성한다.
 
 - `@Covers`: 요건 카드의 수용 기준 문장을 그대로 사용한다. 한 메서드가 여러 AC를 동시에 검증하면 배열로 적는다.
-- `@DisplayName`: 승인된 시나리오 문서의 제목을 그대로 사용한다.
-- 테스트 본문: 시나리오 문서의 Given/When/Then을 실행 가능한 준비/행위/검증으로 옮긴다.
+- `@DisplayName`: JUnit 표시용 자유 작성 레이블이다. 시나리오 제목과 같아도, 다른 케이스 단위 설명을 적어도 무방하다.
+- 테스트 본문: 시나리오의 Given/When/Then을 실행 가능한 준비/행위/검증으로 옮긴다. 한 시나리오에 묶인 여러 테스트는 각자 다른 입력 변형/경계값을 다룬다.
 
-별도 시나리오 ID는 만들지 않는다. 사람이 검토하는 시나리오 단위는 시나리오 문서의 제목이며, 실행 식별자는 `TestClass.testMethod`다. 시나리오 제목은 추적 ID가 아니므로 검토 과정에서 자유롭게 다듬을 수 있다.
+시나리오와 테스트의 연결은 `Scenario.Covers ∩ Test.@Covers`로 판단한다. 별도 시나리오 ID나 `@DisplayName` 매칭 규칙은 두지 않는다. 시나리오 제목은 추적 ID가 아니므로 검토 과정에서 자유롭게 다듬을 수 있다.
 
 ```java
 @Test
-@Covers({
-    "본인의 할 일 목록은 page와 size 쿼리 파라미터로 페이지 단위로 조회된다",
-    "응답에는 content, page, size, totalElements, totalPages가 포함된다"
-})
-@DisplayName("할 일이 많은 사용자가 두 번째 목록 묶음을 이어서 확인한다")
+@Covers("본인의 할 일 목록은 page와 size 쿼리 파라미터로 페이지 단위로 조회된다")
+@DisplayName("page=1, size=2 두 번째 페이지에 두 항목만 반환된다")
 void pageAndSizeQueryParametersSliceContent() {
-    // 승인된 시나리오 문서의 Given/When/Then을 실행 가능한 테스트로 옮긴다.
+    // 시나리오의 Given/When/Then을 실행 가능한 테스트로 옮긴다.
+}
+
+@Test
+@Covers("응답에는 content, page, size, totalElements, totalPages가 포함된다")
+@DisplayName("PageResponse 메타데이터 5개 필드가 모두 채워진다")
+void pageResponseShapeContainsAllFields() {
+    // 같은 시나리오에 묶인 또 다른 검증.
 }
 ```
+
+위 두 테스트의 `@Covers`가 한 시나리오의 `Covers:` 안에 모두 있으면, 하네스는 두 테스트를 같은 시나리오 아래로 보고한다. `@DisplayName`은 자유.
 
 시나리오 문서와 Acceptance Test 연결 규칙의 세부는 [`acceptance-test.md`](../standards/acceptance-test.md)에 둔다.
 
@@ -215,8 +223,9 @@ void pageAndSizeQueryParametersSliceContent() {
 
 - 요건 카드의 모든 수용 기준이 `@Covers`로 연결되어 있는가?
 - `@Covers` 문장이 수용 기준과 정확히 일치하는가?
-- 모든 BDD 테스트의 `@DisplayName`이 승인된 시나리오 문서 제목과 일치하는가?
+- 모든 BDD 테스트의 `@Covers` AC가 같은 요건의 어떤 `.feature` 시나리오 `Covers:`에 포함되어 있는가? (`TEST_COVERS_NO_SCENARIO_COVERS` WARNING 없음)
 - 시나리오 문서의 제목과 Given/When/Then이 업무 언어로 작성되었고 AC 문장을 그대로 복사하지 않았는가?
+- 시나리오가 사용자 행위 단위로 잘 잘렸는지 (입력 변형/경계값마다 별도 시나리오로 폭증하지 않았는지)?
 - 테스트 본문이 시나리오 문서의 전제·핵심 행위·기대 결과를 빠짐없이 실행하는가?
 - 한 시나리오에 핵심 When이 여러 개로 묶여 흐름이 과도하게 커지지 않았는가?
 - 정상, 예외, 경계 조건이 모두 시나리오로 반영되었는가?

@@ -212,6 +212,8 @@
 
 ## BDD 테스트 리뷰
 
+- 시나리오 문서: docs/scenarios/REQ-002-personal-todo.feature (현재 create API 11개 행위 시나리오에 18개 테스트가 귀속, list/update/delete는 후속 마이그레이션 단계)
+
 - 리뷰일: 2026-05-22
   리뷰자: Product Owner, Tech Lead
   확인: 수용 기준 전체가 `@Covers`로 연결되어 있으며 `./gradlew test`에서 80/80 PASS, `validateHarness` BUILD SUCCESSFUL. 페이지네이션 정책 편입(2026-05-22)에 따라 추가된 6개 시나리오(`TodoListPaginationApiAcceptanceTest`)와 기존 19개 BDD 테스트(`Todo*ApiAcceptanceTest`)가 모두 커버한다.

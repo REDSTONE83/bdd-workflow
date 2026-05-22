@@ -453,37 +453,31 @@ function statusForCriterion(criterion, tests, scenarios, results) {
         result: results.get(test.identity) ?? results.get(`${test.className}.${test.displayName}`) ?? 'NOT_RUN'
     }));
 
-    const annotatedScenarios = matchingScenarios.map((scenario) => {
-        const linkedTests = testStatuses.filter((test) => test.displayName === scenario.title);
-        return {
-            title: scenario.title,
-            file: scenario.file,
-            line: scenario.line,
-            stepCount: (scenario.steps ?? []).length,
-            covers: scenarioCovers(scenario),
-            linkedTestIdentities: linkedTests.map((test) => test.identity)
-        };
-    });
-    const linkedTestIds = new Set(annotatedScenarios.flatMap((s) => s.linkedTestIdentities));
-    const annotatedTests = testStatuses.map((test) => ({
-        ...test,
-        scenarioLinked: linkedTestIds.has(test.identity)
+    // Scenario는 사용자 행위 단위, Test는 AC 검증 단위.
+    // 한 AC를 다루는 Scenario와 한 AC를 검증하는 Test는 같은 AC에 함께 연결된다.
+    // @DisplayName과 Scenario: 제목 일치 요건은 두지 않는다.
+    const simplifiedScenarios = matchingScenarios.map((scenario) => ({
+        title: scenario.title,
+        file: scenario.file,
+        line: scenario.line,
+        stepCount: (scenario.steps ?? []).length,
+        covers: scenarioCovers(scenario)
     }));
 
     let status;
-    if (annotatedTests.length === 0) {
+    if (testStatuses.length === 0) {
         status = 'MISSING';
-    } else if (annotatedTests.some((test) => test.result === 'FAIL')) {
+    } else if (testStatuses.some((test) => test.result === 'FAIL')) {
         status = 'FAIL';
-    } else if (annotatedTests.some((test) => test.result === 'SKIP')) {
+    } else if (testStatuses.some((test) => test.result === 'SKIP')) {
         status = 'SKIP';
-    } else if (annotatedTests.some((test) => test.result === 'NOT_RUN')) {
+    } else if (testStatuses.some((test) => test.result === 'NOT_RUN')) {
         status = 'NOT_RUN';
     } else {
         status = 'PASS';
     }
 
-    return { status, tests: annotatedTests, scenarios: annotatedScenarios };
+    return { status, tests: testStatuses, scenarios: simplifiedScenarios };
 }
 
 function attachTerminology(requirement, bucket) {
@@ -579,25 +573,33 @@ function computeScenarioWarnings(scenarioIndex, cards, tests, knownRequirementId
     const features = scenarioIndex.features ?? [];
     const allScenarios = flattenScenarios(scenarioIndex);
 
-    // Warning 1: BDD 테스트(@Covers 있음)의 @DisplayName이 어떤 .feature Scenario:와도 일치하지 않음.
+    // Warning 1: BDD 테스트(@Covers 있음)의 AC가 같은 요건의 어떤 .feature Scenario Covers:에도 없음.
+    // 시나리오와 테스트의 연결은 AC 교집합으로 판단한다. @DisplayName은 JUnit 표시용으로만 두고
+    // 시나리오 제목과 일치할 필요가 없다.
     for (const test of tests) {
         if (!Array.isArray(test.covers) || test.covers.length === 0) continue;
         const testReqs = test.requirements ?? [];
-        const candidateScenarios = allScenarios.filter((scenario) =>
-            (scenario.requirementIds ?? []).some((id) => testReqs.includes(id))
+        const candidateScenarioCovers = new Set(
+            allScenarios
+                .filter((scenario) =>
+                    (scenario.requirementIds ?? []).some((id) => testReqs.includes(id))
+                )
+                .flatMap((scenario) => scenarioCovers(scenario))
         );
-        const matched = candidateScenarios.some((scenario) => scenario.title === test.displayName);
-        if (!matched) {
-            warnings.push({
-                kind: 'TEST_DISPLAYNAME_NO_SCENARIO',
-                severity: 'warning',
-                requirementIds: testReqs,
-                message: `@DisplayName "${test.displayName ?? ''}" 가 어떤 .feature Scenario: 제목과도 일치하지 않음`,
-                location: {
-                    identity: test.identity,
-                    file: test.file ?? null
-                }
-            });
+        for (const ac of test.covers) {
+            if (!candidateScenarioCovers.has(ac)) {
+                warnings.push({
+                    kind: 'TEST_COVERS_NO_SCENARIO_COVERS',
+                    severity: 'warning',
+                    requirementIds: testReqs,
+                    covers: ac,
+                    message: `테스트가 다루는 AC "${ac}" 를 커버하는 .feature Scenario가 없음`,
+                    location: {
+                        identity: test.identity,
+                        file: test.file ?? null
+                    }
+                });
+            }
         }
     }
 
@@ -895,22 +897,14 @@ function buildMarkdown(model) {
             if (scenariosForRow.length === 0 && row.tests.length === 0) {
                 lines.push(`  - (시나리오 없음, 테스트 없음)`);
             }
-            for (const scenario of scenariosForRow) {
-                const loc = `${scenario.file}:${scenario.line}`;
-                lines.push(`  - Scenario: ${scenario.title} (${loc})`);
-                const linkedTests = row.tests.filter((test) =>
-                    scenario.linkedTestIdentities.includes(test.identity)
-                );
-                if (linkedTests.length === 0) {
-                    lines.push(`    - (@DisplayName 일치하는 테스트 없음)`);
-                }
-                for (const test of linkedTests) {
-                    lines.push(`    - ${test.identity}: ${test.result}`);
-                }
+            if (scenariosForRow.length === 0 && row.tests.length > 0) {
+                lines.push(`  - (이 AC를 커버하는 .feature Scenario가 없음)`);
             }
-            const unlinkedTests = row.tests.filter((test) => !test.scenarioLinked);
-            for (const test of unlinkedTests) {
-                lines.push(`  - (시나리오 미연결) ${test.identity}: ${test.result}`);
+            for (const scenario of scenariosForRow) {
+                lines.push(`  - Scenario: ${scenario.title} (${scenario.file}:${scenario.line})`);
+            }
+            for (const test of row.tests) {
+                lines.push(`  - ${test.identity}: ${test.result}`);
             }
         }
         lines.push('');

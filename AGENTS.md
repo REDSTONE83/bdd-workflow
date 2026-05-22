@@ -10,7 +10,7 @@
 - BDD 시나리오는 `/docs/scenarios`의 Gherkin `.feature`로 관리한다. PO/QA/기획자/프론트엔드/백엔드가 함께 검토하는 공유 명세이자 하네스 추적 입력이며, Cucumber 실행 도구는 도입하지 않는다.
 - API 명세는 Spring Boot 컨트롤러와 DTO 애너테이션에 둔다.
 - DB 스키마는 JPA `@Entity` 클래스에 둔다. 컬럼 단위 추적이 필요하면 필드에도 `@Requirement`를 붙인다.
-- Acceptance Test는 승인된 `.feature` 시나리오를 실행 가능한 검증 코드로 옮긴다. `@Covers`는 `.feature`의 `Covers:` 블록과, `@DisplayName`은 `.feature`의 `Scenario:` 제목과 일치시킨다.
+- Acceptance Test는 승인된 `.feature` 시나리오가 다루는 AC를 실행 가능한 검증 코드로 옮긴다. Scenario는 사용자 행위 단위, Test는 AC 검증 단위이며, 둘의 연결은 `Scenario.Covers ∩ Test.@Covers`로 판단한다. `@Covers`는 카드 수용 기준 문장과 정확히 일치하고, `@DisplayName`은 JUnit 표시용 자유 레이블이다.
 - 수용 기준 커버리지는 테스트 메서드의 `@Covers` 값으로 판단한다.
 - API, DTO, Entity, 테스트는 `@Requirement("REQ-001")` 또는 `@Requirement({"REQ-001","REQ-002"})`로 하나 이상의 요건에 연결한다. 공통 응답 DTO처럼 도메인 무관한 클래스는 비워둔다.
 - 추적표와 검증 리포트는 사람이 직접 관리하지 않고 하네스가 생성한다.
@@ -78,7 +78,7 @@ src/test/java/**/*AcceptanceTest.java
 5. 수용 기준을 검증 가능한 문장으로 정리한다.
 6. 시나리오 1개를 골라 `docs/scenarios/REQ-XXX-*.feature`에 Gherkin 시나리오를 추가하고, 컨트롤러/DTO/Entity는 Mock-up 골격(`previewSchema` 가능 수준)까지만 작성한다. 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과로 사용자 확인을 받는다.
 7. 시나리오 + API/DB Mock-up을 사용자에게 묶어 승인 요청한다. Mock-up 결과는 요건 카드의 `BDD 테스트 리뷰 > 시나리오 승인 이력`에 남긴다.
-8. 승인 후 `@Covers` + `@DisplayName`이 `.feature`의 `Covers:`/`Scenario:`와 정합한 Acceptance Test를 작성하고, Service 업무 로직과 컨트롤러 본문을 구현한다.
+8. 승인 후 `.feature`의 `Covers:` AC를 검증하는 Acceptance Test를 작성(한 시나리오에 입력 변형/경계값별 테스트 여러 개 가능)하고, Service 업무 로직과 컨트롤러 본문을 구현한다. `@Covers`는 카드 AC와 정확 일치, `@DisplayName`은 자유.
 9. BDD 테스트 코드 리뷰를 받는다. 다음 시나리오는 6번으로 돌아간다.
 10. `./gradlew validateHarness`로 요건/표준 용어(safe)/API/Entity/테스트/결과 연결을 확인한다.
 11. 카드를 `승인`으로 올리거나 릴리스 전이라면 `./gradlew validateTerminologyStrict`로 strict error를 0으로 맞춘다.

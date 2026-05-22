@@ -49,7 +49,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("유효한 정보이면 할 일이 생성된다")
-    @DisplayName("유효한 정보이면 할 일이 생성된다")
+    @DisplayName("사용자가 기본 정보를 채워 새 할 일을 만든다")
     void createWithValidRequestReturnsCreated() throws Exception {
         // Given
         String requestBody = """
@@ -79,7 +79,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("제목은 앞뒤 공백이 제거되어 저장된다")
-    @DisplayName("제목은 앞뒤 공백이 제거되어 저장된다")
+    @DisplayName("사용자가 입력한 제목의 앞뒤 공백이 다듬어져 저장된다")
     void createTrimsLeadingAndTrailingWhitespaceInTitle() throws Exception {
         // Given
         String requestBody = """
@@ -105,7 +105,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("제목이 비어 있거나 공백만 입력하면 할 일 생성이 거절된다")
-    @DisplayName("제목이 비어 있거나 공백만 입력하면 할 일 생성이 거절된다")
+    @DisplayName("사용자가 빈 제목으로 할 일을 만들려다 거절당한다")
     void createWithBlankTitleReturnsBadRequest() throws Exception {
         // Given
         String requestBody = """
@@ -129,7 +129,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("제목이 100자를 초과하면 할 일 생성이 거절된다")
-    @DisplayName("제목이 100자를 초과하면 할 일 생성이 거절된다")
+    @DisplayName("사용자가 100자가 넘는 제목으로 할 일을 만들려다 거절당한다")
     void createWithTooLongTitleReturnsBadRequest() throws Exception {
         // Given
         String longTitle = "가".repeat(101);
@@ -154,7 +154,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("설명이 1000자를 초과하면 할 일 생성이 거절된다")
-    @DisplayName("설명이 1000자를 초과하면 할 일 생성이 거절된다")
+    @DisplayName("사용자가 1000자가 넘는 설명으로 할 일을 만들려다 거절당한다")
     void createWithTooLongDescriptionReturnsBadRequest() throws Exception {
         // Given
         String longDescription = "가".repeat(1001);
@@ -179,7 +179,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("할 일 생성 시 설명을 입력하지 않으면 설명 없이 저장된다")
-    @DisplayName("할 일 생성 시 설명을 입력하지 않으면 설명 없이 저장된다")
+    @DisplayName("사용자가 설명을 적지 않고 할 일을 만든다")
     void createWithoutDescriptionStoresNullDescription() throws Exception {
         // Given
         String requestBody = """
@@ -204,7 +204,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("할 일 생성 시 설명에 null을 명시하면 설명 없이 저장된다")
-    @DisplayName("할 일 생성 시 설명에 null을 명시하면 설명 없이 저장된다")
+    @DisplayName("사용자가 설명을 일부러 비워 할 일을 만든다")
     void createWithExplicitNullDescriptionStoresNullDescription() throws Exception {
         // Given
         String requestBody = """
@@ -229,7 +229,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("마감일 형식이 ISO 8601 날짜가 아니면 할 일 생성이 거절된다")
-    @DisplayName("마감일 형식이 ISO 8601 날짜가 아니면 할 일 생성이 거절된다")
+    @DisplayName("사용자가 잘못된 형식의 마감일로 할 일을 만들려다 거절당한다")
     void createWithInvalidDueDateFormatReturnsBadRequest() throws Exception {
         // Given
         String requestBody = """
@@ -253,7 +253,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("할 일 생성 시 마감일을 입력하지 않으면 마감일 없이 저장된다")
-    @DisplayName("할 일 생성 시 마감일을 입력하지 않으면 마감일 없이 저장된다")
+    @DisplayName("사용자가 마감일 없이 할 일을 만든다")
     void createWithoutDueDateStoresNullDueDate() throws Exception {
         // Given
         String requestBody = """
@@ -278,7 +278,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("할 일 생성 시 마감일에 null을 명시하면 마감일 없이 저장된다")
-    @DisplayName("할 일 생성 시 마감일에 null을 명시하면 마감일 없이 저장된다")
+    @DisplayName("사용자가 마감일을 일부러 비워 할 일을 만든다")
     void createWithExplicitNullDueDateStoresNullDueDate() throws Exception {
         // Given
         String requestBody = """
@@ -303,7 +303,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("할 일 생성 시 과거 날짜를 마감일로 입력해도 허용된다")
-    @DisplayName("할 일 생성 시 과거 날짜를 마감일로 입력해도 허용된다")
+    @DisplayName("사용자가 지난 일정을 정리하려 과거 마감일로 할 일을 만든다")
     void createWithPastDueDateIsAllowed() throws Exception {
         // Given
         String requestBody = """
@@ -324,7 +324,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("우선순위가 HIGH, MEDIUM, LOW 중 하나가 아니면 할 일 생성이 거절된다")
-    @DisplayName("우선순위가 HIGH, MEDIUM, LOW 중 하나가 아니면 할 일 생성이 거절된다")
+    @DisplayName("사용자가 허용되지 않은 우선순위 값으로 할 일을 만들려다 거절당한다")
     void createWithInvalidPriorityReturnsBadRequest() throws Exception {
         // Given
         String requestBody = """
@@ -348,7 +348,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("우선순위를 입력하지 않으면 기본 우선순위 MEDIUM으로 할 일이 생성된다")
-    @DisplayName("우선순위를 입력하지 않으면 기본 우선순위 MEDIUM으로 할 일이 생성된다")
+    @DisplayName("사용자가 우선순위를 정하지 않으면 기본 우선순위로 저장된다")
     void createWithoutPriorityDefaultsToMedium() throws Exception {
         // Given
         String requestBody = """
@@ -373,7 +373,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("할 일 생성 시 완료 상태는 미완료(`completed=false`)로 저장된다")
-    @DisplayName("할 일 생성 시 완료 상태는 미완료(`completed=false`)로 저장된다")
+    @DisplayName("사용자가 새로 만든 할 일은 미완료 상태로 시작한다")
     void createInitializesCompletedAsFalse() throws Exception {
         // Given
         String requestBody = """
@@ -398,7 +398,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("할 일 생성 시 카테고리 ID를 입력하지 않으면 미분류 상태로 저장된다")
-    @DisplayName("할 일 생성 시 카테고리 ID를 입력하지 않으면 미분류 상태로 저장된다")
+    @DisplayName("사용자가 카테고리 없이 할 일을 만든다")
     void createWithoutCategoryStoresNullCategoryId() throws Exception {
         // Given
         String requestBody = """
@@ -423,7 +423,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("할 일 생성 시 카테고리 ID에 null을 명시하면 미분류 상태로 저장된다")
-    @DisplayName("할 일 생성 시 카테고리 ID에 null을 명시하면 미분류 상태로 저장된다")
+    @DisplayName("사용자가 카테고리를 일부러 비워 할 일을 만든다")
     void createWithExplicitNullCategoryStoresNullCategoryId() throws Exception {
         // Given
         String requestBody = """
@@ -448,7 +448,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("할 일 생성 시 본인의 카테고리 ID를 명시하면 해당 카테고리에 연결되어 저장된다")
-    @DisplayName("할 일 생성 시 본인의 카테고리 ID를 명시하면 해당 카테고리에 연결되어 저장된다")
+    @DisplayName("사용자가 본인의 카테고리에 묶어 새 할 일을 만든다")
     void createWithOwnCategoryLinksTodo() throws Exception {
         // Given
         java.util.UUID categoryId = categoryRepository.save(USER_ID, "업무", "#2563EB", null, 1024).id();
@@ -477,7 +477,7 @@ class TodoCreateApiAcceptanceTest {
 
     @Test
     @Covers("할 일 생성 시 존재하지 않거나 다른 사용자의 카테고리 ID를 명시하면 거절된다")
-    @DisplayName("할 일 생성 시 존재하지 않거나 다른 사용자의 카테고리 ID를 명시하면 거절된다")
+    @DisplayName("사용자가 사용할 수 없는 카테고리로 할 일을 만들려다 거절당한다")
     void createWithInvalidCategoryReturnsBadRequest() throws Exception {
         // Given: 다른 사용자가 소유한 카테고리
         java.util.UUID othersCategoryId = categoryRepository.save(OTHER_USER_ID, "타인 카테고리", "#FF0000", null, 1024).id();

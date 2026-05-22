@@ -59,7 +59,7 @@
 
 - 리뷰일: YYYY-MM-DD
   리뷰자: Product Owner, Tech Lead, QA
-  확인: 모든 수용 기준이 승인된 `.feature` 시나리오와 `@Covers`로 커버, 각 BDD 테스트의 `@DisplayName`이 승인된 `Scenario:` 제목과 일치, 정상/예외/경계 조건 커버, 목록 API의 페이징 AC/테스트 포함.
+  확인: 모든 수용 기준이 `@Covers`로 커버, BDD 테스트의 `@Covers` AC가 같은 요건의 어떤 `.feature` 시나리오 `Covers:`에 포함됨(`TEST_COVERS_NO_SCENARIO_COVERS` 0건), 시나리오는 사용자 행위 단위로 잘림, 정상/예외/경계 조건 커버, 목록 API의 페이징 AC/테스트 포함.
   결과: 미완료, 승인, 또는 수정 필요.
 
 ## 열린 질문
