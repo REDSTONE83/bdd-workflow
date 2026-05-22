@@ -4,14 +4,14 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const backendRoot = path.resolve(__dirname, '..');
-const repoRoot = path.resolve(backendRoot, '..');
+const repoRoot = path.resolve(__dirname, '..', '..');
 const terminologyDir = path.join(repoRoot, 'docs', 'terminology');
 const domainsDir = path.join(terminologyDir, 'domains');
 const draftPath = path.join(terminologyDir, 'draft.json');
-const outputDir = path.join(backendRoot, 'build', 'harness');
+const outputDir = path.join(repoRoot, 'build', 'harness');
 const indexPath = path.join(outputDir, 'terminology-index.json');
-const sourceIndexPath = path.join(outputDir, 'source-index.json');
+const sourceIndexPath = path.join(outputDir, 'source-index.backend.json');
+const frontEndSourceIndexPath = path.join(outputDir, 'source-index.front-end.json');
 const reportJsonPath = path.join(outputDir, 'terminology-report.json');
 const reportMdPath = path.join(outputDir, 'terminology-report.md');
 const requirementsDir = path.join(repoRoot, 'docs', 'requirements');
@@ -279,7 +279,7 @@ function commandIndex() {
 
 function commandSearch(rawQuery) {
     if (!rawQuery || rawQuery.trim() === '') {
-        console.error('Usage: node tools/terminology.mjs search <query>');
+        console.error('Usage: node tools/harness/terminology.mjs search <query>');
         process.exit(2);
     }
     const loaded = loadTerminology();
@@ -626,6 +626,9 @@ function commandValidate(options) {
         process.exit(1);
     }
     const sIndex = JSON.parse(fs.readFileSync(sourceIndexPath, 'utf8'));
+    const feIndex = fs.existsSync(frontEndSourceIndexPath)
+        ? JSON.parse(fs.readFileSync(frontEndSourceIndexPath, 'utf8'))
+        : { textChannels: [] };
     const cards = loadRequirementCards();
     const findings = [];
 
@@ -711,7 +714,7 @@ function commandValidate(options) {
         }
     }
 
-    for (const ch of sIndex.textChannels || []) {
+    for (const ch of [...(sIndex.textChannels || []), ...(feIndex.textChannels || [])]) {
         const banFindings = findBanViolations(ch.content, banSurfaces, allowSurfaces);
         for (const bf of banFindings) {
             pushFinding('BAN_VIOLATION', {
@@ -1104,7 +1107,7 @@ function commandDraft(rest) {
                 commandDraftDelete(tail);
                 break;
             default:
-                console.error('Usage: node tools/terminology.mjs draft <add|update|delete> [args]');
+                console.error('Usage: node tools/harness/terminology.mjs draft <add|update|delete> [args]');
                 console.error('  draft add     --key X --ko Y --en Z --meaning W --reason R [--note N] [--allow A]... [--ban B]... [--name cat=val]...');
                 console.error('  draft update  <termKey> [--set field=value]... [--add-allow X]... [--remove-allow X]... [--add-ban X]... [--remove-ban X]... [--add-name cat=val]... [--remove-name cat=val]...');
                 console.error('  draft delete  <termKey> [--force]');
@@ -1133,7 +1136,7 @@ switch (command) {
         commandDraft(args);
         break;
     default:
-        console.error('Usage: node tools/terminology.mjs <index|search|validate|draft> [args]');
+        console.error('Usage: node tools/harness/terminology.mjs <index|search|validate|draft> [args]');
         console.error('  validate            safe (기본): 모든 finding을 warning으로 보고, 항상 exit 0');
         console.error('  validate --strict   strict: 심각 finding은 error, error가 있으면 exit 1');
         console.error('  draft <add|update|delete>  draft.json의 후보 용어 관리');

@@ -51,29 +51,42 @@ tasks.named('test') {
     }
 }
 
+def workspaceDir = rootProject.projectDir.parentFile
+def harnessBuildDir = new File(workspaceDir, 'build/harness')
+def harnessTool = { String name -> new File(workspaceDir, "tools/harness/${name}").absolutePath }
+
 tasks.register('generateHarnessSourceIndex', JavaExec) {
     group = 'verification'
     description = 'Generate JavaParser-based API/test source index for the BDD harness.'
     classpath = sourceSets.harness.runtimeClasspath
     mainClass = 'com.example.bddworkflow.harness.SourceIndexGenerator'
-    args rootProject.projectDir.parentFile.absolutePath,
+    args workspaceDir.absolutePath,
             file('src/main/java').absolutePath,
             file('src/test/java').absolutePath,
-            layout.buildDirectory.file('harness/source-index.json').get().asFile.absolutePath
+            new File(harnessBuildDir, 'source-index.backend.json').absolutePath
+}
+
+tasks.register('generateFrontEndSourceIndex', Exec) {
+    group = 'verification'
+    description = 'Generate TypeScript-based front-end source index for the BDD harness.'
+    workingDir workspaceDir
+    commandLine 'node', 'front-end/tools/source-index.mjs'
 }
 
 tasks.register('traceRequirements', Exec) {
     group = 'verification'
-    description = 'Generate requirement/API/test trace report from cards, source index, and safe terminology report.'
-    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
-    commandLine 'node', 'tools/trace-requirements.mjs'
+    description = 'Generate requirement/API/test trace report from cards, source indexes, and safe terminology report.'
+    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateFrontEndSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('trace-requirements.mjs')
 }
 
 tasks.register('traceRequirementsAfterTest', Exec) {
     group = 'verification'
     description = 'Quiet finalizer: refresh trace-report files after test without re-printing the full trace.'
-    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
-    commandLine 'node', 'tools/trace-requirements.mjs', '--quiet'
+    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateFrontEndSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('trace-requirements.mjs'), '--quiet'
 }
 
 tasks.register('previewSchema', Exec) {
@@ -85,42 +98,48 @@ tasks.register('previewSchema', Exec) {
 
 tasks.register('generateScenarioIndex', Exec) {
     group = 'verification'
-    description = 'Parse docs/scenarios/*.feature files into build/harness/scenario-index.json.'
-    commandLine 'node', 'tools/scenario-index.mjs'
+    description = 'Parse docs/scenarios/*.feature files into root build/harness/scenario-index.json.'
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('scenario-index.mjs')
 }
 
 tasks.register('indexTerminology', Exec) {
     group = 'verification'
     description = 'Build terminology-index.json from docs/terminology/ JSON sources.'
-    commandLine 'node', 'tools/terminology.mjs', 'index'
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('terminology.mjs'), 'index'
 }
 
 tasks.register('validateTerminology', Exec) {
     group = 'verification'
     description = 'Validate terminology against requirement cards and source-index in safe mode (warnings only, always exit 0).'
-    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('indexTerminology')
-    commandLine 'node', 'tools/terminology.mjs', 'validate'
+    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateFrontEndSourceIndex'), tasks.named('indexTerminology')
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('terminology.mjs'), 'validate'
 }
 
 tasks.register('validateTerminologyStrict', Exec) {
     group = 'verification'
     description = 'Validate terminology in strict mode (severe findings become errors and fail the build).'
-    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('indexTerminology')
-    commandLine 'node', 'tools/terminology.mjs', 'validate', '--strict'
+    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateFrontEndSourceIndex'), tasks.named('indexTerminology')
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('terminology.mjs'), 'validate', '--strict'
 }
 
 tasks.register('validateStandards', Exec) {
     group = 'verification'
     description = 'Write standards-report.{json,md} (always exit 0; for inspection).'
     dependsOn tasks.named('generateHarnessSourceIndex')
-    commandLine 'node', 'tools/validate-standards.mjs'
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('validate-standards.mjs')
 }
 
 tasks.register('validateStandardsStrict', Exec) {
     group = 'verification'
     description = 'Strict standards gate: fail the build on any docs/standards violation.'
     dependsOn tasks.named('generateHarnessSourceIndex')
-    commandLine 'node', 'tools/validate-standards.mjs', '--check'
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('validate-standards.mjs'), '--check'
 }
 
 // Order the strict standards check before tests inside validateHarness so that
@@ -137,11 +156,13 @@ tasks.register('validateHarness', Exec) {
     group = 'verification'
     description = 'Strict gate: standards + safe-terminology + tests + RED/GREEN/BLUE trace.'
     dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')
-    commandLine 'node', 'tools/trace-requirements.mjs', '--check'
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('trace-requirements.mjs'), '--check'
 }
 
 def perCardTaskNames = ['traceRequirementCard', 'validateRequirementCard', 'validateRequirementCardBlue']
@@ -156,9 +177,10 @@ gradle.taskGraph.whenReady { graph ->
 tasks.register('traceRequirementCard', Exec) {
     group = 'verification'
     description = 'Per-card trace report (-Preq=REQ-XXX, always exit 0).'
-    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
+    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateFrontEndSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
+    workingDir workspaceDir
     doFirst {
-        commandLine 'node', 'tools/trace-requirements.mjs', '--requirement', project.property('req')
+        commandLine 'node', harnessTool('trace-requirements.mjs'), '--requirement', project.property('req')
     }
 }
 
@@ -166,12 +188,14 @@ tasks.register('validateRequirementCard', Exec) {
     group = 'verification'
     description = 'Strict per-card gate: standards + safe-terminology + tests + RED check for one card (-Preq=REQ-XXX).'
     dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')
+    workingDir workspaceDir
     doFirst {
-        commandLine 'node', 'tools/trace-requirements.mjs', '--check', '--requirement', project.property('req')
+        commandLine 'node', harnessTool('trace-requirements.mjs'), '--check', '--requirement', project.property('req')
     }
 }
 
@@ -179,12 +203,14 @@ tasks.register('validateRequirementCardBlue', Exec) {
     group = 'verification'
     description = 'Strict per-card BLUE gate: like validateRequirementCard but also fails on GREEN (-Preq=REQ-XXX).'
     dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')
+    workingDir workspaceDir
     doFirst {
-        commandLine 'node', 'tools/trace-requirements.mjs', '--check', '--require-blue', '--requirement', project.property('req')
+        commandLine 'node', harnessTool('trace-requirements.mjs'), '--check', '--require-blue', '--requirement', project.property('req')
     }
 }
 

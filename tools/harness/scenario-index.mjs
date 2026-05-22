@@ -20,10 +20,9 @@ import path from 'node:path';
 import url from 'node:url';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const backEndDir = path.resolve(__dirname, '..');
-const repoRoot = path.resolve(backEndDir, '..');
+const repoRoot = path.resolve(__dirname, '..', '..');
 const scenariosDir = path.join(repoRoot, 'docs', 'scenarios');
-const outDir = path.join(backEndDir, 'build', 'harness');
+const outDir = path.join(repoRoot, 'build', 'harness');
 const outFile = path.join(outDir, 'scenario-index.json');
 
 const STEP_KEYWORDS = ['Given', 'When', 'Then', 'And', 'But'];

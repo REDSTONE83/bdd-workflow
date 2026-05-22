@@ -15,8 +15,8 @@
 - 관리 ID는 `REQ-001` 같은 요건 ID만 사용한다.
 - 별도 시나리오 ID, API ID, 화면 ID는 만들지 않는다.
 - API 연결은 컨트롤러의 `@Requirement`에서 추출한다.
-- FE 화면/라우팅/테스트 연결은 프런트엔드 하네스 인덱서로 추출한다. 도입 전까지는 요건 카드의 Skeleton 승인 이력과 FE 검증 명령 결과로 수동 확인한다.
-- 테스트 연결은 Acceptance Test의 `@Requirement`/`@Covers`와 FE BDD 테스트의 `REQ`/`Covers`에서 추출한다.
+- FE 화면/라우팅/테스트 연결은 `front-end/tools/source-index.mjs`가 생성하는 `build/harness/source-index.front-end.json`에서 추출한다.
+- 테스트 연결은 Acceptance Test의 `@Requirement`/`@Covers`와 FE BDD 테스트의 `Requirement`/`Covers` 메타데이터에서 추출한다.
 - 수용 기준 문장은 테스트의 `@Covers` 값과 일치해야 한다.
 
 요건 카드의 구현 여부는 카드 전체가 아니라 `수용 기준` 커버리지로 판단한다.

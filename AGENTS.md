@@ -37,9 +37,10 @@ back-end/src/test/java/**/*AcceptanceTest.java
 front-end/src/**/*
 front-end/tests/e2e/**/*
 front-end/.storybook/**/*
+front-end/tools/**/*
 ```
 
-`back-end/build/harness/*`, `front-end/dist`, `front-end/storybook-static`, `front-end/playwright-report`, `front-end/test-results` 리포트는 생성 산출물이다.
+`build/harness/*`, `front-end/dist`, `front-end/storybook-static`, `front-end/playwright-report`, `front-end/test-results` 리포트는 생성 산출물이다.
 
 전체 폴더 구조는 [`docs/harness/project-structure.md`](docs/harness/project-structure.md)를 따른다.
 
@@ -82,10 +83,10 @@ front-end/.storybook/**/*
 1. 사용자 요청을 요건 카드 초안으로 정리한다.
 2. 모호한 범위, 예외, 정책, 권한, 상태 변화, 정량 기준을 사용자에게 질문한다. 기본은 한 번에 하나씩 확인하고, 서로 분리하면 오해가 생기는 항목만 최대 3개까지 묶는다. **질문은 항상 선택지형으로 만들고 첫 항목을 `(권장)` 표기와 한 줄 근거가 붙은 추천안으로 둔다** (자세한 형식은 [`requirement-authoring.md`](docs/harness/requirement-authoring.md#선택지와-추천안은-기본값이다)). 미해결 질문은 `열린 질문`에 둔다.
 3. 답변이 확정되면 그 내용을 `범위`/`제외 범위`/`수용 기준` 중 해당 위치에 반영하고, 정책 선택이 따로 필요한 결정은 `의사결정 로그`에 남긴다. 해당 항목은 `열린 질문`에서 제거한다.
-4. 표준 용어 검색/등록은 `node back-end/tools/terminology.mjs ...`로 한다 (`draft.json` 직접 편집 금지).
+4. 표준 용어 검색/등록은 `node tools/harness/terminology.mjs ...`로 한다 (`draft.json` 직접 편집 금지).
 5. 수용 기준을 검증 가능한 문장으로 정리한다.
 6. 요건 하나를 선택해 검증 설계(`.feature` 시나리오 묶음)와 요건 Skeleton(API/DB/Service 골격, 필요 시 화면/라우팅 Skeleton)을 한 번에 작성한다. Controller/DTO/Entity/Repository/Service의 인터페이스와 계약, 화면 이름/업무 진입점/route 초안/접근 권한/주요 표시 정보에 집중하고, 업무 로직과 실제 FE 컴포넌트 구현은 하지 않는다.
-7. Skeleton 단계에서 `compileJava`, `generateHarnessSourceIndex`, 필요 시 `previewSchema`, `traceRequirementCard -Preq=REQ-XXX`로 인터페이스와 추적 상태를 확인한다. FE 대상이면 `npm run typecheck`, `npm run lint`도 확인한다. 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과까지 포함해 사용자 승인을 받는다. 사용자 승인 결과는 요건 카드의 `BDD 테스트 리뷰 > 요건 Skeleton 승인 이력`에 남긴다.
+7. Skeleton 단계에서 `compileJava`, `generateHarnessSourceIndex`, `generateFrontEndSourceIndex`, 필요 시 `previewSchema`, `traceRequirementCard -Preq=REQ-XXX`로 인터페이스와 추적 상태를 확인한다. FE 대상이면 `npm run typecheck`, `npm run lint`, `npm run source-index`도 확인한다. 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과까지 포함해 사용자 승인을 받는다. 사용자 승인 결과는 요건 카드의 `BDD 테스트 리뷰 > 요건 Skeleton 승인 이력`에 남긴다.
 8. 승인된 같은 요건에 대해 `.feature`의 `Covers:` AC를 검증하는 실행 테스트(Acceptance Test 또는 FE BDD 테스트)를 작성하고 Service 업무 로직, 컨트롤러 본문, 실제 FE 화면/라우팅/API 연동을 구현한다. `@Covers` 또는 FE `Covers` 메타데이터는 카드 AC와 정확 일치, 표시용 테스트 이름은 자유.
 9. BDD 테스트 코드 리뷰를 받는다.
 10. `./gradlew validateHarness`로 요건/표준 용어(safe)/API/Entity/테스트/결과 연결을 확인한다.
@@ -113,10 +114,17 @@ BLUE
 ## 자주 쓰는 검증 명령
 
 ```bash
+# 루트 통합 진입점
+npm run validate                    # 표준 + 용어 safe + BE 테스트 + FE 결과 + 추적 게이트
+npm run trace                       # 추적 리포트 생성
+npm run harness:trace -- --check    # 루트 Node 하네스 직접 실행
+
+# 백엔드/Gradle 상세 진입점
 cd back-end
 
 ./gradlew test                       # JUnit 테스트
 ./gradlew generateHarnessSourceIndex # JavaParser source index만 생성
+./gradlew generateFrontEndSourceIndex # FE source index만 생성
 ./gradlew generateScenarioIndex      # Gherkin .feature 시나리오 인덱스 생성
 ./gradlew previewSchema              # Entity 기반 DDL 미리보기
 ./gradlew traceRequirements          # 추적 리포트 생성 (always exit 0)

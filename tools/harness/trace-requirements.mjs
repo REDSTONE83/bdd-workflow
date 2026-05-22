@@ -4,14 +4,16 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const backendRoot = path.resolve(__dirname, '..');
-const workspaceRoot = path.resolve(backendRoot, '..');
+const workspaceRoot = path.resolve(__dirname, '..', '..');
+const backendRoot = path.join(workspaceRoot, 'back-end');
 const docsRoot = path.join(workspaceRoot, 'docs', 'requirements');
-const outputDir = path.join(backendRoot, 'build', 'harness');
-const sourceIndexPath = path.join(outputDir, 'source-index.json');
+const outputDir = path.join(workspaceRoot, 'build', 'harness');
+const sourceIndexPath = path.join(outputDir, 'source-index.backend.json');
+const frontEndSourceIndexPath = path.join(outputDir, 'source-index.front-end.json');
 const scenarioIndexPath = path.join(outputDir, 'scenario-index.json');
 const terminologyReportPath = path.join(outputDir, 'terminology-report.json');
 const terminologyIndexPath = path.join(outputDir, 'terminology-index.json');
+const frontEndTestResultPath = path.join(workspaceRoot, 'front-end', 'test-results', 'e2e-results.json');
 const testResultRoots = [
     path.join(backendRoot, 'target', 'surefire-reports'),
     path.join(backendRoot, 'build', 'test-results', 'test')
@@ -91,6 +93,7 @@ const REQUIRED_SECTIONS = [
 ];
 const ALLOWED_STATUSES = ['초안', '검토중', '승인'];
 const ALLOWED_PRIORITIES = ['높음', '중간', '낮음'];
+const ALLOWED_IMPLEMENTATION_TARGETS = ['back-end', 'front-end', 'full-stack'];
 const REQUIREMENT_ID_PATTERN = /^REQ-\d{3,}$/;
 const REQUIREMENT_FILENAME_PATTERN = /^(REQ-\d{3,})-[^/]+\.md$/;
 const TERM_KEY_PATTERN = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){1,2}$/;
@@ -143,6 +146,10 @@ function readAllRequirementCards() {
         const title = content.match(/^제목:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
         const priority = content.match(/^우선순위:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
         const status = content.match(/^상태:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+        const implementationTargetRaw = content.match(/^구현 대상:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+        const implementationTarget = ALLOWED_IMPLEMENTATION_TARGETS.includes(implementationTargetRaw)
+            ? implementationTargetRaw
+            : 'back-end';
         const acceptanceCriteria = bulletItems(section(content, '수용 기준'));
         const openQuestions = bulletItems(section(content, '열린 질문'))
             .filter((item) => !/^없음$/.test(item.trim()));
@@ -161,6 +168,8 @@ function readAllRequirementCards() {
             title,
             priority,
             status,
+            implementationTarget,
+            implementationTargetRaw,
             approved: normalizeApprovalStatus(status),
             file,
             content,
@@ -222,6 +231,9 @@ function validateRequirementCardStructure(card, allCards, terminologyIndex) {
         issues.push('상태 누락');
     } else if (!ALLOWED_STATUSES.includes(card.status)) {
         issues.push(`상태 값이 허용 목록(${ALLOWED_STATUSES.join(', ')}) 외: "${card.status}"`);
+    }
+    if (card.implementationTargetRaw && !ALLOWED_IMPLEMENTATION_TARGETS.includes(card.implementationTargetRaw)) {
+        issues.push(`구현 대상 값이 허용 목록(${ALLOWED_IMPLEMENTATION_TARGETS.join(', ')}) 외: "${card.implementationTargetRaw}"`);
     }
 
     for (const sec of REQUIRED_SECTIONS) {
@@ -293,8 +305,34 @@ function readSourceIndex() {
     const sourceIndex = JSON.parse(fs.readFileSync(sourceIndexPath, 'utf8'));
     return {
         apis: sourceIndex.apis ?? [],
-        tests: sourceIndex.tests ?? [],
+        tests: (sourceIndex.tests ?? []).map((test) => ({ source: 'back-end', ...test })),
         entities: sourceIndex.entities ?? []
+    };
+}
+
+function readFrontEndSourceIndex() {
+    if (!fs.existsSync(frontEndSourceIndexPath)) {
+        return {
+            present: false,
+            pages: [],
+            routes: [],
+            stories: [],
+            tests: [],
+            issues: [],
+            textChannels: []
+        };
+    }
+
+    const frontEndSourceIndex = JSON.parse(fs.readFileSync(frontEndSourceIndexPath, 'utf8'));
+    return {
+        present: true,
+        generatedAt: frontEndSourceIndex.generatedAt ?? null,
+        pages: frontEndSourceIndex.pages ?? [],
+        routes: frontEndSourceIndex.routes ?? [],
+        stories: frontEndSourceIndex.stories ?? [],
+        tests: (frontEndSourceIndex.tests ?? []).map((test) => ({ source: 'front-end', ...test })),
+        issues: frontEndSourceIndex.issues ?? [],
+        textChannels: frontEndSourceIndex.textChannels ?? []
     };
 }
 
@@ -438,8 +476,115 @@ function readTestResults() {
     return results;
 }
 
+function normalizeRepoPath(filePath) {
+    if (!filePath) {
+        return '';
+    }
+    if (path.isAbsolute(filePath)) {
+        return path.relative(workspaceRoot, filePath).replace(/\\/g, '/');
+    }
+    const normalized = filePath.replace(/\\/g, '/');
+    if (normalized.startsWith('front-end/')) {
+        return normalized;
+    }
+    if (!normalized.includes('/') && /\.spec\.[cm]?[tj]sx?$/.test(normalized)) {
+        return `front-end/tests/e2e/${normalized}`;
+    }
+    return `front-end/${normalized}`;
+}
+
+function statusFromPlaywrightTest(test) {
+    const results = test.results ?? [];
+    if (test.outcome === 'skipped' || results.some((result) => result.status === 'skipped')) {
+        return 'SKIP';
+    }
+    if (['unexpected', 'flaky'].includes(test.outcome)) {
+        return 'FAIL';
+    }
+    if (results.some((result) => ['failed', 'timedOut', 'interrupted'].includes(result.status))) {
+        return 'FAIL';
+    }
+    if (results.length === 0) {
+        return 'NOT_RUN';
+    }
+    return 'PASS';
+}
+
+function readFrontEndTestResults() {
+    const results = new Map();
+    if (!fs.existsSync(frontEndTestResultPath)) {
+        return results;
+    }
+
+    let report;
+    try {
+        report = JSON.parse(fs.readFileSync(frontEndTestResultPath, 'utf8'));
+    } catch {
+        return results;
+    }
+
+    function walkSuite(suite, describeStack = []) {
+        const suiteTitle = suite.title && !/\.(spec|test)\.[cm]?[tj]sx?$/.test(suite.title)
+            ? suite.title
+            : null;
+        const childDescribeStack = suiteTitle ? [...describeStack, suiteTitle] : describeStack;
+        for (const spec of suite.specs ?? []) {
+            const file = normalizeRepoPath(spec.file);
+            const titlePath = [...childDescribeStack, spec.title].filter(Boolean);
+            const line = spec.line ?? 0;
+            const identity = `${file}:${line} > ${titlePath.join(' > ')}`;
+            const identityNoLine = `${file} > ${titlePath.join(' > ')}`;
+            const testStatuses = (spec.tests ?? []).map(statusFromPlaywrightTest);
+            const status = combineStatuses(testStatuses.length > 0 ? testStatuses : ['NOT_RUN']);
+            results.set(identity, status);
+            results.set(identityNoLine, status);
+        }
+        for (const child of suite.suites ?? []) {
+            walkSuite(child, childDescribeStack);
+        }
+    }
+
+    for (const suite of report.suites ?? []) {
+        walkSuite(suite, []);
+    }
+    return results;
+}
+
 function scenarioCovers(scenario) {
     return (scenario.covers ?? []).map((c) => (typeof c === 'string' ? c : c.text));
+}
+
+function combineStatuses(statuses) {
+    if (statuses.length === 0) {
+        return 'MISSING';
+    }
+    if (statuses.some((status) => status === 'FAIL')) {
+        return 'FAIL';
+    }
+    if (statuses.some((status) => status === 'SKIP')) {
+        return 'SKIP';
+    }
+    if (statuses.some((status) => status === 'NOT_RUN')) {
+        return 'NOT_RUN';
+    }
+    if (statuses.some((status) => status === 'MISSING')) {
+        return 'MISSING';
+    }
+    return 'PASS';
+}
+
+function resultForTest(test, results) {
+    const keys = [
+        test.identity,
+        ...(test.resultKeys ?? []),
+        `${test.className}.${test.displayName}`
+    ].filter(Boolean);
+    for (const key of keys) {
+        if (results.has(key)) {
+            return results.get(key);
+        }
+    }
+    return 'NOT_RUN';
 }
 
 function statusForCriterion(criterion, tests, scenarios, results) {
@@ -450,7 +595,7 @@ function statusForCriterion(criterion, tests, scenarios, results) {
 
     const testStatuses = matchingTests.map((test) => ({
         ...test,
-        result: results.get(test.identity) ?? results.get(`${test.className}.${test.displayName}`) ?? 'NOT_RUN'
+        result: resultForTest(test, results)
     }));
 
     // Scenario는 사용자 행위 단위, Test는 AC 검증 단위.
@@ -464,18 +609,7 @@ function statusForCriterion(criterion, tests, scenarios, results) {
         covers: scenarioCovers(scenario)
     }));
 
-    let status;
-    if (testStatuses.length === 0) {
-        status = 'MISSING';
-    } else if (testStatuses.some((test) => test.result === 'FAIL')) {
-        status = 'FAIL';
-    } else if (testStatuses.some((test) => test.result === 'SKIP')) {
-        status = 'SKIP';
-    } else if (testStatuses.some((test) => test.result === 'NOT_RUN')) {
-        status = 'NOT_RUN';
-    } else {
-        status = 'PASS';
-    }
+    const status = combineStatuses(testStatuses.map((test) => test.result));
 
     return { status, tests: testStatuses, scenarios: simplifiedScenarios };
 }
@@ -491,7 +625,56 @@ function attachTerminology(requirement, bucket) {
     };
 }
 
-function evaluateRequirement(card, apis, tests, scenarios, entities, results) {
+function frontEndSurfacesForRequirement(card, frontEndIndex) {
+    return {
+        pages: (frontEndIndex.pages ?? []).filter((page) => (page.requirements ?? []).includes(card.id)),
+        routes: (frontEndIndex.routes ?? []).filter((route) => (route.requirements ?? []).includes(card.id)),
+        stories: (frontEndIndex.stories ?? []).filter((story) => (story.requirements ?? []).includes(card.id))
+    };
+}
+
+function hasFrontEndSurface(frontEndSurfaces) {
+    return (
+        (frontEndSurfaces.pages ?? []).length > 0 ||
+        (frontEndSurfaces.routes ?? []).length > 0 ||
+        (frontEndSurfaces.stories ?? []).length > 0
+    );
+}
+
+function targetCoverageForCriterion(criterion, requirementTests, requirementScenarios, results, implementationTarget) {
+    const backEndTests = requirementTests.filter((test) => test.source !== 'front-end');
+    const frontEndTests = requirementTests.filter((test) => test.source === 'front-end');
+
+    if (implementationTarget === 'front-end') {
+        const coverage = statusForCriterion(criterion, frontEndTests, requirementScenarios, results);
+        return {
+            ...coverage,
+            requiredChecks: [{ target: 'front-end', status: coverage.status }]
+        };
+    }
+
+    if (implementationTarget === 'full-stack') {
+        const backEndCoverage = statusForCriterion(criterion, backEndTests, requirementScenarios, results);
+        const frontEndCoverage = statusForCriterion(criterion, frontEndTests, requirementScenarios, results);
+        return {
+            status: combineStatuses([backEndCoverage.status, frontEndCoverage.status]),
+            tests: [...backEndCoverage.tests, ...frontEndCoverage.tests],
+            scenarios: backEndCoverage.scenarios,
+            requiredChecks: [
+                { target: 'back-end', status: backEndCoverage.status },
+                { target: 'front-end', status: frontEndCoverage.status }
+            ]
+        };
+    }
+
+    const coverage = statusForCriterion(criterion, backEndTests, requirementScenarios, results);
+    return {
+        ...coverage,
+        requiredChecks: [{ target: 'back-end', status: coverage.status }]
+    };
+}
+
+function evaluateRequirement(card, apis, tests, scenarios, entities, results, frontEndIndex) {
     const requirementApis = apis.filter((api) => api.requirements.includes(card.id));
     const requirementTests = tests.filter((test) => test.requirements.includes(card.id));
     const requirementScenarios = scenarios.filter((scenario) =>
@@ -503,17 +686,21 @@ function evaluateRequirement(card, apis, tests, scenarios, entities, results) {
             columns: entity.columns.filter((column) => column.requirements.includes(card.id))
         }))
         .filter((entity) => entity.requirements.includes(card.id) || entity.columns.length > 0);
+    const frontEndSurfaces = frontEndSurfacesForRequirement(card, frontEndIndex);
     const coverage = card.acceptanceCriteria.map((criterion) => ({
         criterion,
-        ...statusForCriterion(criterion, requirementTests, requirementScenarios, results)
+        ...targetCoverageForCriterion(criterion, requirementTests, requirementScenarios, results, card.implementationTarget)
     }));
 
     const redReasons = [];
     if (card.acceptanceCriteria.length === 0) {
         redReasons.push('수용 기준 없음');
     }
-    if (requirementApis.length === 0) {
+    if (['back-end', 'full-stack'].includes(card.implementationTarget) && requirementApis.length === 0) {
         redReasons.push('관련 API 없음');
+    }
+    if (['front-end', 'full-stack'].includes(card.implementationTarget) && !hasFrontEndSurface(frontEndSurfaces)) {
+        redReasons.push('관련 FE 화면/스토리 없음');
     }
     for (const row of coverage) {
         if (row.status !== 'PASS') {
@@ -530,6 +717,7 @@ function evaluateRequirement(card, apis, tests, scenarios, entities, results) {
             tests: requirementTests,
             scenarios: requirementScenarios,
             entities: requirementEntities,
+            frontEnd: frontEndSurfaces,
             coverage
         };
     }
@@ -551,6 +739,7 @@ function evaluateRequirement(card, apis, tests, scenarios, entities, results) {
         tests: requirementTests,
         scenarios: requirementScenarios,
         entities: requirementEntities,
+        frontEnd: frontEndSurfaces,
         coverage
     };
 }
@@ -655,16 +844,17 @@ function computeScenarioWarnings(scenarioIndex, cards, tests, knownRequirementId
     return warnings;
 }
 
-function buildModel(allCards, cards, apis, tests, entities, results, terminologyReport, terminologyIndex, scenarioIndex, selectedIds, flags = {}) {
+function buildModel(allCards, cards, apis, tests, entities, results, terminologyReport, terminologyIndex, scenarioIndex, frontEndIndex, selectedIds, flags = {}) {
     const knownRequirementIds = new Set(cards.map((card) => card.id));
     const terminologyBucket = bucketTerminologyFindings(terminologyReport, knownRequirementIds);
     const scenarios = flattenScenarios(scenarioIndex);
     const isSelected = (id) => !selectedIds || selectedIds.has(id);
     const allRequirements = cards
-        .map((card) => evaluateRequirement(card, apis, tests, scenarios, entities, results))
+        .map((card) => evaluateRequirement(card, apis, tests, scenarios, entities, results, frontEndIndex))
         .map((req) => attachTerminology(req, terminologyBucket));
     const requirements = allRequirements.filter((req) => isSelected(req.id));
     const hasUnknown = (refs) => refs.length === 0 || refs.some((ref) => !knownRequirementIds.has(ref));
+    const hasUnknownNonEmpty = (refs) => refs.length > 0 && refs.some((ref) => !knownRequirementIds.has(ref));
     const intersectsSelection = (refs) => !selectedIds || refs.some((ref) => selectedIds.has(ref));
     const unknownApis = apis
         .filter((api) => hasUnknown(api.requirements))
@@ -697,6 +887,21 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
             }
             return intersectsSelection(refs);
         });
+    const allFrontEndSurfaces = [
+        ...(frontEndIndex.pages ?? []).map((surface) => ({ type: 'page', ...surface })),
+        ...(frontEndIndex.routes ?? []).map((surface) => ({ type: 'route', ...surface })),
+        ...(frontEndIndex.stories ?? []).map((surface) => ({ type: 'story', ...surface }))
+    ];
+    const unknownFrontEndSurfaces = allFrontEndSurfaces
+        .filter((surface) => hasUnknownNonEmpty(surface.requirements ?? []))
+        .filter((surface) => intersectsSelection(surface.requirements ?? []));
+    const frontEndIndexIssues = (frontEndIndex.issues ?? []).filter((issue) => {
+        const refs = issue.requirements ?? [];
+        if (refs.length === 0) {
+            return !selectedIds;
+        }
+        return intersectsSelection(refs);
+    });
     const scenarioIssueFeatures = (scenarioIndex.features ?? [])
         .filter((feature) => (feature.issues ?? []).length > 0)
         .filter((feature) => {
@@ -750,6 +955,8 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
         unknownTests: unknownTests.length,
         unknownEntities: unknownEntities.length,
         unknownFeatures: unknownFeatures.length,
+        unknownFrontEndSurfaces: unknownFrontEndSurfaces.length,
+        frontEndIndexIssues: frontEndIndexIssues.length,
         scenarioIssues: scenarioFeatureIssueCount + globalScenarioIssues.length,
         scenarioWarnings: scenarioWarnings.length,
         scenarioWarningsByKind,
@@ -767,6 +974,12 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
         unknownTests,
         unknownEntities,
         unknownFeatures,
+        unknownFrontEndSurfaces,
+        frontEndIndex: {
+            present: frontEndIndex.present !== false,
+            generatedAt: frontEndIndex.generatedAt ?? null,
+            issues: frontEndIndexIssues
+        },
         scenarioIndex: {
             present: scenarioIndex.present !== false,
             generatedAt: scenarioIndex.generatedAt ?? null,
@@ -810,6 +1023,8 @@ function buildMarkdown(model) {
     lines.push(`- Unknown test references: ${model.summary.unknownTests}`);
     lines.push(`- Unknown entity references: ${model.summary.unknownEntities}`);
     lines.push(`- Unknown feature references: ${model.summary.unknownFeatures}`);
+    lines.push(`- Unknown front-end surface references: ${model.summary.unknownFrontEndSurfaces}`);
+    lines.push(`- Front-end source index issues: ${model.summary.frontEndIndexIssues}`);
     lines.push(`- Scenario index issues: ${model.summary.scenarioIssues}`);
     const sw = model.summary.scenarioWarnings;
     const swByKind = model.summary.scenarioWarningsByKind || {};
@@ -834,6 +1049,7 @@ function buildMarkdown(model) {
         lines.push(`## ${requirement.id} ${requirement.title}`, '');
         lines.push(`State: ${requirement.state}`);
         lines.push(`Card status: ${requirement.status || '미기재'}`);
+        lines.push(`Implementation target: ${requirement.implementationTarget}`);
         lines.push(`Card: ${path.relative(workspaceRoot, requirement.file)}`);
         lines.push('');
 
@@ -855,7 +1071,7 @@ function buildMarkdown(model) {
 
         lines.push('### APIs', '');
         if (requirement.apis.length === 0) {
-            lines.push('- MISSING');
+            lines.push(requirement.implementationTarget === 'front-end' ? '- (front-end 대상 - API 요구 없음)' : '- MISSING');
         } else {
             for (const api of requirement.apis) {
                 lines.push(`- ${api.http} / ${api.controller} [${api.requirements.join(', ')}]`);
@@ -872,6 +1088,27 @@ function buildMarkdown(model) {
                 for (const column of entity.columns) {
                     lines.push(`  - ${column.columnName} (${column.javaType}) [${column.requirements.join(', ') || '(field-level 미지정)'}]`);
                 }
+            }
+        }
+        lines.push('');
+
+        lines.push('### Front-end', '');
+        const pages = requirement.frontEnd?.pages ?? [];
+        const routes = requirement.frontEnd?.routes ?? [];
+        const stories = requirement.frontEnd?.stories ?? [];
+        if (pages.length === 0 && routes.length === 0 && stories.length === 0) {
+            lines.push('- (없음)');
+        } else {
+            for (const route of routes) {
+                lines.push(`- route ${route.path} (${route.file}:${route.line ?? 0}) [${route.requirements.join(', ')}]`);
+            }
+            for (const page of pages) {
+                const routeLabel = page.route ? ` route=${page.route}` : '';
+                lines.push(`- page ${page.name}${routeLabel} (${page.file}:${page.line ?? 0}) [${page.requirements.join(', ')}]`);
+            }
+            for (const story of stories) {
+                const storyTitle = [story.title, story.story].filter(Boolean).join(' / ');
+                lines.push(`- story ${storyTitle} (${story.file}:${story.line ?? 0}) [${story.requirements.join(', ')}]`);
             }
         }
         lines.push('');
@@ -893,6 +1130,9 @@ function buildMarkdown(model) {
         lines.push('### Acceptance Criteria Coverage', '');
         for (const row of requirement.coverage) {
             lines.push(`- ${row.status}: ${row.criterion}`);
+            if ((row.requiredChecks ?? []).length > 1) {
+                lines.push(`  - Required checks: ${row.requiredChecks.map((check) => `${check.target}=${check.status}`).join(', ')}`);
+            }
             const scenariosForRow = row.scenarios ?? [];
             if (scenariosForRow.length === 0 && row.tests.length === 0) {
                 lines.push(`  - (시나리오 없음, 테스트 없음)`);
@@ -904,7 +1144,8 @@ function buildMarkdown(model) {
                 lines.push(`  - Scenario: ${scenario.title} (${scenario.file}:${scenario.line})`);
             }
             for (const test of row.tests) {
-                lines.push(`  - ${test.identity}: ${test.result}`);
+                const source = test.source ? `[${test.source}] ` : '';
+                lines.push(`  - ${source}${test.identity}: ${test.result}`);
             }
         }
         lines.push('');
@@ -985,6 +1226,25 @@ function buildMarkdown(model) {
         lines.push('');
     }
 
+    if (model.unknownFrontEndSurfaces.length > 0) {
+        lines.push('## Unknown Front-end Surface Requirement References', '');
+        for (const surface of model.unknownFrontEndSurfaces) {
+            const label = surface.path || surface.name || surface.story || surface.title || '(unknown)';
+            lines.push(`- [${formatUnknownRefs(surface.requirements ?? [])}] ${surface.type} ${label} (${surface.file}:${surface.line ?? 0})`);
+        }
+        lines.push('');
+    }
+
+    if ((model.frontEndIndex.issues ?? []).length > 0) {
+        lines.push('## Front-end Source Index Issues', '');
+        for (const issue of model.frontEndIndex.issues) {
+            const loc = issue.location || {};
+            const where = loc.file ? `${loc.file}:${loc.line ?? 0}` : '(global)';
+            lines.push(`- [${issue.severity ?? 'warning'}] ${issue.kind}: ${issue.message} — ${where}`);
+        }
+        lines.push('');
+    }
+
     if (
         (model.scenarioIndex.globalIssues ?? []).length > 0 ||
         (model.scenarioIndex.featureIssues ?? []).length > 0
@@ -1038,10 +1298,14 @@ function buildMarkdown(model) {
 const allCardsRaw = readAllRequirementCards();
 const cards = allCardsRaw.filter((card) => card.id);
 const sourceIndex = readSourceIndex();
+const frontEndIndex = readFrontEndSourceIndex();
 const apis = sourceIndex.apis;
-const tests = sourceIndex.tests;
+const tests = [...sourceIndex.tests, ...frontEndIndex.tests];
 const entities = sourceIndex.entities;
 const results = readTestResults();
+for (const [key, value] of readFrontEndTestResults()) {
+    results.set(key, value);
+}
 const terminologyReport = readTerminologyReport();
 const terminologyIndex = readTerminologyIndex();
 const scenarioIndex = readScenarioIndex();
@@ -1091,7 +1355,7 @@ function resolveSelectedIds(cli, allCards) {
 }
 
 const selectedIds = resolveSelectedIds(cli, allCardsRaw);
-const model = buildModel(allCardsRaw, cards, apis, tests, entities, results, terminologyReport, terminologyIndex, scenarioIndex, selectedIds, { checkMode, requireBlue });
+const model = buildModel(allCardsRaw, cards, apis, tests, entities, results, terminologyReport, terminologyIndex, scenarioIndex, frontEndIndex, selectedIds, { checkMode, requireBlue });
 const markdown = buildMarkdown(model);
 
 fs.mkdirSync(outputDir, { recursive: true });
@@ -1111,7 +1375,8 @@ if (quiet) {
 const hasUnknownReferences =
     model.summary.unknownApis > 0 ||
     model.summary.unknownTests > 0 ||
-    model.summary.unknownEntities > 0;
+    model.summary.unknownEntities > 0 ||
+    model.summary.unknownFrontEndSurfaces > 0;
 const hasStructureIssues = model.summary.structureIssues > 0;
 if (checkMode && (model.summary.total === 0 || model.summary.red > 0 || hasUnknownReferences || hasStructureIssues)) {
     process.exitCode = 1;

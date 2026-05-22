@@ -112,8 +112,8 @@ for each banMatch in text:
 | `strict` | 최종 승인 / 릴리스 검증 | 심각 finding은 error로 보고 | error 있으면 1 |
 
 ```bash
-node tools/terminology.mjs validate           # safe
-node tools/terminology.mjs validate --strict  # strict
+node tools/harness/terminology.mjs validate           # safe
+node tools/harness/terminology.mjs validate --strict  # strict
 ```
 
 각 finding은 두 severity 필드를 동시에 가진다.
@@ -180,7 +180,7 @@ draft.json에만 있음    draft      safe=warning, strict=error
 
 ## 운영 흐름
 
-1. 새 요건 작성 전 `node back-end/tools/terminology.mjs search <표현>`으로 기존 용어를 찾는다.
+1. 새 요건 작성 전 `node tools/harness/terminology.mjs search <표현>`으로 기존 용어를 찾는다.
 2. 적합한 term이 있으면 카드의 `표준 용어`에 key를 적는다.
 3. 적합한 term이 없으면 CLI로 draft 후보를 등록한다. `draft.json`을 직접 편집하지 않는다.
 4. 도메인 합의 후 `domains/<domain>.json`으로 이동하면 approved로 승격되어 strict 검증에서도 통과한다.
@@ -190,7 +190,7 @@ draft.json에만 있음    draft      safe=warning, strict=error
 `draft.json`은 저장 포맷이고, 편집은 CLI로 한다. 검색에서 적합한 term을 찾지 못한 경우 또는 사용자의 명시적 선택으로만 신규 등록한다.
 
 ```bash
-node back-end/tools/terminology.mjs draft add \
+node tools/harness/terminology.mjs draft add \
   --key todo.dueDate \
   --ko "마감일" \
   --en "due date" \
@@ -204,7 +204,7 @@ node back-end/tools/terminology.mjs draft add \
 - 이미 approved 또는 draft에 존재하는 key는 거부한다.
 
 ```bash
-node back-end/tools/terminology.mjs draft update todo.dueDate \
+node tools/harness/terminology.mjs draft update todo.dueDate \
   --set "reason=시간 포함 여부 합의 후 승격" \
   --add-allow "due-date" \
   --add-name table=todo \
@@ -215,7 +215,7 @@ node back-end/tools/terminology.mjs draft update todo.dueDate \
 - 변경 옵션이 하나도 없으면 거부한다.
 
 ```bash
-node back-end/tools/terminology.mjs draft delete todo.dueDate
+node tools/harness/terminology.mjs draft delete todo.dueDate
 ```
 
 - 요건 카드의 `표준 용어` bullet에 등장하면 기본 거부한다. 어느 카드가 참조하는지 함께 출력한다.

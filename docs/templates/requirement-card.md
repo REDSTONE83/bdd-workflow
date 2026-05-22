@@ -20,7 +20,7 @@
 
 - domain.concept
 
-`docs/terminology/`에 정의된 term key만 적는다. 검색은 `node back-end/tools/terminology.mjs search <표현>`을 사용한다. 새 용어가 필요하면 `node back-end/tools/terminology.mjs draft add ...`로 후보를 등록한 뒤 key를 적는다 (`draft.json`은 직접 편집하지 않는다). draft 상태는 `validateHarness`(safe)는 통과하지만 `validateTerminologyStrict`에서는 error로 잡힌다.
+`docs/terminology/`에 정의된 term key만 적는다. 검색은 `node tools/harness/terminology.mjs search <표현>`을 사용한다. 새 용어가 필요하면 `node tools/harness/terminology.mjs draft add ...`로 후보를 등록한 뒤 key를 적는다 (`draft.json`은 직접 편집하지 않는다). draft 상태는 `validateHarness`(safe)는 통과하지만 `validateTerminologyStrict`에서는 error로 잡힌다.
 
 ## 제외 범위
 
@@ -57,7 +57,7 @@
   DB Skeleton: 변경되는 Entity/컬럼/관계. `previewSchema` 확인 완료 여부.
   Service Skeleton: 공개 메서드와 내부 동작 코멘트. 업무 로직 미구현 확인 완료 여부.
   화면/라우팅 Skeleton: 화면 이름, 업무 진입점, 예상 route 초안, 접근 권한, 주요 표시 정보, loading/empty/error 상태, Storybook으로 고정할 상태. CSS selector·컴포넌트 구조는 포함하지 않는다.
-  검증: `compileJava`, `generateHarnessSourceIndex`, `previewSchema`(필요 시), `traceRequirementCard -Preq=REQ-000`, FE 대상이면 `npm run typecheck`, `npm run lint` 결과.
+  검증: `compileJava`, `generateHarnessSourceIndex`, `generateFrontEndSourceIndex`, `previewSchema`(필요 시), `traceRequirementCard -Preq=REQ-000`, FE 대상이면 `npm run typecheck`, `npm run lint`, `npm run source-index` 결과.
   승인자: Product Owner, Tech Lead
   Skeleton 결과: 승인 또는 수정 요청
 

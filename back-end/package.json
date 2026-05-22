@@ -5,6 +5,6 @@
   "scripts": {
     "trace": "./gradlew traceRequirements",
     "validate": "./gradlew validateHarness",
-    "trace:report": "node tools/trace-requirements.mjs"
+    "trace:report": "node ../tools/harness/trace-requirements.mjs"
   }
 }

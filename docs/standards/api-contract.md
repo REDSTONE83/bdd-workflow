@@ -267,7 +267,7 @@ private static final Set<String> ALLOWED_SORT_KEYS = Set.of("createdAt", "name")
 ## 자동 검증 항목
 
 - `validateHarness`: 컨트롤러의 `@Requirement` ID가 카드에 존재하는지, 카드의 수용 기준이 테스트로 커버되는지 검사.
-- `generateHarnessSourceIndex`: JavaParser로 컨트롤러를 파싱해 source index를 만든다. 결과는 `back-end/build/harness/source-index.json`.
+- `generateHarnessSourceIndex`: JavaParser로 컨트롤러를 파싱해 source index를 만든다. 결과는 `build/harness/source-index.backend.json`.
 
 ## 수동 리뷰 항목
 

@@ -1,0 +1,13 @@
+{
+  "name": "bdd-workflow",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "trace": "cd back-end && ./gradlew traceRequirements",
+    "validate": "cd back-end && ./gradlew validateHarness",
+    "harness:trace": "node tools/harness/trace-requirements.mjs",
+    "harness:scenario-index": "node tools/harness/scenario-index.mjs",
+    "harness:terminology": "node tools/harness/terminology.mjs",
+    "harness:standards": "node tools/harness/validate-standards.mjs"
+  }
+}

@@ -10,6 +10,8 @@ front-end/
   vite.config.ts
   components.json
   playwright.config.ts
+  tools/
+    source-index.mjs
   .storybook/
     main.ts
     preview.ts
@@ -113,7 +115,15 @@ Playwright E2E와 접근성 smoke test를 둔다.
 
 - 파일명은 사용자 흐름 단위로 `{feature}.spec.ts`를 쓴다.
 - FE BDD 테스트는 이 위치에서 시작한다.
-- BDD 커버리지 대상 테스트는 `REQ`와 `Covers` 메타데이터를 남긴다. 실제 메타데이터 형식은 하네스 인덱서 도입 시 확정한다.
+- BDD 커버리지 대상 테스트는 `Requirement`와 `Covers` 메타데이터를 남긴다. 실제 형식은 [`front-end-testing.md`](./front-end-testing.md)를 따른다.
+
+### `tools/`
+
+프런트엔드 하네스용 Node 도구를 둔다.
+
+- `source-index.mjs`: TypeScript AST로 FE page/route/story와 Playwright BDD 테스트 메타데이터를 수집한다.
+- 출력은 `build/harness/source-index.front-end.json`이다.
+- 사람이 출력 JSON을 직접 수정하지 않는다.
 
 ## 파일명 규칙
 
@@ -140,6 +150,35 @@ Something.stories.tsx # Storybook story
 - `front-end`: API/DB 변경 없이 화면, 라우팅, 클라이언트 상태, 시각/접근성 품질을 구현한다.
 - `full-stack`: 같은 수용 기준을 API와 화면 양쪽에서 검증한다.
 
+화면/route/story가 요건에 연결되어야 하는 경우 파일 상단 JSDoc 또는 exported metadata를 사용한다.
+
+```ts
+export const harness = {
+  requirements: ["REQ-002"],
+  route: "/todos",
+  page: "TodoListPage",
+}
+```
+
+지원하는 필드:
+
+- `requirements` 또는 `requirementIds`: `REQ-XXX` 배열.
+- `route`, `path`, `routePath`: 화면 route.
+- `page`, `screen`, `name`: 화면 이름.
+
+Storybook story는 default export 또는 story export의 `parameters.harness.requirements`로 요건을 연결할 수 있다.
+
+```ts
+export default {
+  title: "Todo/TodoListPage",
+  parameters: {
+    harness: {
+      requirements: ["REQ-002"],
+    },
+  },
+}
+```
+
 ## 생성 산출물
 
 다음은 사람이 직접 수정하지 않는다.
@@ -151,6 +190,7 @@ front-end/playwright-report/
 front-end/test-results/
 front-end/coverage/
 front-end/.cache/
+build/harness/source-index.front-end.json
 ```
 
 ## 검증 명령
@@ -164,6 +204,7 @@ npm run test            # Vitest unit/component test
 npm run build           # production build
 npm run build-storybook # Storybook static build
 npm run e2e             # Playwright E2E/accessibility smoke
+npm run source-index    # FE source index 생성
 npm run validate        # 빠른 FE 게이트
 npm run validate:full   # Storybook/E2E 포함 전체 FE 게이트
 ```
@@ -172,8 +213,8 @@ npm run validate:full   # Storybook/E2E 포함 전체 FE 게이트
 
 - `npm run validate`: typecheck, lint, Vitest, Vite build를 실행한다.
 - `npm run validate:full`: 빠른 게이트에 Storybook build와 Playwright E2E를 더한다.
-- (예정) `generateFrontEndSourceIndex`: route, page, story, FE BDD 테스트의 `REQ`/`Covers` 메타데이터를 수집한다.
-- (예정) 통합 `validateHarness`: 구현 대상이 `front-end` 또는 `full-stack`인 카드의 FE BDD 커버리지와 테스트 결과를 RED/GREEN/BLUE 판정에 반영한다.
+- `npm run source-index` 또는 `./gradlew generateFrontEndSourceIndex`: route, page, story, FE BDD 테스트의 `Requirement`/`Covers` 메타데이터를 수집한다.
+- 통합 `validateHarness`: 구현 대상이 `front-end` 또는 `full-stack`인 카드의 FE BDD 커버리지와 테스트 결과를 RED/GREEN/BLUE 판정에 반영한다.
 
 ## 수동 리뷰 항목
 

@@ -4,10 +4,10 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const backendRoot = path.resolve(__dirname, '..');
-const repoRoot = path.resolve(backendRoot, '..');
-const outputDir = path.join(backendRoot, 'build', 'harness');
-const sourceIndexPath = path.join(outputDir, 'source-index.json');
+const repoRoot = path.resolve(__dirname, '..', '..');
+const backendRoot = path.join(repoRoot, 'back-end');
+const outputDir = path.join(repoRoot, 'build', 'harness');
+const sourceIndexPath = path.join(outputDir, 'source-index.backend.json');
 const applicationYmlPath = path.join(backendRoot, 'src', 'main', 'resources', 'application.yml');
 const bootApplicationPath = path.join(
     backendRoot,

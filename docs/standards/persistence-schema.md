@@ -141,7 +141,7 @@ cd back-end
 ./gradlew previewSchema
 ```
 
-결과는 `back-end/build/harness/schema-preview.sql`에 떨어진다. 컬럼마다 어느 요건에서 도입됐는지 주석으로 남는다. 이 산출물은 Entity가 생성할 스키마의 미리보기이며, 그대로 적용되는 마이그레이션 파일은 아니다. preview를 확인하고 사용자 승인을 받은 뒤 구현으로 넘어간다.
+결과는 `build/harness/schema-preview.sql`에 떨어진다. 컬럼마다 어느 요건에서 도입됐는지 주석으로 남는다. 이 산출물은 Entity가 생성할 스키마의 미리보기이며, 그대로 적용되는 마이그레이션 파일은 아니다. preview를 확인하고 사용자 승인을 받은 뒤 구현으로 넘어간다.
 
 Entity 변경이 수용 기준에 영향을 주면 요건 카드의 `의사결정 로그`에 흔적을 남긴다.
 

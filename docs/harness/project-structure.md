@@ -6,6 +6,7 @@
 bdd-workflow/
   AGENTS.md
   .gitignore
+  package.json
   docs/
     README.md
     harness/
@@ -34,6 +35,20 @@ bdd-workflow/
       README.md
       requirement-card.md
       scenario-feature.feature
+  tools/
+    harness/
+      trace-requirements.mjs
+      scenario-index.mjs
+      terminology.mjs
+      validate-standards.mjs
+  build/
+    harness/
+      source-index.backend.json
+      source-index.front-end.json
+      scenario-index.json
+      trace-report.md
+      trace-report.json
+      schema-preview.sql
   back-end/
     README.md
     gradlew
@@ -47,7 +62,6 @@ bdd-workflow/
         gradle-wrapper.properties
     package.json
     tools/
-      trace-requirements.mjs
       preview-schema.mjs
     src/
       harness/
@@ -81,17 +95,13 @@ bdd-workflow/
               Covers.java
             user/
               SignupApiAcceptanceTest.java
-    build/
-      harness/
-        source-index.json
-        trace-report.md
-        trace-report.json
-        schema-preview.sql
   front-end/
     package.json
     vite.config.ts
     components.json
     playwright.config.ts
+    tools/
+      source-index.mjs
     .storybook/
       main.ts
       preview.ts
@@ -129,6 +139,12 @@ AGENTS.md
 ```
 
 Gradle 빌드 산출물, 하네스 생성 리포트, 클래스 파일 등 생성물을 제외한다.
+
+```text
+package.json
+```
+
+루트 하네스 실행 편의 스크립트를 둔다. `npm run validate`를 통합 품질 게이트의 기본 진입점으로 쓰고, `npm run trace`는 기존 Gradle trace 태스크를 호출한다. `npm run harness:*`는 루트 `tools/harness` 도구를 직접 실행한다.
 
 ## docs
 
@@ -198,7 +214,7 @@ back-end/settings.gradle
 back-end/gradle.properties
 ```
 
-Spring Boot Gradle 프로젝트 설정이다. `validateHarness`, `traceRequirements`, `previewSchema` 태스크도 여기서 정의한다.
+Spring Boot Gradle 프로젝트 설정이다. `validateHarness`, `traceRequirements`, `previewSchema`, `generateFrontEndSourceIndex` 태스크도 여기서 정의한다.
 
 ```text
 back-end/gradlew
@@ -212,13 +228,13 @@ back-end/gradle/wrapper/
 back-end/package.json
 ```
 
-Node 기반 하네스 스캐너 실행 편의 스크립트를 둔다. 애플리케이션 런타임 의존성 관리는 Gradle이 담당한다.
+Gradle 하네스 태스크 실행 편의 스크립트를 둔다. 애플리케이션 런타임 의존성 관리는 Gradle이 담당한다.
 
 ```text
-back-end/tools/trace-requirements.mjs
+tools/harness/trace-requirements.mjs
 ```
 
-요건 카드, JavaParser source index, Gradle 테스트 결과를 병합해 추적 리포트를 생성한다.
+요건 카드, JavaParser source index, FE source index, Gradle/Playwright 테스트 결과를 병합해 추적 리포트를 생성한다.
 
 ```text
 back-end/tools/preview-schema.mjs
@@ -230,7 +246,13 @@ JavaParser source index의 `entities[]`를 읽어 검토용 DDL(`build/harness/s
 back-end/src/harness/java/com/example/bddworkflow/harness/SourceIndexGenerator.java
 ```
 
-JavaParser로 컨트롤러, JPA `@Entity` 클래스, Acceptance Test 소스를 파싱해 `build/harness/source-index.json`을 생성한다. Java 코드 내용은 Node 정규식이 아니라 이 인덱서가 구조적으로 읽는다. `@Requirement`는 클래스/메서드/필드 어디에 붙어 있어도 인덱싱되며, 단일값과 배열값(`{"REQ-001","REQ-002"}`)을 모두 지원한다.
+JavaParser로 컨트롤러, JPA `@Entity` 클래스, Acceptance Test 소스를 파싱해 `build/harness/source-index.backend.json`을 생성한다. Java 코드 내용은 Node 정규식이 아니라 이 인덱서가 구조적으로 읽는다. `@Requirement`는 클래스/메서드/필드 어디에 붙어 있어도 인덱싱되며, 단일값과 배열값(`{"REQ-001","REQ-002"}`)을 모두 지원한다.
+
+```text
+front-end/tools/source-index.mjs
+```
+
+TypeScript AST로 FE page/route/story 메타데이터와 Playwright FE BDD 테스트의 `Requirement`/`Covers` 메타데이터를 파싱해 `build/harness/source-index.front-end.json`을 생성한다. Gradle `generateFrontEndSourceIndex`, `traceRequirements`, `validateHarness`에서 이 파일을 사용한다.
 
 ## Spring Boot 소스 구조
 
@@ -372,21 +394,22 @@ front-end/tests/e2e/**/*.spec.ts
 
 - `*.test.tsx`: Vitest/Testing Library 기반 TDD/보조 테스트. AC 커버리지에는 포함하지 않는다.
 - `*.stories.tsx`: Storybook 상태 카탈로그. visual regression의 기준 화면이다.
-- `*.spec.ts`: Playwright 기반 FE BDD/E2E 테스트. 하네스 인덱서 도입 후 `REQ`와 `Covers` 메타데이터로 카드 AC와 연결한다.
+- `*.spec.ts`: Playwright 기반 FE BDD/E2E 테스트. `Requirement`와 `Covers` 메타데이터로 카드 AC와 연결한다.
 
 ## 생성 산출물
 
 ```text
-back-end/build/
+build/harness/
 ```
 
-Gradle 빌드와 하네스 리포트 생성물이다. 사람이 직접 수정하지 않는다.
+통합 하네스 리포트 생성물이다. 사람이 직접 수정하지 않는다.
 
 ```text
-back-end/build/harness/trace-report.md
-back-end/build/harness/trace-report.json
-back-end/build/harness/source-index.json
-back-end/build/harness/schema-preview.sql
+build/harness/trace-report.md
+build/harness/trace-report.json
+build/harness/source-index.backend.json
+build/harness/source-index.front-end.json
+build/harness/schema-preview.sql
 ```
 
 요건, API, Entity, 테스트, 테스트 결과를 연결한 자동 생성 산출물이다. `schema-preview.sql`은 구현 전 사용자 검토용 DDL 미리보기다.

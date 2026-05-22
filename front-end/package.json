@@ -8,13 +8,14 @@
     "typecheck": "tsc -b",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "source-index": "node tools/source-index.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
     "storybook": "HOME=.cache/storybook STORYBOOK_DISABLE_TELEMETRY=1 storybook dev -p 6006 --host 127.0.0.1",
     "build-storybook": "HOME=.cache/storybook STORYBOOK_DISABLE_TELEMETRY=1 storybook build",
     "preview": "vite preview --host 127.0.0.1",
-    "validate": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "validate": "npm run typecheck && npm run lint && npm run test && npm run build && npm run source-index",
     "validate:full": "npm run validate && npm run build-storybook && npm run e2e"
   },
   "dependencies": {

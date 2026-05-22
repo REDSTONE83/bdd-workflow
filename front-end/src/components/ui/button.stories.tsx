@@ -8,6 +8,9 @@ const meta = {
   component: Button,
   parameters: {
     layout: "centered",
+    harness: {
+      requirements: ["REQ-005"],
+    },
   },
   tags: ["autodocs"],
   argTypes: {

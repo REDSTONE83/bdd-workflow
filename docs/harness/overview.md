@@ -41,7 +41,7 @@ Acceptance Test
 Front-end
   front-end/src/features/{domain}/pages/*
   front-end/tests/e2e/*.spec.ts
-  Requirement / Covers 메타데이터             // 하네스 인덱서 도입 예정
+  Requirement / Covers 메타데이터
   Storybook story                            // 상태 카탈로그, visual regression 기준
 
 검증 리포트
@@ -87,23 +87,26 @@ back-end/src/harness/java
   JavaParser 기반 API/Entity/test source index 생성기
 
 front-end/tools
-  (예정) TypeScript 기반 route/page/story/FE BDD test source index 생성기
+  TypeScript 기반 route/page/story/FE BDD test source index 생성기
 
-back-end/tools/trace-requirements.mjs
-  요건 카드, JavaParser source index, 테스트 결과 병합
+tools/harness/trace-requirements.mjs
+  요건 카드, Java/FE source index, 테스트 결과 병합
 
 back-end/tools/preview-schema.mjs
   Entity 인덱스로부터 DDL 미리보기 생성
 
-back-end/build/harness
-  자동 생성 source index, 추적 리포트, schema preview
+build/harness
+  자동 생성 source index, front-end source index, 추적 리포트, schema preview
 ```
 
 ## 상태 판정
 
 `RED`는 개발 중 또는 검증 실패 상태다.
 
-- API 연결 없음
+- 구현 대상에 맞는 연결 없음
+  - `back-end`: 관련 API 없음
+  - `front-end`: 관련 FE 화면/route/story 없음
+  - `full-stack`: 관련 API 또는 FE 화면/route/story 없음
 - 수용 기준 커버 테스트 없음
 - 테스트 미실행
 - 테스트 실패 또는 스킵
@@ -111,8 +114,11 @@ back-end/build/harness
 
 `GREEN`은 구현 검증 통과 상태다.
 
-- API 연결 있음
-- 수용 기준 모두 커버됨
+- 구현 대상에 맞는 API 또는 FE 화면/route/story 연결 있음
+- 구현 대상에 맞는 수용 기준 커버 테스트가 모두 PASS
+  - `back-end`: 백엔드 Acceptance Test
+  - `front-end`: Playwright FE BDD 테스트
+  - `full-stack`: 백엔드 Acceptance Test와 Playwright FE BDD 테스트 모두
 - 연결 테스트 모두 PASS
 
 `BLUE`는 정리 완료 상태다.
@@ -121,20 +127,26 @@ back-end/build/harness
 - 요건 카드 승인
 - 열린 질문 없음
 
-Skeleton 단계의 카드(`@Covers` 테스트 부재)는 정상적으로 RED로 표시된다. 이 시점에는 strict 게이트인 `validateHarness`를 돌리지 않고 `compileJava`, `generateHarnessSourceIndex`, `previewSchema`, `traceRequirementCard`로 인터페이스와 현황만 본다. 작성 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
-
-프런트엔드 하네스 인덱서 도입 전까지 RED/GREEN/BLUE 자동 판정은 백엔드 API 기준이 우선이다. 신규 FE 대상 카드는 `구현 대상: front-end | full-stack`을 카드에 적고, `npm run validate:full` 결과와 화면/라우팅 Skeleton 승인 이력을 수동 리뷰 증거로 남긴다. FE 인덱서가 도입되면 구현 대상에 따라 API 연결 또는 화면 연결을 판정한다.
+Skeleton 단계의 카드(`@Covers` 또는 FE `Covers` 테스트 부재)는 정상적으로 RED로 표시된다. 이 시점에는 strict 게이트인 `validateHarness`를 돌리지 않고 `compileJava`, `generateHarnessSourceIndex`, `generateFrontEndSourceIndex`, `previewSchema`, `traceRequirementCard`로 인터페이스와 현황만 본다. 작성 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
 
 ## 품질 게이트
 
 릴리스 후보로 넘기려면 최소한 다음 명령이 성공해야 한다.
 
 ```bash
+npm run validate
+```
+
+루트 `npm run validate`는 내부적으로 `back-end`의 `validateHarness` Gradle 태스크를 호출한다. Java 테스트와 JavaParser source index 생성은 Gradle 소유라 Gradle 태스크를 유지하되, 작업자는 루트에서 통합 게이트를 실행한다.
+
+이 명령은 테스트를 먼저 실행한 뒤, 요건 카드와 코드(API, Entity, Acceptance Test, FE BDD 테스트) 연결 상태를 검사한다. 알려지지 않은 요건 ID가 하나라도 섞여 있으면 실패한다. FE BDD 테스트 결과는 `front-end/test-results/e2e-results.json`을 읽는다. FE 대상 카드가 있으면 `cd front-end && npm run e2e` 또는 `npm run validate:full`로 Playwright JSON 결과를 먼저 갱신한다.
+
+백엔드 상세 태스크를 직접 실행해야 할 때는 다음 호환 진입점을 쓴다.
+
+```bash
 cd back-end
 ./gradlew validateHarness
 ```
-
-이 명령은 테스트를 먼저 실행한 뒤, 요건 카드와 코드(API, Entity, Acceptance Test) 연결 상태를 검사한다. 알려지지 않은 요건 ID가 하나라도 섞여 있으면 실패한다.
 
 구현 전 스키마 검토용:
 
@@ -143,7 +155,7 @@ cd back-end
 ./gradlew previewSchema
 ```
 
-`back-end/build/harness/schema-preview.sql`에 JPA `@Entity` 정의로부터 생성된 DDL 미리보기가 떨어진다. 컬럼마다 어느 요건에서 도입됐는지 주석으로 남는다. 사용자에게 확인을 받은 뒤 Entity를 그대로 source of truth로 사용한다 (별도 마이그레이션 스크립트를 작성하지 않는다 — [`persistence-schema.md`](../standards/persistence-schema.md)).
+`build/harness/schema-preview.sql`에 JPA `@Entity` 정의로부터 생성된 DDL 미리보기가 떨어진다. 컬럼마다 어느 요건에서 도입됐는지 주석으로 남는다. 사용자에게 확인을 받은 뒤 Entity를 그대로 source of truth로 사용한다 (별도 마이그레이션 스크립트를 작성하지 않는다 — [`persistence-schema.md`](../standards/persistence-schema.md)).
 
 ## 요건 작성과 리뷰 흐름
 
@@ -155,4 +167,4 @@ cd back-end
 
 테스트 코드 리뷰에서는 모든 수용 기준이 `@Covers` 또는 FE `Covers` 메타데이터로 커버되는지, BDD 테스트의 Covers AC가 같은 요건의 어떤 `.feature` 시나리오 `Covers:`에 포함되는지 (`TEST_COVERS_NO_SCENARIO_COVERS` WARNING 없음), 정상/예외/경계 조건이 충분한지, API 계약과 화면 결과를 필요한 만큼 검증하는지 확인한다.
 
-요건 카드에는 API와 테스트 목록을 수기로 적지 않는다. 실제 연결은 JavaParser 기반 source index에서 추출해 `build/harness/source-index.json`, `build/harness/trace-report.md`, `build/harness/trace-report.json`에 기록한다. 요건 Skeleton 승인 이력만 사람이 카드의 `BDD 테스트 리뷰` 섹션에 남긴다.
+요건 카드에는 API, 화면, 테스트 목록을 수기로 적지 않는다. 실제 연결은 JavaParser 기반 `build/harness/source-index.backend.json`과 TypeScript 기반 `build/harness/source-index.front-end.json`에서 추출해 `build/harness/trace-report.md`, `build/harness/trace-report.json`에 기록한다. 요건 Skeleton 승인 이력만 사람이 카드의 `BDD 테스트 리뷰` 섹션에 남긴다.
