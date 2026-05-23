@@ -89,8 +89,8 @@ front-end/tools/**/*
 7. Skeleton 단계에서 `compileJava`, `generateHarnessSourceIndex`, `generateFrontEndSourceIndex`, 필요 시 `previewSchema`, `traceRequirementCard -Preq=REQ-XXX`로 인터페이스와 추적 상태를 확인한다. FE 대상이면 `npm run typecheck`, `npm run lint`, `npm run source-index`도 확인한다. 스키마가 새로 생기거나 바뀌면 `./gradlew previewSchema` 결과까지 포함해 사용자 승인을 받는다. 사용자 승인 결과는 요건 카드의 `BDD 테스트 리뷰 > 요건 Skeleton 승인 이력`에 남긴다.
 8. 승인된 같은 요건에 대해 `.feature`의 `Covers:` AC를 검증하는 실행 테스트(Acceptance Test 또는 FE BDD 테스트)를 작성하고 Service 업무 로직, 컨트롤러 본문, 실제 FE 화면/라우팅/API 연동을 구현한다. `@Covers` 또는 FE `Covers` 메타데이터는 카드 AC와 정확 일치, 표시용 테스트 이름은 자유.
 9. BDD 테스트 코드 리뷰를 받는다.
-10. `./gradlew validateHarness`로 요건/표준 용어(safe)/API/Entity/테스트/결과 연결을 확인한다.
-11. 카드를 `승인`으로 올리거나 릴리스 전이라면 `./gradlew validateTerminologyStrict`로 strict error를 0으로 맞춘다.
+10. `./gradlew validateHarness`로 요건/표준 용어(strict)/API/Entity/테스트/결과 연결을 확인한다. 통합 게이트(`gate.mjs`, REQ-010)가 TRACE/CARD/REF/TRC/BE/FE/SCN/TRM 카테고리를 한 번에 차단한다.
+11. 카드를 `승인`으로 올릴 수 있다 (TRM strict는 `validateHarness`가 이미 차단하므로 별도 단계 불필요). 단독 strict 진단이 필요하면 `./gradlew validateTerminologyStrict`로 따로 돌릴 수 있다.
 
 요건 카드의 구현 완료 여부는 카드 전체 자연어가 아니라 `수용 기준` 커버리지로 판단한다.
 
@@ -115,7 +115,7 @@ BLUE
 
 ```bash
 # 루트 통합 진입점
-npm run validate                    # 표준 + 용어 safe + BE 테스트 + FE 결과 + 추적 게이트
+npm run validate                    # 통합 게이트(REQ-010): BE/FE/SCN/CARD/REF/TRC/TRM + RED/GREEN/BLUE
 npm run trace                       # 추적 리포트 생성
 npm run harness:trace -- --check    # 루트 Node 하네스 직접 실행
 
@@ -135,9 +135,9 @@ cd back-end
 ./gradlew validateStandards          # docs/standards 정적 검사 리포트 (always exit 0)
 ./gradlew validateStandardsStrict    # docs/standards strict 게이트 (위반 시 실패)
 ./gradlew harnessReport              # 표준/용어/테스트/추적 리포트 모두 생성 (집계용)
-./gradlew validateHarness            # strict 게이트: 표준 + 용어 safe + 테스트 + RED/GREEN/BLUE
-./gradlew validateTerminology        # 용어만 safe 검증
-./gradlew validateTerminologyStrict  # 최종 승인 / 릴리스 전 strict 게이트
+./gradlew validateHarness            # 통합 게이트(REQ-010): BE + FE + SCN + CARD + REF + TRC + TRM strict + RED/GREEN/BLUE
+./gradlew validateTerminology        # 용어 finding emit만 (safe 모드, 차단은 통합 게이트가 수행)
+./gradlew validateTerminologyStrict  # 통합 게이트와 동일한 TRM 차단을 단독 진단으로 돌리는 도구
 ./gradlew check                      # 전체 확인
 ```
 

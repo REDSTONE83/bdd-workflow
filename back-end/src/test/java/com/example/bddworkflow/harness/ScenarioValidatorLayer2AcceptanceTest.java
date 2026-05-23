@@ -143,62 +143,106 @@ class ScenarioValidatorLayer2AcceptanceTest {
     }
 
     @Test
-    @DisplayName("AC5 SCN-* error finding이 있으면 gate-trace --check가 실패한다")
+    @DisplayName("AC5 SCN-* error finding이 있으면 validateHarness 게이트(gate.mjs)가 실패한다")
     @Covers("`validateHarness` 게이트는 SCN-* error finding을 발견하면 실패한다")
     void gateFailsOnScenarioStandardsErrors(@TempDir Path tmp) throws IOException, InterruptedException {
+        // REQ-010 통합 게이트는 scenarios.findings.json 의 SCN-* error 를 직접 차단한다.
+        // fixture: BLUE state + scenarios.findings.json 에 SCN-* error 1건 + 나머지 finding 파일은 빈 owner shell.
         ObjectNode state = MAPPER.createObjectNode();
         state.put("generatedAt", "2026-05-23T00:00:00.000Z");
         state.put("schemaVersion", "1");
+        state.put("source", "trace.state");
         ObjectNode summary = MAPPER.createObjectNode();
         summary.put("total", 1);
         summary.put("red", 0);
         summary.put("green", 0);
         summary.put("blue", 1);
-        summary.put("unknownApis", 0);
-        summary.put("unknownTests", 0);
-        summary.put("unknownEntities", 0);
-        summary.put("unknownFeatures", 0);
-        summary.put("unknownFrontEndSurfaces", 0);
-        summary.put("frontEndStandardsErrors", 0);
-        summary.put("scenarioStandardsErrors", 1);
-        summary.put("structureIssues", 0);
         state.set("summary", summary);
+        state.set("filter", null);
+        ArrayNode reqs = MAPPER.createArrayNode();
+        ObjectNode req = MAPPER.createObjectNode();
+        req.put("id", "REQ-001");
+        req.put("state", "BLUE");
+        reqs.add(req);
+        state.set("requirements", reqs);
 
-        Path stateDir = tmp.resolve("state");
-        Files.createDirectories(stateDir);
-        Path stateFile = stateDir.resolve("trace.state.json");
-        Files.writeString(stateFile, MAPPER.writeValueAsString(state));
+        // 진짜 repo 위치의 production 파일을 임시 백업 후 fixture 로 덮어쓰고, 끝나면 복구한다.
+        Path ws = workspaceRoot();
+        Path realState = ws.resolve(Paths.get("build", "harness", "state", "trace.state.json"));
+        Path findingsDir = ws.resolve(Paths.get("build", "harness", "findings"));
+        Files.createDirectories(realState.getParent());
+        Files.createDirectories(findingsDir);
 
-        Path workspace = tmp.resolve("ws");
-        Path buildHarnessState = workspace.resolve(Paths.get("build", "harness", "state"));
-        Files.createDirectories(buildHarnessState);
-        Path targetState = buildHarnessState.resolve("trace.state.json");
-        Files.copy(stateFile, targetState);
-        // 도구 경로를 진짜 repo의 것으로 가리키기 위해 workspace에는 tools 심볼릭 링크 대신
-        // 진짜 repo의 gate-trace.mjs를 그대로 호출하되, --quiet 출력에 노출되는 작업 경로만 임시로 잡는다.
-        // gate-trace는 state 파일을 자기 위치 기준 `../../build/harness/state/...`로 찾으므로,
-        // 진짜 repo 위치의 state를 fixture로 덮어쓰는 대신 별도 실행 위치를 두기보다는
-        // 정상적으로 실제 repo state를 사용하면서, 이 케이스는 fixture script를 별도로 두지 않는다.
-        // → 실제 호출은 진짜 repo 위치의 state를 그대로 보되 fixture state로 덮어쓰는 방식 대신
-        //   gate-trace의 stateOutFile 경로가 고정이므로, fixture를 직접 그 경로에 두기 위해
-        //   본 테스트는 진짜 repo의 state 파일 자리를 임시 백업 후 fixture로 대체한다.
-        Path realState = workspaceRoot().resolve(Paths.get("build", "harness", "state", "trace.state.json"));
-        Path backupState = tmp.resolve("trace.state.backup.json");
+        Path stateBackup = tmp.resolve("trace.state.backup.json");
         boolean hadReal = Files.exists(realState);
-        if (hadReal) {
-            Files.copy(realState, backupState);
-        } else {
-            Files.createDirectories(realState.getParent());
+        if (hadReal) Files.copy(realState, stateBackup);
+
+        List<String> findingFiles = List.of(
+                "requirement-cards.findings.json", "cross-artifact.findings.json",
+                "back-end-standards.findings.json", "front-end-standards.findings.json",
+                "scenarios.findings.json", "terminology.findings.json");
+        java.util.Map<String, Path> backups = new java.util.HashMap<>();
+        java.util.Map<String, Boolean> existed = new java.util.HashMap<>();
+        for (String name : findingFiles) {
+            Path p = findingsDir.resolve(name);
+            boolean exists = Files.exists(p);
+            existed.put(name, exists);
+            if (exists) {
+                Path bak = Files.createTempFile("findings-bak-", ".json");
+                Files.copy(p, bak, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                backups.put(name, bak);
+            }
         }
+
         try {
-            Files.copy(stateFile, realState, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            Files.writeString(realState, MAPPER.writeValueAsString(state), StandardCharsets.UTF_8);
+
+            // 빈 finding shell 6종 작성
+            for (String name : findingFiles) {
+                ObjectNode shell = MAPPER.createObjectNode();
+                shell.put("generatedAt", "2026-05-23T00:00:00.000Z");
+                shell.put("schemaVersion", "1");
+                if ("terminology.findings.json".equals(name)) {
+                    shell.put("mode", "safe");
+                } else {
+                    String owner = name.substring(0, name.indexOf(".findings.json"));
+                    if (owner.equals("requirement-cards")) owner = "requirement-cards";
+                    shell.put("owner", owner);
+                }
+                shell.set("findings", MAPPER.createArrayNode());
+                Files.writeString(findingsDir.resolve(name), MAPPER.writeValueAsString(shell), StandardCharsets.UTF_8);
+            }
+
+            // SCN-* error finding 주입
+            ObjectNode scn = MAPPER.createObjectNode();
+            scn.put("generatedAt", "2026-05-23T00:00:00.000Z");
+            scn.put("schemaVersion", "1");
+            scn.put("owner", "scenarios");
+            ArrayNode sf = MAPPER.createArrayNode();
+            ObjectNode finding = MAPPER.createObjectNode();
+            finding.put("ruleId", "SCN-REQ-TAG-MISSING");
+            finding.put("severity", "error");
+            finding.put("strictSeverity", "error");
+            finding.set("requirements", MAPPER.createArrayNode());
+            finding.put("message", "fixture SCN error");
+            sf.add(finding);
+            scn.set("findings", sf);
+            Files.writeString(findingsDir.resolve("scenarios.findings.json"), MAPPER.writeValueAsString(scn), StandardCharsets.UTF_8);
+
             int exit = runGateCheck();
-            assertThat(exit).as("gate-trace --check must fail when scenarioStandardsErrors > 0").isEqualTo(1);
+            assertThat(exit).as("gate.mjs --check must fail when SCN-* error finding exists").isEqualTo(1);
         } finally {
-            if (hadReal) {
-                Files.copy(backupState, realState, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            } else {
-                Files.deleteIfExists(realState);
+            if (hadReal) Files.copy(stateBackup, realState, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            else Files.deleteIfExists(realState);
+            for (String name : findingFiles) {
+                Path p = findingsDir.resolve(name);
+                Path bak = backups.get(name);
+                if (bak != null) {
+                    Files.copy(bak, p, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    Files.deleteIfExists(bak);
+                } else if (!existed.get(name)) {
+                    Files.deleteIfExists(p);
+                }
             }
         }
     }
@@ -262,8 +306,8 @@ class ScenarioValidatorLayer2AcceptanceTest {
 
     private static int runGateCheck() throws IOException, InterruptedException {
         Path workspace = workspaceRoot();
-        Path script = workspace.resolve(Paths.get("tools", "harness", "gate-trace.mjs"));
-        assertThat(Files.exists(script)).as("gate-trace script must exist").isTrue();
+        Path script = workspace.resolve(Paths.get("tools", "harness", "gate.mjs"));
+        assertThat(Files.exists(script)).as("gate.mjs script must exist").isTrue();
         ProcessBuilder pb = new ProcessBuilder("node", script.toString(), "--check");
         pb.directory(workspace.toFile());
         pb.redirectErrorStream(true);
@@ -272,7 +316,7 @@ class ScenarioValidatorLayer2AcceptanceTest {
         boolean finished = proc.waitFor(30, TimeUnit.SECONDS);
         if (!finished) {
             proc.destroyForcibly();
-            throw new IllegalStateException("gate-trace timed out after 30s");
+            throw new IllegalStateException("gate.mjs timed out after 30s");
         }
         return proc.exitValue();
     }

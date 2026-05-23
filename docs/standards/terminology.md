@@ -7,18 +7,18 @@
 - `safe`(기본): 모든 finding을 warning으로 보고하고 항상 exit 0.
 - `strict`: 심각 finding을 error로 보고하고 1개라도 있으면 exit 1.
 
-`validateHarness`는 safe 모드 `validateTerminology`를 의존성으로 포함한다. 따라서 일상 빌드는 terminology finding 때문에 실패하지 않고, 잠재 위반은 `counts.strictError`로 누적되어 미리 보인다.
+`validateHarness`는 safe 모드 `validateTerminology`를 의존성으로 포함하지만, REQ-010 통합 게이트(`gate.mjs`)가 `terminology.findings.json`의 `strictSeverity: error`까지 차단한다. 따라서 일상 빌드도 strict 기준으로 통과해야 한다. `counts.strictError`는 잠재 위반이 아니라 즉시 실패 사유다.
 
-## 최종 승인 게이트
+## 단독 진단 게이트
 
-최종 승인이나 릴리스 전에는 strict를 따로 돌려 0으로 맞춘다.
+`validateHarness`와 동일한 TRM 차단 정책을 따로 확인하고 싶을 때 strict 모드를 직접 돌릴 수 있다.
 
 ```bash
 cd back-end
 ./gradlew validateTerminologyStrict
 ```
 
-이 게이트는 `validateHarness`에 연결하지 않는다. 즉 `validateHarness`를 우회적으로 strict 게이트로 만들지 않는다.
+이 태스크는 `validateHarness` 체인에는 들어가지 않는 단독 진단 도구다. TRM 카테고리 차단 자체는 `gate.mjs`가 통합 게이트의 일부로 수행한다.
 
 ## finding severity
 
@@ -36,7 +36,7 @@ cd back-end
 
 ## trace 리포트와의 관계
 
-trace 리포트는 terminology finding을 카드별로 표시/집계만 한다. safe 리포트의 `strictError`는 "잠재 strict 실패" 지표로 같이 보여주되, RED/GREEN/BLUE 판정에는 반영하지 않는다. 실제 실패 게이트는 `validateTerminologyStrict` 태스크 하나뿐이다.
+trace 리포트는 terminology finding을 카드별로 표시/집계만 한다. safe 리포트의 `strictError`는 RED/GREEN/BLUE 판정에는 반영하지 않지만, `validateHarness`/`validateRequirementCard*` 통합 게이트는 `gate.mjs`의 TRM 카테고리에서 동일 강도로 차단한다. `validateTerminologyStrict`는 단독 진단 도구로 남는다.
 
 ## 카드 `## 표준 용어` 섹션에 무엇을 넣는가
 

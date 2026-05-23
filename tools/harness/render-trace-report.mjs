@@ -115,7 +115,7 @@ function buildMarkdown(model) {
         lines.push(`- Terminology mode: ${t.mode}`);
         lines.push(`- Terminology findings: error=${t.totals.error}, warning=${t.totals.warning}, strictError=${t.totals.strictError}`);
         if (t.totals.strictError > 0) {
-            lines.push(`  (잠재 strict 실패 ${t.totals.strictError}건 — validateHarness 판정에는 영향 없음. validateTerminologyStrict로 별도 검증.)`);
+            lines.push(`  (strict 실패 ${t.totals.strictError}건 — gate.mjs TRM 카테고리가 validateHarness 게이트를 차단한다 (REQ-010).)`);
         }
     } else {
         lines.push('- Terminology report: 없음 (`./gradlew validateTerminology` 실행 필요)');

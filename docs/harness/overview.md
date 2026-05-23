@@ -100,7 +100,10 @@ tools/harness/
   terminology.mjs                 표준 용어 인덱서 + 검사기 (Layer 1 + Layer 2)
   validate-back-end-standards.mjs 백엔드 정적 검사기 (Layer 2, prefix `BE-*`)
   validate-front-end-standards.mjs FE 정적 검사기 (Layer 2, prefix `FE-*`, 예정)
-  trace-requirements.mjs          카드 상태 계산 + 임시 reporter (Layer 3 + Layer 4)
+  trace-requirements.mjs          orchestration wrapper: evaluate-trace-state → render-trace-report → gate.mjs
+  evaluate-trace-state.mjs        카드 state 계산 (Layer 3)
+  render-trace-report.mjs         trace 리포트 렌더링 (Layer 4)
+  gate.mjs                        통합 게이트 단일 판정기 (Layer 4, REQ-010)
 
 back-end/tools/preview-schema.mjs
   Entity 인덱스로부터 DDL 미리보기 생성
@@ -136,7 +139,7 @@ build/harness
 
 세부 JSON 형태는 [`data-contracts.md`](./data-contracts.md), 룰 prefix(`BE-*` / `FE-*` / `TRC-*` 등)는 [`rule-namespaces.md`](./rule-namespaces.md).
 
-마이그레이션 중에는 `trace-requirements.mjs`가 기존 CLI 호환 wrapper 역할을 한다. 실제 책임은 `index-*` collector, `validate-*` validator, `evaluate-trace-state.mjs`, `render-trace-report.mjs`, `gate-trace.mjs`로 분리되어 있다.
+`trace-requirements.mjs`는 기존 CLI 호환 wrapper로 남아 `evaluate-trace-state.mjs` → `render-trace-report.mjs` → `gate.mjs`를 직렬 spawn한다. 통합 게이트 단일 판정기는 `gate.mjs`(REQ-010)이고 8개 카테고리(`TRACE`/`CARD`/`REF`/`TRC`/`BE`/`FE`/`SCN`/`TRM`)로 분류된 실패 사유를 출력한다. 자세한 입출력 계약은 [`data-contracts.md`](./data-contracts.md#게이트-layer-4)를 본다.
 
 ## 상태 판정
 

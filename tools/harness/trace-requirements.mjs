@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Orchestration wrapper: evaluate-trace-state → render-trace-report → gate-trace 를
+// Orchestration wrapper: evaluate-trace-state → render-trace-report → gate 를
 // 직렬로 호출한다. CLI 시그니처는 옛 monolith trace-requirements와 호환된다.
 //
 // 흐름:
 //   1) evaluate-trace-state.mjs  (state/trace.state.json 갱신)
 //   2) render-trace-report.mjs   (reports/trace-report.{md,json} + 호환 평탄 경로 갱신)
-//   3) gate-trace.mjs            (--check/--require-blue 인 경우 exit code 결정)
+//   3) gate.mjs                  (--check/--require-blue 인 경우 exit code 결정. REQ-010)
 //
 // 옛 monolith가 들고 있던 입력 수집/상태 계산/리포트 렌더링/게이트 판정 책임은 모두
 // 세 도구로 분리되었다. 본 파일은 spawn 오케스트레이션만 담당한다.
@@ -96,7 +96,7 @@ if (status !== 0) process.exit(status);
 //   - quiet 가 아니면 markdown 전체를 stdout 으로 출력
 //   - quiet 면 한 줄 요약만 출력
 if (cli.quiet) {
-    // gate-trace --quiet 한 줄만 출력한다.
+    // gate.mjs --quiet 한 줄만 출력한다.
 } else {
     const reportMdPath = currentReportMdPath();
     if (!fs.existsSync(reportMdPath)) {
@@ -107,11 +107,12 @@ if (cli.quiet) {
     process.stdout.write('\n');
 }
 
-// Step 3: 게이트
+// Step 3: 게이트 (REQ-010: 통합 단일 판정기 gate.mjs)
 const gateArgs = [
+    ...cli.requirementArgs,
     ...(cli.checkMode ? ['--check'] : []),
     ...(cli.requireBlue ? ['--require-blue'] : []),
     ...(cli.quiet ? ['--quiet'] : [])
 ];
-status = runTool('gate-trace.mjs', gateArgs);
+status = runTool('gate.mjs', gateArgs);
 process.exit(status);

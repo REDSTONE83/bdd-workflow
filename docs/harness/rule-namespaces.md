@@ -133,18 +133,20 @@ TRACE-AC-NO-FEATURE  AC를 다루는 .feature Scenario가 없음 (예약 — 현
 
 기본값은 `severity = strictSeverity`다. 두 값을 다르게 두는 경우(예: 마이그레이션 중)에는 finding에 `remediation`으로 승격 예정 날짜/조건을 적는다.
 
-### Layer 4 게이트 반영 (gate-trace.mjs)
+### Layer 4 게이트 반영 (gate.mjs)
 
-`--check` / `--require-blue` 게이트는 다음을 모두 본다:
+REQ-010부터 단일 게이트 진입점은 `tools/harness/gate.mjs`다. `--check` / `--require-blue`는 다음 8개 카테고리를 본다:
 
-- `summary.red > 0` 또는 `total === 0`
-- unknown reference (`REF-API/TEST/ENTITY/FE-SURFACE` finding 합산)
-- card structure issues (`CARD-*` + `REF-CARD` 머지)
-- **`summary.frontEndStandardsErrors > 0`** (FE-* 중 severity=error)
-- **`summary.scenarioStandardsErrors > 0`** (SCN-* 중 severity=error, REQ-009부터)
-- `--require-blue`는 위 + `summary.green > 0`도 실패 사유
+- `TRACE`: `state.requirements[]`를 selectedIds(또는 전체)로 카운트한 결과에서 `red > 0` 또는 `total === 0` (`--require-blue`는 추가로 `green > 0`). `state.summary` 의 미리 계산된 값이 아니라 매 호출마다 다시 카운트한다.
+- `CARD`: `requirement-cards.findings.json`의 `severity: error`
+- `REF`: `cross-artifact.findings.json`의 `REF-*` 룰 `severity: error`
+- `TRC`: `cross-artifact.findings.json`의 `TRC-*` 룰 `severity: error` (TRC-COV-* warning은 정보 출력만)
+- `BE`: `back-end-standards.findings.json`의 `severity: error`
+- `FE`: `front-end-standards.findings.json`의 `severity: error`
+- `SCN`: `scenarios.findings.json`의 `severity: error`
+- `TRM`: `terminology.findings.json`의 `strictSeverity: error`
 
-FE-* warning은 게이트 통과(리포트에만 남음). 향후 룰에 `severity: "error"`를 부여하면 자동으로 게이트가 차단한다. cross-artifact/terminology warning과 일관된 정책이다.
+warning(또는 strict 격상 전 severity)은 게이트 통과(리포트에만 남음). 향후 룰에 `severity: "error"`를 부여하면 자동으로 해당 카테고리가 차단한다. 자세한 입출력 계약은 [`data-contracts.md`](./data-contracts.md#게이트-layer-4).
 
 ## 룰 비활성화는 없다
 

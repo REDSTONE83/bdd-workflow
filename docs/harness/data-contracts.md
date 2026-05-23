@@ -231,19 +231,40 @@ build/harness/
 
 ## 게이트 (Layer 4)
 
-현재 trace 게이트 진입점은 `gate-trace.mjs`다. 전체 하네스 게이트를 하나로 묶는 `gate.mjs`는 후속 단계에서 도입한다.
+전체 하네스 게이트 단일 진입점은 `tools/harness/gate.mjs`다 (REQ-010). 입력은 다음 3종이다.
+
+- `build/harness/state/trace.state.json` — Layer 3 산출. TRACE 카테고리(RED/GREEN/BLUE 카운트)와 게이트 필터/모드를 읽는다.
+- `build/harness/findings/{back-end-standards,front-end-standards,scenarios,requirement-cards,cross-artifact}.findings.json` — Layer 2 표준/구조/참조 검사 결과.
+- `build/harness/findings/terminology.findings.json` — Layer 2 표준 용어 검사 결과(safe 모드로 emit되지만 `strictSeverity: error` 필드를 함께 갖는다).
+
+`gate.mjs`는 위 입력을 다시 계산하지 않는다. finding을 owner/ruleId로 8개 카테고리에 매핑하고 모드 플래그(`--check`/`--require-blue`)로 차단 여부를 결정한다.
 
 ```bash
-node tools/harness/evaluate-trace-state.mjs --requirement=REQ-005
-node tools/harness/gate-trace.mjs --check
-node tools/harness/gate-trace.mjs --check --require-blue
+node tools/harness/gate.mjs --check
+node tools/harness/gate.mjs --check --require-blue
+node tools/harness/gate.mjs --check --requirement REQ-005
 ```
 
-게이트는 `state/trace.state.json`만 본다. exit code:
+### 8개 카테고리 라벨
 
-- `0`: 게이트 통과
-- `1`: 위반 발견 (error severity 또는 RED 상태)
-- `2`: CLI 입력 오류
+| 카테고리 | 입력 | 차단 조건 |
+| -------- | ---- | --------- |
+| `TRACE`  | `trace.state.json` `requirements[]` (선택 카드 ID로 다시 카운트한 RED/GREEN/total) | `--check`: `total === 0` 또는 `red > 0`. `--require-blue`: 그 위에 `green > 0`. |
+| `CARD`   | `findings/requirement-cards.findings.json` (owner `requirement-cards`, ruleId prefix `CARD-*`) | `severity: error` finding |
+| `REF`    | `findings/cross-artifact.findings.json`의 `REF-*` ruleId (REF-API/REF-TEST/REF-ENTITY/REF-FEATURE/REF-FE-SURFACE/REF-CARD) | `severity: error` finding |
+| `TRC`    | `findings/cross-artifact.findings.json`의 `TRC-*` ruleId (TRC-COV-* warning은 정보 출력만, 차단하지 않음) | `severity: error` finding |
+| `BE`     | `findings/back-end-standards.findings.json` (owner `back-end-standards`, ruleId prefix `BE-*`) | `severity: error` finding |
+| `FE`     | `findings/front-end-standards.findings.json` (owner `front-end-standards`, ruleId prefix `FE-*`) | `severity: error` finding |
+| `SCN`    | `findings/scenarios.findings.json` (owner `scenarios`, ruleId prefix `SCN-*`) | `severity: error` finding |
+| `TRM`    | `findings/terminology.findings.json` (owner `terminology`) | `strictSeverity: error` finding |
+
+`--requirement REQ-XXX` 단일 카드 모드에서는 finding의 `requirements[]`와 선택 카드 ID 교집합이 비어 있지 않은 finding만 카테고리 카운트에 합산한다. `requirements: []` 전역 finding은 단일 카드 게이트에서는 차단되지 않고 전체 게이트(`validateHarness`)에서만 차단된다. `TRACE` 카운트도 같은 selectedIds 로 `state.requirements[]` 에서 다시 계산한다 — `state.summary` 의 미리 계산된 RED/GREEN 값은 state 생성 시점의 필터 기준이라 CLI `--requirement` 와 다를 수 있다.
+
+### exit code
+
+- `0`: 모든 카테고리 통과
+- `1`: 한 카테고리 이상 차단 사유 발견
+- `2`: CLI 입력 오류 또는 필수 입력 파일 누락
 
 ## 스키마 버전
 

@@ -233,19 +233,16 @@ tasks.register('validateStandardsStrict', Exec) {
     commandLine 'node', harnessTool('validate-back-end-standards.mjs'), '--check'
 }
 
-// Order the strict standards check before tests inside validateHarness so that
-// structural violations surface even when tests fail.
-// Use the quiet finalizer so the trace report files always reflect the latest
-// test run without re-printing the full markdown alongside other gates that
-// emit their own trace output (validateHarness, validateRequirementCard, etc.).
+// REQ-010: validateStandardsStrict 직접 의존을 validateStandards(non-strict, findings emit only)로 교체.
+// BE-* error 차단은 gate.mjs 가 back-end-standards.findings.json 을 직접 읽어 수행한다.
 tasks.named('test').configure {
-    mustRunAfter tasks.named('validateStandardsStrict'), tasks.named('validateStandards')
+    mustRunAfter tasks.named('validateStandards')
     finalizedBy tasks.named('traceRequirementsAfterTest')
 }
 
 tasks.register('validateHarness', Exec) {
     group = 'verification'
-    description = 'Strict gate: standards + safe-terminology + tests + RED/GREEN/BLUE trace.'
+    description = 'Unified gate: BE/FE/SCN/CARD/REF/TRC/TRM findings + RED/GREEN/BLUE trace (REQ-010).'
     dependsOn tasks.named('generateHarnessSourceIndex'),
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
@@ -255,7 +252,7 @@ tasks.register('validateHarness', Exec) {
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
             tasks.named('validateScenarios'),
-            tasks.named('validateStandardsStrict'),
+            tasks.named('validateStandards'),
             tasks.named('validateTerminology'),
             tasks.named('test')
     workingDir workspaceDir
@@ -292,7 +289,7 @@ tasks.register('traceRequirementCard', Exec) {
 
 tasks.register('validateRequirementCard', Exec) {
     group = 'verification'
-    description = 'Strict per-card gate: standards + safe-terminology + tests + RED check for one card (-Preq=REQ-XXX).'
+    description = 'Unified per-card gate: BE/FE/SCN/CARD/REF/TRC/TRM + RED check for one card (-Preq=REQ-XXX, REQ-010).'
     dependsOn tasks.named('generateHarnessSourceIndex'),
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
@@ -302,7 +299,7 @@ tasks.register('validateRequirementCard', Exec) {
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
             tasks.named('validateScenarios'),
-            tasks.named('validateStandardsStrict'),
+            tasks.named('validateStandards'),
             tasks.named('validateTerminology'),
             tasks.named('test')
     workingDir workspaceDir
@@ -313,7 +310,7 @@ tasks.register('validateRequirementCard', Exec) {
 
 tasks.register('validateRequirementCardBlue', Exec) {
     group = 'verification'
-    description = 'Strict per-card BLUE gate: like validateRequirementCard but also fails on GREEN (-Preq=REQ-XXX).'
+    description = 'Unified per-card BLUE gate: like validateRequirementCard but also fails on GREEN (-Preq=REQ-XXX, REQ-010).'
     dependsOn tasks.named('generateHarnessSourceIndex'),
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
@@ -323,7 +320,7 @@ tasks.register('validateRequirementCardBlue', Exec) {
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
             tasks.named('validateScenarios'),
-            tasks.named('validateStandardsStrict'),
+            tasks.named('validateStandards'),
             tasks.named('validateTerminology'),
             tasks.named('test')
     workingDir workspaceDir
