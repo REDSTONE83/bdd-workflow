@@ -91,7 +91,7 @@ build/harness/
 - `card`: `id`, `title`, `status`, `priority`, `implementationTarget`, `acceptanceCriteria[]`, `openQuestions[]`, `terms[]`, `sectionPresent`, `approved`, `bddReviewIncomplete`, `bddReviewApproved`
 - `term`: `key`, `surfaces[]`, `mode`
 - `test-result`: `identity`, `alternateIdentities[]`, `status` (`PASS` | `FAIL` | `SKIP` | `NOT_RUN`), `runtime` (`junit` | `playwright`). 엔트리 `kind`는 항상 `"test-result"`이고, runner 구분은 `runtime` 필드를 쓴다.
-- `api-operation` (REQ-006, `indexes/openapi.index.json`): `method` (대문자), `path` (OpenAPI paths 키 그대로 — 예: `/users/{id}`), `operationId`. `location.identity`는 `METHOD path`. 인덱스 최상위에 `sha256` (rawOpenApi 직렬화 SHA-256), `rawOpenApi` (원본 `/v3/api-docs` JSON)을 함께 둔다. 이 인덱스는 `entries[]`와 함께 두 필드를 추가로 갖는 점에서 다른 source index와 다르다.
+- `api-operation` (REQ-006, `indexes/openapi.index.json`): `method` (대문자), `path` (OpenAPI paths 키 그대로 — 예: `/users/{id}`), `operationId`. `location.identity`는 `METHOD path`. 인덱스 최상위에 `sha256` (`rawOpenApi`를 객체 키 정렬 canonical JSON으로 직렬화한 값의 SHA-256), `rawOpenApi` (원본 `/v3/api-docs` JSON)을 함께 둔다. 이 인덱스는 `entries[]`와 함께 두 필드를 추가로 갖는 점에서 다른 source index와 다르다.
 - `api-call` (REQ-006, `front-end.source-index.json`의 `apiCalls[]`): `method` (대문자), `path` (정규화된 URL 표현). FE `src/api/**` 모듈에서 추출된다. 화면 컴포넌트의 직접 호출은 별도 경계 위반 룰의 입력이지 이 채널이 아니다. payload 최상위에 `apiCalls: [...]`로 둔다 (다른 표면과 같은 위치).
 
 ## 텍스트 채널 (선택 추가 필드)

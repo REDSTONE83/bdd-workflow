@@ -96,7 +96,7 @@
 
 - 승인일: 2026-05-23
   검증 설계: `.feature`의 5개 Scenario가 카드 수용 기준 5개를 1:1로 `Covers:`로 연결. `validate-cross-artifact`에서 TRC-COV-* 0건.
-  API Skeleton: `back-end/src/test/java/com/example/bddworkflow/harness/OpenApiContractDumpTest.java`. `@SpringBootTest` + MockMvc로 `/v3/api-docs`를 받아 `build/harness/indexes/openapi.index.json`에 `entries[] {kind, method, path, operationId, requirements, location}` + `rawOpenApi` + `sha256` 형태로 dump. `@Requirement("REQ-006")` 부착, `@Covers` 없음(산출물 생성 도구이므로 BDD Acceptance Test 아님).
+  API Skeleton: `back-end/src/test/java/com/example/bddworkflow/harness/OpenApiContractDumpTest.java`. `@SpringBootTest` + MockMvc로 `/v3/api-docs`를 받아 `build/harness/indexes/openapi.index.json`에 `entries[] {kind, method, path, operationId, requirements, location}` + `rawOpenApi` + canonical `sha256` 형태로 dump. `@Requirement("REQ-006")` 부착, `@Covers` 없음(산출물 생성 도구이므로 BDD Acceptance Test 아님).
   DB Skeleton: 해당 없음.
   Service Skeleton: 해당 없음 (FE-API 룰은 Layer 2 검사기 영역).
   화면/라우팅 Skeleton: 해당 없음. `front-end/src/api/**` 디렉터리는 본 REQ에서 생성하지 않는다(생성 클라이언트 도입은 별도 단계). source-index의 apiCalls 추출은 디렉터리가 생긴 뒤 자동 활성화.

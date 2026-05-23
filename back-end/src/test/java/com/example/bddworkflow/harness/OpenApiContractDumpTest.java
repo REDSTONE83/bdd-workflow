@@ -42,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *     location: { file: "", line: 0, identity: "POST /users/signup" }
  *   }
  *   rawOpenApi: <원본 /v3/api-docs JSON 그대로 — 후속 도구가 schema 참조용으로 사용>
- *   sha256: <rawOpenApi 직렬화 결과의 SHA-256 — FE-API-CLIENT-STALE 비교 키>
+ *   sha256: <rawOpenApi canonical JSON 직렬화 결과의 SHA-256 — FE-API-CLIENT-STALE 비교 키>
  *
  * 이 클래스는 BDD Acceptance Test가 아니라 산출물 생성용이라 @Covers / @AcceptanceTest 를 두지 않는다.
  */

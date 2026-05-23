@@ -23,6 +23,12 @@ OpenAPI 설명은 컨트롤러와 DTO에 둔다.
 - 컨트롤러: `@Operation`, `@ApiResponse`
 - DTO: `@Schema`, Bean Validation
 
+## OpenAPI 계약 산출물
+
+하네스가 소비하는 OpenAPI 계약 산출물은 Spring Boot가 제공하는 `/v3/api-docs` JSON을 기준으로 생성한다. 산출물 위치는 `build/harness/indexes/openapi.index.json`이며, 사람이 별도 OpenAPI 파일을 직접 유지하지 않는다.
+
+`openapi.index.json`의 `sha256`은 `/v3/api-docs` 응답 바이트나 pretty-print 결과가 아니라, 객체 키를 정렬한 canonical JSON 직렬화 결과를 기준으로 계산한다. `generatedAt` 같은 실행 시점 메타데이터는 해시 입력에 넣지 않는다. 이 값은 `FE-API-CLIENT-STALE`이 프런트엔드 생성 클라이언트의 기준 계약을 비교하는 안정적인 키로 사용한다.
+
 메서드 레벨 `@RequestMapping`을 사용할 때는 `method = RequestMethod.GET`처럼 HTTP method를 반드시 지정한다. 가능하면 `@GetMapping`, `@PostMapping`, `@PutMapping`, `@PatchMapping`, `@DeleteMapping`을 우선 사용한다.
 
 ## DTO
