@@ -36,8 +36,9 @@ src/api/
 Spring Boot OpenAPI JSON 기반 생성 타입과 클라이언트를 둔다.
 
 - 사람이 직접 수정하지 않는다.
-- 생성 명령과 입력 OpenAPI 경로를 `package.json` script 또는 별도 문서에 남긴다.
-- 입력은 실행 중인 백엔드의 `/v3/api-docs` 또는 백엔드 빌드가 내보낸 동일 JSON 산출물을 우선한다.
+- 생성 명령은 `npm run api:generate`, 검증 명령은 `npm run api:check`로 고정한다.
+- 입력은 백엔드 빌드가 생성한 `build/harness/indexes/openapi.index.json`의 `rawOpenApi`를 사용한다.
+- 생성 시 같은 인덱스의 canonical `sha256` 값을 `src/api/generated/.openapi-source.sha256`에 기록한다.
 - 생성 타입이 아직 없으면 임시 타입을 쓸 수 있지만, 해당 요건 카드의 Skeleton 승인 이력에 전환 필요성을 남긴다.
 
 ### 도메인 API 모듈
@@ -114,9 +115,10 @@ ApiError(code, message, field)
 ## 자동 검증 항목
 
 - `npm run typecheck`: 생성 타입과 화면 코드 타입 정합성 확인.
+- `npm run api:check`: 생성 API client와 현재 OpenAPI 계약의 일치 여부 확인.
 - `npm run test`: API 상태별 UI 렌더링 단위 검증.
 - `npm run e2e`: 주요 사용자 흐름의 API 연동 화면 검증.
-- (예정) Spring Boot OpenAPI JSON 기반 타입 생성 여부와 생성 파일 직접 수정 여부 검사.
+- `validateHarness`: FE-API-* finding을 trace/gate에 반영.
 
 ## 수동 리뷰 항목
 

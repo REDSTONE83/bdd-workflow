@@ -8,6 +8,8 @@
     "typecheck": "tsc -b",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "api:generate": "node tools/generate-api-client.mjs",
+    "api:check": "node tools/generate-api-client.mjs --check",
     "source-index": "node tools/source-index.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -15,7 +17,7 @@
     "storybook": "HOME=.cache/storybook STORYBOOK_DISABLE_TELEMETRY=1 storybook dev -p 6006 --host 127.0.0.1",
     "build-storybook": "HOME=.cache/storybook STORYBOOK_DISABLE_TELEMETRY=1 storybook build",
     "preview": "vite preview --host 127.0.0.1",
-    "validate": "npm run typecheck && npm run lint && npm run test && npm run build && npm run source-index",
+    "validate": "npm run api:check && npm run typecheck && npm run lint && npm run test && npm run build && npm run source-index",
     "validate:full": "npm run validate && npm run build-storybook && npm run e2e"
   },
   "dependencies": {
@@ -23,6 +25,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.555.0",
+    "openapi-fetch": "^0.17.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "shadcn": "^3.5.0",
@@ -48,6 +51,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^29.1.1",
+    "openapi-typescript": "^7.13.0",
     "storybook": "^10.4.1",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.9.3",
