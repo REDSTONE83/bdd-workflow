@@ -65,6 +65,12 @@ docs/harness/requirement-authoring.md
 docs/harness/project-structure.md
   프로젝트 전체 폴더 구조와 파일 배치 기준
 
+docs/harness/data-contracts.md
+  인덱스/검사 결과/카드 상태 JSON 최소 형태와 산출물 디렉터리 레이아웃
+
+docs/harness/rule-namespaces.md
+  검사 룰 prefix 규약과 새 룰 추가 절차
+
 docs/requirements
   사람이 관리하는 요건 카드
 
@@ -84,20 +90,53 @@ front-end/tests/e2e
   승인된 시나리오를 실제 화면 흐름으로 옮긴 FE BDD/E2E 테스트
 
 back-end/src/harness/java
-  JavaParser 기반 API/Entity/test source index 생성기
+  JavaParser 기반 API/Entity/test source index 생성기 (Layer 1)
 
 front-end/tools
-  TypeScript 기반 route/page/story/FE BDD test source index 생성기
+  TypeScript 기반 route/page/story/FE BDD test source index 생성기 (Layer 1)
 
-tools/harness/trace-requirements.mjs
-  요건 카드, Java/FE source index, 테스트 결과 병합
+tools/harness/
+  scenario-index.mjs              Gherkin `.feature` 파서 (Layer 1)
+  terminology.mjs                 표준 용어 인덱서 + 검사기 (Layer 1 + Layer 2)
+  validate-back-end-standards.mjs 백엔드 정적 검사기 (Layer 2, prefix `BE-*`)
+  validate-front-end-standards.mjs FE 정적 검사기 (Layer 2, prefix `FE-*`, 예정)
+  trace-requirements.mjs          카드 상태 계산 + 임시 reporter (Layer 3 + Layer 4)
 
 back-end/tools/preview-schema.mjs
   Entity 인덱스로부터 DDL 미리보기 생성
 
 build/harness
-  자동 생성 source index, front-end source index, 추적 리포트, schema preview
+  자동 생성 인덱스/검사 결과/상태/리포트. 자세한 위치는 `data-contracts.md`.
 ```
+
+## 파이프라인 구조
+
+하네스는 입력에서 출력까지 4개 layer로 단방향 흐름을 갖는다. 각 layer는 다음 layer의 입력 JSON만 본다. 도구 책임이 흐려지는 것을 막기 위해 신규 도구는 정확히 한 layer에만 속해야 한다.
+
+```text
+┌────────────────────────────────────────────────────────────────┐
+│ Layer 1: Collect  (원본 → 정규화 인덱스)                       │
+│   build/harness/indexes/*.json                                  │
+│   순수. cross-artifact 로직 금지. 한 도구가 한 인덱스만.       │
+├────────────────────────────────────────────────────────────────┤
+│ Layer 2: Validate (인덱스 → findings)                          │
+│   build/harness/findings/*.findings.json                        │
+│   룰셋 단위. state 계산/리포트 생성 금지. findings만 emit.     │
+├────────────────────────────────────────────────────────────────┤
+│ Layer 3: Trace    (인덱스 + findings → 카드 state)             │
+│   build/harness/state/trace.state.json                          │
+│   RED/GREEN/BLUE 계산만. cross-artifact 검사는 Layer 2가 발견, │
+│   Layer 3은 그 finding을 RED 사유로 흡수만 한다.                │
+├────────────────────────────────────────────────────────────────┤
+│ Layer 4: Report & Gate                                          │
+│   build/harness/reports/*.md, *.json + exit code                │
+│   findings/state를 다시 계산하지 않는다. 게이트 모드 판정만.   │
+└────────────────────────────────────────────────────────────────┘
+```
+
+세부 JSON 형태는 [`data-contracts.md`](./data-contracts.md), 룰 prefix(`BE-*` / `FE-*` / `TRC-*` 등)는 [`rule-namespaces.md`](./rule-namespaces.md).
+
+마이그레이션 중에는 `trace-requirements.mjs`가 기존 CLI 호환 wrapper 역할을 한다. 실제 책임은 `index-*` collector, `validate-*` validator, `evaluate-trace-state.mjs`, `render-trace-report.mjs`, `gate-trace.mjs`로 분리되어 있다.
 
 ## 상태 판정
 
@@ -107,6 +146,7 @@ build/harness
   - `back-end`: 관련 API 없음
   - `front-end`: 관련 FE 화면/route/story 없음
   - `full-stack`: 관련 API 또는 FE 화면/route/story 없음
+  - `harness`: API/FE 표면 연결을 요구하지 않으므로 이 사유로 RED가 되지 않는다
 - 수용 기준 커버 테스트 없음
 - 테스트 미실행
 - 테스트 실패 또는 스킵
@@ -114,11 +154,12 @@ build/harness
 
 `GREEN`은 구현 검증 통과 상태다.
 
-- 구현 대상에 맞는 API 또는 FE 화면/route/story 연결 있음
+- 구현 대상에 맞는 API 또는 FE 화면/route/story 연결 있음 (`harness` 대상은 해당 없음)
 - 구현 대상에 맞는 수용 기준 커버 테스트가 모두 PASS
   - `back-end`: 백엔드 Acceptance Test
   - `front-end`: Playwright FE BDD 테스트
   - `full-stack`: 백엔드 Acceptance Test와 Playwright FE BDD 테스트 모두
+  - `harness`: 백엔드 Acceptance Test 또는 Playwright FE BDD 테스트 (어느 쪽이든 AC를 커버하면 통과)
 - 연결 테스트 모두 PASS
 
 `BLUE`는 정리 완료 상태다.
@@ -167,4 +208,4 @@ cd back-end
 
 테스트 코드 리뷰에서는 모든 수용 기준이 `@Covers` 또는 FE `Covers` 메타데이터로 커버되는지, BDD 테스트의 Covers AC가 같은 요건의 어떤 `.feature` 시나리오 `Covers:`에 포함되는지 (`TEST_COVERS_NO_SCENARIO_COVERS` WARNING 없음), 정상/예외/경계 조건이 충분한지, API 계약과 화면 결과를 필요한 만큼 검증하는지 확인한다.
 
-요건 카드에는 API, 화면, 테스트 목록을 수기로 적지 않는다. 실제 연결은 JavaParser 기반 `build/harness/source-index.backend.json`과 TypeScript 기반 `build/harness/source-index.front-end.json`에서 추출해 `build/harness/trace-report.md`, `build/harness/trace-report.json`에 기록한다. 요건 Skeleton 승인 이력만 사람이 카드의 `BDD 테스트 리뷰` 섹션에 남긴다.
+요건 카드에는 API, 화면, 테스트 목록을 수기로 적지 않는다. 실제 연결은 JavaParser 기반 `build/harness/indexes/backend.source-index.json`과 TypeScript 기반 `build/harness/indexes/front-end.source-index.json`에서 추출해 `build/harness/reports/trace-report.md`, `build/harness/reports/trace-report.json`에 기록한다. 요건 Skeleton 승인 이력만 사람이 카드의 `BDD 테스트 리뷰` 섹션에 남긴다.

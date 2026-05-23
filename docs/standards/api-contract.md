@@ -127,7 +127,7 @@ OpenAPI 설명은 컨트롤러와 DTO에 둔다.
 
 의존성: `org.openapitools:jackson-databind-nullable` 의 **최신 안정 버전**을 사용한다. 구체 버전은 빌드 도구(Gradle version catalog 등) 한 곳에서 관리하며, 표준 문서에는 박지 않는다.
 
-> 의존성 선언 방식은 Gradle 구성(version catalog, convention plugin, BOM 등)에 따라 달라지므로 `validate-standards`의 strict 규칙으로 직접 검증하지 않는다. 실제 누락은 `JsonNullable<T>` / `JsonNullableModule` 사용 코드의 컴파일과 테스트 실패로 확인한다.
+> 의존성 선언 방식은 Gradle 구성(version catalog, convention plugin, BOM 등)에 따라 달라지므로 `validate-back-end-standards`의 strict 규칙으로 직접 검증하지 않는다. 실제 누락은 `JsonNullable<T>` / `JsonNullableModule` 사용 코드의 컴파일과 테스트 실패로 확인한다.
 
 `JsonNullableModule` 등록은 Jackson 구성 절을 참조한다.
 
@@ -267,7 +267,7 @@ private static final Set<String> ALLOWED_SORT_KEYS = Set.of("createdAt", "name")
 ## 자동 검증 항목
 
 - `validateHarness`: 컨트롤러의 `@Requirement` ID가 카드에 존재하는지, 카드의 수용 기준이 테스트로 커버되는지 검사.
-- `generateHarnessSourceIndex`: JavaParser로 컨트롤러를 파싱해 source index를 만든다. 결과는 `build/harness/source-index.backend.json`.
+- `generateHarnessSourceIndex`: JavaParser로 컨트롤러를 파싱해 source index를 만든다. 결과는 `build/harness/indexes/backend.source-index.json`.
 
 ## 수동 리뷰 항목
 

@@ -49,10 +49,33 @@ tasks.named('test') {
     testLogging {
         events 'passed', 'skipped', 'failed'
     }
+    // REQ-006: OpenAPI dump 전용 태스크에서만 실행. 일반 test에서는 제외해 중복 Spring 컨텍스트 비용을 피한다.
+    exclude '**/OpenApiContractDumpTest.class'
+    // REQ-006 AC1/AC2: OpenApiContractAcceptanceTest가 build/harness/indexes/openapi.index.json을 읽으므로,
+    // 일반 test 시작 전에 generateOpenApiIndex가 산출물을 만들어 두어야 한다.
+    dependsOn tasks.named('generateOpenApiIndex')
+}
+
+tasks.register('generateOpenApiIndex', Test) {
+    group = 'verification'
+    description = 'Run OpenApiContractDumpTest to refresh build/harness/indexes/openapi.index.json (REQ-006).'
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    include '**/OpenApiContractDumpTest.class'
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+    // Spring 컨텍스트 캐시 영향이 없도록 자체 fork. test 결과 디렉터리는 분리해 다른 테스트 리포트와 섞이지 않게 한다.
+    reports {
+        html.outputLocation = layout.buildDirectory.dir('reports/tests/generateOpenApiIndex')
+        junitXml.outputLocation = layout.buildDirectory.dir('test-results/generateOpenApiIndex')
+    }
 }
 
 def workspaceDir = rootProject.projectDir.parentFile
 def harnessBuildDir = new File(workspaceDir, 'build/harness')
+def harnessIndexesDir = new File(harnessBuildDir, 'indexes')
 def harnessTool = { String name -> new File(workspaceDir, "tools/harness/${name}").absolutePath }
 
 tasks.register('generateHarnessSourceIndex', JavaExec) {
@@ -63,7 +86,7 @@ tasks.register('generateHarnessSourceIndex', JavaExec) {
     args workspaceDir.absolutePath,
             file('src/main/java').absolutePath,
             file('src/test/java').absolutePath,
-            new File(harnessBuildDir, 'source-index.backend.json').absolutePath
+            new File(harnessIndexesDir, 'backend.source-index.json').absolutePath
 }
 
 tasks.register('generateFrontEndSourceIndex', Exec) {
@@ -73,10 +96,60 @@ tasks.register('generateFrontEndSourceIndex', Exec) {
     commandLine 'node', 'front-end/tools/source-index.mjs'
 }
 
+tasks.register('indexRequirements', Exec) {
+    group = 'verification'
+    description = 'Parse docs/requirements/*.md into build/harness/indexes/requirements.index.json.'
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('index-requirements.mjs')
+}
+
+tasks.register('indexTestResults', Exec) {
+    group = 'verification'
+    description = 'Collect JUnit XML + Playwright JSON into build/harness/indexes/test-results.index.json.'
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('index-test-results.mjs')
+}
+
+tasks.register('validateRequirementCards', Exec) {
+    group = 'verification'
+    description = 'Validate requirement card structure (CARD-*) into build/harness/findings/requirement-cards.findings.json.'
+    dependsOn tasks.named('indexRequirements'), tasks.named('indexTerminology')
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('validate-requirement-cards.mjs')
+}
+
+tasks.register('validateCrossArtifact', Exec) {
+    group = 'verification'
+    description = 'Validate cross-artifact references and Covers consistency (REF-* / TRC-COV-*) into build/harness/findings/cross-artifact.findings.json.'
+    dependsOn tasks.named('indexRequirements'),
+            tasks.named('generateHarnessSourceIndex'),
+            tasks.named('generateFrontEndSourceIndex'),
+            tasks.named('generateScenarioIndex')
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('validate-cross-artifact.mjs')
+}
+
+// validateFrontEndStandards가 generateOpenApiIndex에 의존하기 때문에, trace/validateHarness/카드 게이트는 모두 전이적으로 최신 OpenAPI 인덱스를 본다.
+tasks.register('validateFrontEndStandards', Exec) {
+    group = 'verification'
+    description = 'Validate front-end static rules (FE-*) into build/harness/findings/front-end-standards.findings.json.'
+    dependsOn tasks.named('generateFrontEndSourceIndex'), tasks.named('generateOpenApiIndex')
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('validate-front-end-standards.mjs')
+}
+
 tasks.register('traceRequirements', Exec) {
     group = 'verification'
     description = 'Generate requirement/API/test trace report from cards, source indexes, and safe terminology report.'
-    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateFrontEndSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
+    dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('generateFrontEndSourceIndex'),
+            tasks.named('generateScenarioIndex'),
+            tasks.named('indexRequirements'),
+            tasks.named('indexTestResults'),
+            tasks.named('validateRequirementCards'),
+            tasks.named('validateCrossArtifact'),
+            tasks.named('validateFrontEndStandards'),
+            tasks.named('validateTerminology')
     workingDir workspaceDir
     commandLine 'node', harnessTool('trace-requirements.mjs')
 }
@@ -84,7 +157,15 @@ tasks.register('traceRequirements', Exec) {
 tasks.register('traceRequirementsAfterTest', Exec) {
     group = 'verification'
     description = 'Quiet finalizer: refresh trace-report files after test without re-printing the full trace.'
-    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateFrontEndSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
+    dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('generateFrontEndSourceIndex'),
+            tasks.named('generateScenarioIndex'),
+            tasks.named('indexRequirements'),
+            tasks.named('indexTestResults'),
+            tasks.named('validateRequirementCards'),
+            tasks.named('validateCrossArtifact'),
+            tasks.named('validateFrontEndStandards'),
+            tasks.named('validateTerminology')
     workingDir workspaceDir
     commandLine 'node', harnessTool('trace-requirements.mjs'), '--quiet'
 }
@@ -98,14 +179,14 @@ tasks.register('previewSchema', Exec) {
 
 tasks.register('generateScenarioIndex', Exec) {
     group = 'verification'
-    description = 'Parse docs/scenarios/*.feature files into root build/harness/scenario-index.json.'
+    description = 'Parse docs/scenarios/*.feature files into build/harness/indexes/scenarios.index.json.'
     workingDir workspaceDir
     commandLine 'node', harnessTool('scenario-index.mjs')
 }
 
 tasks.register('indexTerminology', Exec) {
     group = 'verification'
-    description = 'Build terminology-index.json from docs/terminology/ JSON sources.'
+    description = 'Build indexes/terminology.index.json from docs/terminology/ JSON sources.'
     workingDir workspaceDir
     commandLine 'node', harnessTool('terminology.mjs'), 'index'
 }
@@ -131,7 +212,7 @@ tasks.register('validateStandards', Exec) {
     description = 'Write standards-report.{json,md} (always exit 0; for inspection).'
     dependsOn tasks.named('generateHarnessSourceIndex')
     workingDir workspaceDir
-    commandLine 'node', harnessTool('validate-standards.mjs')
+    commandLine 'node', harnessTool('validate-back-end-standards.mjs')
 }
 
 tasks.register('validateStandardsStrict', Exec) {
@@ -139,7 +220,7 @@ tasks.register('validateStandardsStrict', Exec) {
     description = 'Strict standards gate: fail the build on any docs/standards violation.'
     dependsOn tasks.named('generateHarnessSourceIndex')
     workingDir workspaceDir
-    commandLine 'node', harnessTool('validate-standards.mjs'), '--check'
+    commandLine 'node', harnessTool('validate-back-end-standards.mjs'), '--check'
 }
 
 // Order the strict standards check before tests inside validateHarness so that
@@ -158,6 +239,11 @@ tasks.register('validateHarness', Exec) {
     dependsOn tasks.named('generateHarnessSourceIndex'),
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
+            tasks.named('indexRequirements'),
+            tasks.named('indexTestResults'),
+            tasks.named('validateRequirementCards'),
+            tasks.named('validateCrossArtifact'),
+            tasks.named('validateFrontEndStandards'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')
@@ -177,7 +263,15 @@ gradle.taskGraph.whenReady { graph ->
 tasks.register('traceRequirementCard', Exec) {
     group = 'verification'
     description = 'Per-card trace report (-Preq=REQ-XXX, always exit 0).'
-    dependsOn tasks.named('generateHarnessSourceIndex'), tasks.named('generateFrontEndSourceIndex'), tasks.named('generateScenarioIndex'), tasks.named('validateTerminology')
+    dependsOn tasks.named('generateHarnessSourceIndex'),
+            tasks.named('generateFrontEndSourceIndex'),
+            tasks.named('generateScenarioIndex'),
+            tasks.named('indexRequirements'),
+            tasks.named('indexTestResults'),
+            tasks.named('validateRequirementCards'),
+            tasks.named('validateCrossArtifact'),
+            tasks.named('validateFrontEndStandards'),
+            tasks.named('validateTerminology')
     workingDir workspaceDir
     doFirst {
         commandLine 'node', harnessTool('trace-requirements.mjs'), '--requirement', project.property('req')
@@ -190,6 +284,11 @@ tasks.register('validateRequirementCard', Exec) {
     dependsOn tasks.named('generateHarnessSourceIndex'),
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
+            tasks.named('indexRequirements'),
+            tasks.named('indexTestResults'),
+            tasks.named('validateRequirementCards'),
+            tasks.named('validateCrossArtifact'),
+            tasks.named('validateFrontEndStandards'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')
@@ -205,6 +304,11 @@ tasks.register('validateRequirementCardBlue', Exec) {
     dependsOn tasks.named('generateHarnessSourceIndex'),
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
+            tasks.named('indexRequirements'),
+            tasks.named('indexTestResults'),
+            tasks.named('validateRequirementCards'),
+            tasks.named('validateCrossArtifact'),
+            tasks.named('validateFrontEndStandards'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')

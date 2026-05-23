@@ -15,7 +15,7 @@
 - 관리 ID는 `REQ-001` 같은 요건 ID만 사용한다.
 - 별도 시나리오 ID, API ID, 화면 ID는 만들지 않는다.
 - API 연결은 컨트롤러의 `@Requirement`에서 추출한다.
-- FE 화면/라우팅/테스트 연결은 `front-end/tools/source-index.mjs`가 생성하는 `build/harness/source-index.front-end.json`에서 추출한다.
+- FE 화면/라우팅/테스트 연결은 `front-end/tools/source-index.mjs`가 생성하는 `build/harness/indexes/front-end.source-index.json`에서 추출한다.
 - 테스트 연결은 Acceptance Test의 `@Requirement`/`@Covers`와 FE BDD 테스트의 `Requirement`/`Covers` 메타데이터에서 추출한다.
 - 수용 기준 문장은 테스트의 `@Covers` 값과 일치해야 한다.
 

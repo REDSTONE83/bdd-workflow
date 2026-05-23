@@ -8,6 +8,6 @@
     "harness:trace": "node tools/harness/trace-requirements.mjs",
     "harness:scenario-index": "node tools/harness/scenario-index.mjs",
     "harness:terminology": "node tools/harness/terminology.mjs",
-    "harness:standards": "node tools/harness/validate-standards.mjs"
+    "harness:standards": "node tools/harness/validate-back-end-standards.mjs"
   }
 }

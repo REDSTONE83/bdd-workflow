@@ -1,0 +1,11 @@
+{
+    "$schema": "../schema.json",
+    "note": "OpenAPI 계약 산출물 도메인. Spring Boot가 생성하는 계약 JSON과 그 소비 경계를 표준화한다.",
+    "terms": {
+        "openapi.contract": {
+            "ko": "OpenAPI 계약",
+            "en": "OpenAPI contract",
+            "meaning": "Spring Boot가 생성한 OpenAPI JSON 산출물. FE와 하네스가 API 계약을 검증할 때 참조하는 단일 기준이다."
+        }
+    }
+}

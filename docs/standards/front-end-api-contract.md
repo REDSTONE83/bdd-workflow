@@ -1,11 +1,12 @@
 # Front-end API 연동 표준
 
-프런트엔드는 백엔드 Spring Boot API 계약을 소비한다. API source of truth는 백엔드 컨트롤러/DTO/OpenAPI 애너테이션이며, 프런트엔드는 그 계약을 재정의하지 않는다.
+프런트엔드는 백엔드 Spring Boot API 계약을 소비한다. API source of truth는 백엔드 컨트롤러/DTO/OpenAPI 애너테이션이 들어 있는 API 코드이며, 프런트엔드는 그 계약을 재정의하지 않는다. 가능하면 Spring Boot가 제공하는 OpenAPI JSON(`/v3/api-docs`)을 참조 산출물로 사용한다.
 
 ## 원칙
 
-- 백엔드 API 계약은 `back-end`의 OpenAPI 산출물을 기준으로 한다.
-- 프런트엔드 API 타입은 OpenAPI에서 생성한다.
+- 백엔드 API 계약은 `back-end`의 Spring Boot 컨트롤러/DTO/API 애너테이션 코드를 기준으로 한다.
+- 프런트엔드 API 타입은 Spring Boot가 제공하는 OpenAPI JSON에서 생성한다.
+- 사람이 관리하는 별도 OpenAPI yaml/json을 프런트엔드 계약 source of truth로 두지 않는다.
 - 화면 컴포넌트는 `fetch`나 HTTP client를 직접 호출하지 않는다.
 - 인증 토큰, 오류 매핑, 응답 정규화는 `src/api/` 또는 전역 client 경계에서 처리한다.
 - DTO 필드명, HTTP 상태 코드, 오류 코드는 `.feature` Given/When/Then에 쓰지 않는다. 시나리오 본문은 사용자 관찰 언어로 유지한다.
@@ -32,10 +33,11 @@ src/api/
 
 ### `generated/`
 
-OpenAPI 기반 생성 타입과 클라이언트를 둔다.
+Spring Boot OpenAPI JSON 기반 생성 타입과 클라이언트를 둔다.
 
 - 사람이 직접 수정하지 않는다.
 - 생성 명령과 입력 OpenAPI 경로를 `package.json` script 또는 별도 문서에 남긴다.
+- 입력은 실행 중인 백엔드의 `/v3/api-docs` 또는 백엔드 빌드가 내보낸 동일 JSON 산출물을 우선한다.
 - 생성 타입이 아직 없으면 임시 타입을 쓸 수 있지만, 해당 요건 카드의 Skeleton 승인 이력에 전환 필요성을 남긴다.
 
 ### 도메인 API 모듈
@@ -98,7 +100,7 @@ ApiError(code, message, field)
 ### BDD / E2E Test
 
 - 승인된 `.feature`의 Given/When/Then을 실제 화면 행위로 옮긴다.
-- 네트워크 mock을 쓸 때도 백엔드 OpenAPI 계약과 같은 shape를 사용한다.
+- 네트워크 mock을 쓸 때도 Spring Boot OpenAPI JSON과 같은 shape를 사용한다.
 - full-stack 검증이 필요한 요건은 실제 백엔드 또는 계약 검증된 테스트 서버를 사용한다.
 
 ## 금지 사항
@@ -114,7 +116,7 @@ ApiError(code, message, field)
 - `npm run typecheck`: 생성 타입과 화면 코드 타입 정합성 확인.
 - `npm run test`: API 상태별 UI 렌더링 단위 검증.
 - `npm run e2e`: 주요 사용자 흐름의 API 연동 화면 검증.
-- (예정) OpenAPI 타입 생성 여부와 생성 파일 직접 수정 여부 검사.
+- (예정) Spring Boot OpenAPI JSON 기반 타입 생성 여부와 생성 파일 직접 수정 여부 검사.
 
 ## 수동 리뷰 항목
 

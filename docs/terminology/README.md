@@ -100,9 +100,9 @@ for each banMatch in text:
 
 ## 검색 CLI의 원본 의존
 
-- `terminology search`는 매 호출마다 `docs/terminology/domains/*.json`과 `draft.json`을 **직접 로드**한다. `terminology-index.json`에 의존하지 않는다.
+- `terminology search`는 매 호출마다 `docs/terminology/domains/*.json`과 `draft.json`을 **직접 로드**한다. `terminology.index.json`에 의존하지 않는다.
 - 새 term을 추가한 직후 `indexTerminology`를 돌리지 않아도 검색 결과에 즉시 반영된다.
-- `terminology-index.json`은 validate 일관성과 외부 도구용 생성물로만 둔다.
+- `terminology.index.json`은 validate 일관성과 외부 도구용 생성물로만 둔다.
 
 ## 검증 모드
 

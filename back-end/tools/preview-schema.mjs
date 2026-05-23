@@ -7,7 +7,7 @@ const __dirname = path.dirname(__filename);
 const backendRoot = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(backendRoot, '..');
 const outputDir = path.join(repoRoot, 'build', 'harness');
-const sourceIndexPath = path.join(outputDir, 'source-index.backend.json');
+const sourceIndexPath = path.join(outputDir, 'indexes', 'backend.source-index.json');
 
 if (!fs.existsSync(sourceIndexPath)) {
     console.error(
@@ -46,7 +46,7 @@ function formatRequirements(requirements) {
 }
 
 const lines = [
-    '-- Schema preview generated from JPA @Entity classes via source-index.backend.json',
+    '-- Schema preview generated from JPA @Entity classes via indexes/backend.source-index.json',
     '-- Java type → SQL type is a best-effort mapping for human review.',
     '-- Each table/column lists associated requirement IDs as comments.',
     ''

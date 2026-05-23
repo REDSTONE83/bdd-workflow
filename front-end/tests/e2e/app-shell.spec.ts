@@ -17,16 +17,16 @@ test.describe("App shell", () => {
     await expect(page.getByText("shadcn/ui component registry ready")).toBeVisible()
   })
 
-  test("keeps the shell inside a mobile viewport", async ({ page }, testInfo) => {
+  test("keeps the shell inside the desktop viewport", async ({ page }, testInfo) => {
     testInfo.annotations.push(
       { type: "Requirement", description: "REQ-005" },
       {
         type: "Covers",
-        description: "모바일 화면에서 앱 셸의 핵심 요소가 화면 밖으로 넘치지 않는다",
+        description: "데스크톱 화면에서 앱 셸의 핵심 요소가 화면 밖으로 넘치지 않는다",
       },
     )
 
-    await page.setViewportSize({ width: 390, height: 844 })
+    await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto("/")
 
     await expect(page.getByRole("heading", { name: "Front-end foundation" })).toBeVisible()

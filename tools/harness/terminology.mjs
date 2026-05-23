@@ -9,11 +9,14 @@ const terminologyDir = path.join(repoRoot, 'docs', 'terminology');
 const domainsDir = path.join(terminologyDir, 'domains');
 const draftPath = path.join(terminologyDir, 'draft.json');
 const outputDir = path.join(repoRoot, 'build', 'harness');
-const indexPath = path.join(outputDir, 'terminology-index.json');
-const sourceIndexPath = path.join(outputDir, 'source-index.backend.json');
-const frontEndSourceIndexPath = path.join(outputDir, 'source-index.front-end.json');
-const reportJsonPath = path.join(outputDir, 'terminology-report.json');
-const reportMdPath = path.join(outputDir, 'terminology-report.md');
+const indexesDir = path.join(outputDir, 'indexes');
+const findingsDir = path.join(outputDir, 'findings');
+const reportsDir = path.join(outputDir, 'reports');
+const indexPath = path.join(indexesDir, 'terminology.index.json');
+const sourceIndexPath = path.join(indexesDir, 'backend.source-index.json');
+const frontEndSourceIndexPath = path.join(indexesDir, 'front-end.source-index.json');
+const reportJsonPath = path.join(findingsDir, 'terminology.findings.json');
+const reportMdPath = path.join(reportsDir, 'terminology-report.md');
 const requirementsDir = path.join(repoRoot, 'docs', 'requirements');
 
 const TERM_KEY_PATTERN = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){1,2}$/;
@@ -268,7 +271,7 @@ function commandIndex() {
         process.exit(1);
     }
     const index = buildIndex(loaded);
-    fs.mkdirSync(outputDir, { recursive: true });
+    fs.mkdirSync(indexesDir, { recursive: true });
     fs.writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n');
     console.log(`Wrote ${relativeToRepo(indexPath)}`);
     console.log(`  approved: ${index.counts.approved}, draft: ${index.counts.draft}, name duplicates: ${index.nameDuplicates.length}`);
@@ -764,7 +767,8 @@ function commandValidate(options) {
         cardTerms: extractCardTerms(cards)
     };
 
-    fs.mkdirSync(outputDir, { recursive: true });
+    fs.mkdirSync(findingsDir, { recursive: true });
+    fs.mkdirSync(reportsDir, { recursive: true });
     fs.writeFileSync(reportJsonPath, JSON.stringify(report, null, 2) + '\n');
     fs.writeFileSync(reportMdPath, renderReportMd(report));
     console.log(`Wrote ${relativeToRepo(reportJsonPath)}`);

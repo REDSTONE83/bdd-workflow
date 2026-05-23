@@ -90,7 +90,7 @@ src/components/PageHeader.tsx
 
 백엔드 API 호출 함수와 생성 타입을 둔다.
 
-- API 타입은 OpenAPI에서 생성하는 것을 기본으로 한다.
+- API 타입은 Spring Boot가 제공하는 OpenAPI JSON에서 생성하는 것을 기본으로 한다.
 - 손으로 작성한 타입은 임시로만 허용하고, 요건 Skeleton 승인 이력에 생성 전환 필요성을 남긴다.
 - API 호출 함수는 화면 컴포넌트에서 직접 `fetch`를 호출하지 않도록 경계를 만든다.
 
@@ -122,7 +122,7 @@ Playwright E2E와 접근성 smoke test를 둔다.
 프런트엔드 하네스용 Node 도구를 둔다.
 
 - `source-index.mjs`: TypeScript AST로 FE page/route/story와 Playwright BDD 테스트 메타데이터를 수집한다.
-- 출력은 `build/harness/source-index.front-end.json`이다.
+- 출력은 `build/harness/indexes/front-end.source-index.json`이다.
 - 사람이 출력 JSON을 직접 수정하지 않는다.
 
 ## 파일명 규칙
@@ -147,7 +147,7 @@ Something.stories.tsx # Storybook story
 ```
 
 - 기존 카드에 구현 대상이 없으면 `back-end`로 본다.
-- `front-end`: API/DB 변경 없이 화면, 라우팅, 클라이언트 상태, 시각/접근성 품질을 구현한다.
+- `front-end`: API/DB 변경 없이 화면, 라우팅, 클라이언트 상태, 데스크톱 시각/접근성 품질을 구현한다.
 - `full-stack`: 같은 수용 기준을 API와 화면 양쪽에서 검증한다.
 
 화면/route/story가 요건에 연결되어야 하는 경우 파일 상단 JSDoc 또는 exported metadata를 사용한다.
@@ -190,7 +190,7 @@ front-end/playwright-report/
 front-end/test-results/
 front-end/coverage/
 front-end/.cache/
-build/harness/source-index.front-end.json
+build/harness/indexes/front-end.source-index.json
 ```
 
 ## 검증 명령
@@ -215,6 +215,25 @@ npm run validate:full   # Storybook/E2E 포함 전체 FE 게이트
 - `npm run validate:full`: 빠른 게이트에 Storybook build와 Playwright E2E를 더한다.
 - `npm run source-index` 또는 `./gradlew generateFrontEndSourceIndex`: route, page, story, FE BDD 테스트의 `Requirement`/`Covers` 메타데이터를 수집한다.
 - 통합 `validateHarness`: 구현 대상이 `front-end` 또는 `full-stack`인 카드의 FE BDD 커버리지와 테스트 결과를 RED/GREEN/BLUE 판정에 반영한다.
+
+## 정적 검사 정책
+
+ESLint는 TypeScript/React 코드 품질, React Hooks 규칙, import/사용 금지 같은 파일 단위 정적 검사에 사용한다. 다음 항목은 ESLint로 충분하다.
+
+- React Hooks 규칙
+- 미사용 변수, 기본 TypeScript lint
+- 화면 컴포넌트의 직접 `fetch` 금지 같은 import/API 사용 제한
+- `src/components/ui/` 같은 특정 경로의 예외 규칙
+
+다음 항목은 ESLint보다 하네스 또는 별도 Node 검사 도구가 맞다. 파일 하나의 AST만으로 판단하기 어렵고, 요건 카드/시나리오/source index/테스트 결과를 함께 봐야 하기 때문이다.
+
+- `Requirement`/`Covers`와 카드 수용 기준의 정확 일치
+- Storybook story와 route/page 메타데이터의 요건 연결
+- Spring Boot OpenAPI JSON 기반 타입 생성 여부
+- generated API 파일 직접 수정 여부
+- 공통 UI primitive의 Storybook 상태 누락 여부
+
+제안: 당장은 ESLint와 기존 `source-index`/`validateHarness` 조합을 유지한다. 직접 `fetch` 금지처럼 명확한 파일 단위 규칙은 ESLint에 추가하고, OpenAPI 생성물/Storybook 상태/요건 연결처럼 교차 파일 검사가 필요한 항목은 `tools/harness`에 `validate-front-end-standards.mjs` 형태의 별도 검사로 확장한다.
 
 ## 수동 리뷰 항목
 

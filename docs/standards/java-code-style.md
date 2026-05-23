@@ -130,7 +130,7 @@ stereotype을 갖지 않는 일반 클래스(공통 유틸, 예외, 헬퍼, argu
 
 ## 자동 검증 항목
 
-- `validateStandards`: L1/L2/L3/L4 룰이 위반된 클래스/필드를 보고한다 (`build/harness/standards-report.md`).
+- `validateStandards`: BE-L1/BE-L2/BE-L3/BE-L4 룰이 위반된 클래스/필드를 보고한다 (`build/harness/reports/back-end-standards-report.md`, finding JSON은 `build/harness/findings/back-end-standards.findings.json`).
 - `validateStandardsStrict`: 위반 시 빌드를 실패시킨다.
 
 ## 수동 리뷰 항목

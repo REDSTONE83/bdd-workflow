@@ -1,0 +1,153 @@
+#!/usr/bin/env node
+// Layer 1 collector: parse docs/requirements/*.md into indexes/requirements.index.json.
+// 본문 raw content는 인덱스에 넣지 않는다. 다음 단계(card 구조 검사, cross-artifact 검사)가
+// 필요로 하는 모든 필드를 미리 추출해 둔다.
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const workspaceRoot = path.resolve(__dirname, '..', '..');
+const docsRoot = path.join(workspaceRoot, 'docs', 'requirements');
+const outDir = path.join(workspaceRoot, 'build', 'harness', 'indexes');
+const outFile = path.join(outDir, 'requirements.index.json');
+
+const REQUIRED_SECTIONS = [
+    '사용자/목적',
+    '범위',
+    '표준 용어',
+    '제외 범위',
+    '수용 기준',
+    '의사결정 로그',
+    'BDD 테스트 리뷰',
+    '열린 질문'
+];
+const REQUIREMENT_ID_PATTERN = /^REQ-\d{3,}$/;
+
+function repoRelative(filePath) {
+    return path.relative(workspaceRoot, filePath).replace(/\\/g, '/');
+}
+
+function walk(dir, predicate = () => true) {
+    if (!fs.existsSync(dir)) {
+        return [];
+    }
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            return walk(fullPath, predicate);
+        }
+        return predicate(fullPath) ? [fullPath] : [];
+    });
+}
+
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function section(content, heading) {
+    const start = content.search(new RegExp(`^## ${escapeRegExp(heading)}\\s*$`, 'm'));
+    if (start < 0) {
+        return '';
+    }
+    const afterHeading = content.slice(start).replace(new RegExp(`^## ${escapeRegExp(heading)}\\s*`, 'm'), '');
+    const nextHeading = afterHeading.search(/^## /m);
+    return nextHeading >= 0 ? afterHeading.slice(0, nextHeading) : afterHeading;
+}
+
+function bulletItems(markdown) {
+    return markdown
+        .split('\n')
+        .map((line) => line.match(/^\s*-\s+(?:\[[ xX]\]\s*)?(.+?)\s*$/)?.[1])
+        .filter(Boolean);
+}
+
+function normalizeApprovalStatus(status) {
+    const normalized = status.trim().toLowerCase();
+    return ['승인', 'approved', 'blue'].includes(normalized);
+}
+
+function parseCard(file) {
+    const content = fs.readFileSync(file, 'utf8');
+    const idRaw = content.match(/^요건 ID:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+    const id = REQUIREMENT_ID_PATTERN.test(idRaw) ? idRaw : '';
+    const title = content.match(/^제목:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+    const priority = content.match(/^우선순위:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+    const status = content.match(/^상태:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+    const implementationTargetRaw = content.match(/^구현 대상:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+    const acceptanceCriteria = bulletItems(section(content, '수용 기준'));
+    const openQuestions = bulletItems(section(content, '열린 질문'))
+        .filter((item) => !/^없음$/.test(item.trim()));
+    const terms = bulletItems(section(content, '표준 용어'));
+    const bddReview = section(content, 'BDD 테스트 리뷰');
+    const bddReviewIncomplete = /미완료/.test(bddReview);
+    const bddReviewApproved = /^[ \t]*결과:[ \t]*승인\s*$/m.test(bddReview);
+    const sectionPresent = {};
+    for (const sec of REQUIRED_SECTIONS) {
+        sectionPresent[sec] = new RegExp(`^## ${escapeRegExp(sec)}\\s*$`, 'm').test(content);
+    }
+    const referencedRequirementIds = [...new Set(content.match(/\bREQ-\d{3,}\b/g) ?? [])];
+
+    return {
+        file: repoRelative(file),
+        idRaw,
+        id,
+        title,
+        priority,
+        status,
+        implementationTargetRaw,
+        approved: normalizeApprovalStatus(status),
+        acceptanceCriteria,
+        openQuestions,
+        terms,
+        sectionPresent,
+        bddReviewIncomplete,
+        bddReviewApproved,
+        referencedRequirementIds
+    };
+}
+
+function toEntry(card) {
+    return {
+        kind: 'card',
+        requirements: card.id ? [card.id] : [],
+        location: {
+            file: card.file,
+            line: 0,
+            identity: card.id || card.idRaw || `(no-id):${card.file}`
+        },
+        idRaw: card.idRaw,
+        id: card.id,
+        title: card.title,
+        priority: card.priority,
+        status: card.status,
+        implementationTargetRaw: card.implementationTargetRaw,
+        approved: card.approved,
+        acceptanceCriteria: card.acceptanceCriteria,
+        openQuestions: card.openQuestions,
+        terms: card.terms,
+        sectionPresent: card.sectionPresent,
+        bddReviewIncomplete: card.bddReviewIncomplete,
+        bddReviewApproved: card.bddReviewApproved,
+        referencedRequirementIds: card.referencedRequirementIds
+    };
+}
+
+function main() {
+    const files = walk(docsRoot, (file) => file.endsWith('.md'));
+    const entries = files.map(parseCard).map(toEntry);
+    const payload = {
+        generatedAt: new Date().toISOString(),
+        schemaVersion: '1',
+        source: 'requirements.index',
+        entries,
+        issues: []
+    };
+
+    fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(outFile, `${JSON.stringify(payload, null, 2)}\n`);
+    console.log(`requirements.index.json: ${entries.length} card(s)`);
+}
+
+main();

@@ -18,8 +18,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const frontEndRoot = path.resolve(__dirname, "..")
 const repoRoot = path.resolve(frontEndRoot, "..")
-const outDir = path.join(repoRoot, "build", "harness")
-const outFile = path.join(outDir, "source-index.front-end.json")
+const outDir = path.join(repoRoot, "build", "harness", "indexes")
+const outFile = path.join(outDir, "front-end.source-index.json")
 
 const REQUIREMENT_PATTERN = /^REQ-\d{3,}$/
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"])
@@ -606,6 +606,86 @@ function collectPlaywrightTests(sourceFile, filePath, issues, textChannels) {
   return tests
 }
 
+// REQ-006 Skeleton: src/api/** 모듈에서 (method, path) 쌍을 수집한다.
+// 화면 컴포넌트의 직접 호출은 별도 룰이 잡으므로 여기서는 보지 않는다.
+// 추출 패턴은 SDK/생성 도구 선택 전 단계라 잠정적이다:
+//   - client.METHOD(path, ...) 형태 (예: client.get("/users/signup"))
+//   - fetch(path, { method: "POST" }) 형태
+//   - 템플릿 리터럴은 첫 부분만 본다(예: `/users/${id}` → `/users/`)
+// Skeleton에서는 최소 패턴만 잡고 정확도는 후속 단계에서 보강한다.
+const FE_API_DIR_SEGMENT = `${path.sep}api${path.sep}`
+const HTTP_METHOD_RE = /^(get|post|put|patch|delete|head|options)$/i
+
+function isInFrontEndApiModule(filePath) {
+  const norm = filePath.includes("\\") ? filePath.replace(/\\/g, "/") : filePath
+  return /\/src\/api\//.test(norm)
+}
+
+function literalPathFromArg(arg) {
+  if (!arg) return null
+  if (isString(arg)) return arg.text
+  if (ts.isTemplateExpression(arg)) {
+    return arg.head.text || null
+  }
+  if (ts.isNoSubstitutionTemplateLiteral(arg)) {
+    return arg.text
+  }
+  return null
+}
+
+function methodFromPropertyAccess(node) {
+  if (!ts.isPropertyAccessExpression(node)) return null
+  const name = node.name?.text ?? ""
+  if (HTTP_METHOD_RE.test(name)) return name.toUpperCase()
+  return null
+}
+
+function collectFrontEndApiCalls(sourceFile, filePath) {
+  if (!isInFrontEndApiModule(filePath)) return []
+  const fileRel = repoRelative(filePath)
+  const calls = []
+
+  function visit(node) {
+    if (ts.isCallExpression(node)) {
+      const callee = node.expression
+      const method = methodFromPropertyAccess(callee)
+      if (method) {
+        const literalPath = literalPathFromArg(node.arguments[0])
+        if (literalPath) {
+          calls.push({
+            source: "front-end",
+            method,
+            path: literalPath,
+            file: fileRel,
+            line: lineOf(sourceFile, node),
+          })
+        }
+      } else if (ts.isIdentifier(callee) && callee.text === "fetch") {
+        const literalPath = literalPathFromArg(node.arguments[0])
+        const opts = node.arguments[1]
+        let fetchMethod = "GET"
+        if (opts && ts.isObjectLiteralExpression(opts)) {
+          const methodProp = objectProperty(opts, "method")
+          const methodValue = methodProp ? stringValue(methodProp) : null
+          if (methodValue) fetchMethod = methodValue.toUpperCase()
+        }
+        if (literalPath) {
+          calls.push({
+            source: "front-end",
+            method: fetchMethod,
+            path: literalPath,
+            file: fileRel,
+            line: lineOf(sourceFile, node),
+          })
+        }
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  return calls
+}
+
 function collectTextChannelsFromSurfaces(surfaces, textChannels) {
   for (const page of surfaces.pages) {
     textChannels.push({
@@ -648,6 +728,7 @@ function main() {
   const routes = []
   const stories = []
   const tests = []
+  const apiCalls = []
 
   for (const filePath of walk(srcRoot)) {
     const sourceText = fs.readFileSync(filePath, "utf8")
@@ -656,6 +737,7 @@ function main() {
     pages.push(...collectPages(sourceFile, sourceText, filePath, metadata))
     routes.push(...collectRoutes(sourceFile, filePath, metadata))
     stories.push(...collectStories(sourceFile, filePath, metadata))
+    apiCalls.push(...collectFrontEndApiCalls(sourceFile, filePath))
   }
 
   for (const filePath of walk(e2eRoot)) {
@@ -694,6 +776,7 @@ function main() {
     routes,
     stories,
     tests,
+    apiCalls,
     textChannels,
     issues,
   }
@@ -701,7 +784,7 @@ function main() {
   fs.mkdirSync(outDir, { recursive: true })
   fs.writeFileSync(outFile, `${JSON.stringify(payload, null, 2)}\n`)
   console.log(
-    `source-index.front-end.json: ${pages.length} page(s), ${routes.length} route(s), ${stories.length} story/stories, ${tests.length} BDD test(s), ${issues.length} issue(s)`,
+    `front-end.source-index.json: ${pages.length} page(s), ${routes.length} route(s), ${stories.length} story/stories, ${tests.length} BDD test(s), ${apiCalls.length} api call(s), ${issues.length} issue(s)`,
   )
 }
 

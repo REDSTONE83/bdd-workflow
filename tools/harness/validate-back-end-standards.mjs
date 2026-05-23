@@ -7,7 +7,7 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
 const backendRoot = path.join(repoRoot, 'back-end');
 const outputDir = path.join(repoRoot, 'build', 'harness');
-const sourceIndexPath = path.join(outputDir, 'source-index.backend.json');
+const sourceIndexPath = path.join(outputDir, 'indexes', 'backend.source-index.json');
 const applicationYmlPath = path.join(backendRoot, 'src', 'main', 'resources', 'application.yml');
 const bootApplicationPath = path.join(
     backendRoot,
@@ -914,36 +914,61 @@ if (!/\bNON_ABSENT\b/.test(customizerBody)) {
 
 // --- Output ---
 
-const counts = findings.reduce((acc, f) => {
-    acc[f.severity] = (acc[f.severity] ?? 0) + 1;
-    return acc;
-}, { error: 0, warning: 0 });
-
-fs.mkdirSync(outputDir, { recursive: true });
-const reportJson = path.join(outputDir, 'standards-report.json');
-const reportMd = path.join(outputDir, 'standards-report.md');
-
-fs.writeFileSync(reportJson, JSON.stringify({
-    summary: {
-        error: counts.error,
-        warning: counts.warning,
-        total: findings.length,
+// 데이터 계약(docs/harness/data-contracts.md)에 맞춰 finding을 정규화한다.
+// ruleId는 내부 짧은 ID(E1 / D7 / C3 / ...)를 BE-* prefix로 고정한다.
+const normalizedFindings = findings.map((f) => ({
+    ruleId: `BE-${f.ruleId}`,
+    severity: f.severity,
+    strictSeverity: f.severity,
+    kind: 'static',
+    message: f.message,
+    requirements: f.requirements ?? [],
+    location: {
+        file: f.location?.file ?? '',
+        line: f.location?.line ?? 0,
+        identity: f.location?.target ?? ''
     },
-    findings,
-}, null, 2));
+    evidence: {
+        rawRuleId: f.ruleId,
+        target: f.location?.target ?? null
+    },
+    remediation: 'docs/standards/'
+}));
+
+const summary = normalizedFindings.reduce((acc, f) => {
+    acc[f.severity] = (acc[f.severity] ?? 0) + 1;
+    acc.byRuleId[f.ruleId] = (acc.byRuleId[f.ruleId] ?? 0) + 1;
+    return acc;
+}, { error: 0, warning: 0, info: 0, byRuleId: {} });
+
+const findingsDir = path.join(outputDir, 'findings');
+const reportsDir = path.join(outputDir, 'reports');
+const findingsJson = path.join(findingsDir, 'back-end-standards.findings.json');
+const reportMd = path.join(reportsDir, 'back-end-standards-report.md');
+
+fs.mkdirSync(findingsDir, { recursive: true });
+fs.mkdirSync(reportsDir, { recursive: true });
+
+fs.writeFileSync(findingsJson, JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    schemaVersion: '1',
+    owner: 'back-end-standards',
+    summary,
+    findings: normalizedFindings
+}, null, 2) + '\n');
 
 const lines = [
-    '# Standards validation report',
+    '# Back-end Standards Findings (BE-*)',
     '',
-    `- error: ${counts.error}`,
-    `- warning: ${counts.warning}`,
-    `- total: ${findings.length}`,
+    `- error: ${summary.error}`,
+    `- warning: ${summary.warning}`,
+    `- total: ${normalizedFindings.length}`,
     '',
 ];
 
-if (findings.length > 0) {
+if (normalizedFindings.length > 0) {
     const groups = new Map();
-    for (const f of findings) {
+    for (const f of normalizedFindings) {
         if (!groups.has(f.ruleId)) groups.set(f.ruleId, []);
         groups.get(f.ruleId).push(f);
     }
@@ -951,7 +976,7 @@ if (findings.length > 0) {
         lines.push(`## ${ruleId} (${group.length})`);
         for (const f of group) {
             const loc = f.location ?? {};
-            const where = [loc.file, loc.line ? `line ${loc.line}` : null, loc.target]
+            const where = [loc.file, loc.line ? `line ${loc.line}` : null, loc.identity]
                 .filter(Boolean).join(' · ');
             lines.push(`- [${f.severity}] ${f.message}`);
             if (where) lines.push(`  - ${where}`);
@@ -962,10 +987,9 @@ if (findings.length > 0) {
 
 fs.writeFileSync(reportMd, lines.join('\n'));
 
-console.log(`Wrote ${relPath(reportJson)}`);
-console.log(`Wrote ${relPath(reportMd)}`);
-console.log(`  error: ${counts.error}, warning: ${counts.warning}, total: ${findings.length}`);
+console.log(`back-end-standards.findings.json: ${normalizedFindings.length} finding(s) (error=${summary.error}, warning=${summary.warning}) → ${relPath(findingsJson)}`);
+console.log(`back-end-standards-report.md → ${relPath(reportMd)}`);
 
-if (checkMode && counts.error > 0) {
+if (checkMode && summary.error > 0) {
     process.exit(1);
 }

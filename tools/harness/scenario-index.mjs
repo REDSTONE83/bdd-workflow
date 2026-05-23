@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Parse docs/scenarios/*.feature into build/harness/scenario-index.json.
+// Parse docs/scenarios/*.feature into build/harness/indexes/scenarios.index.json.
 //
 // Subset of Gherkin supported (Cucumber 런타임은 사용하지 않음):
 //   - Feature: <title>           (1 per file)
@@ -22,8 +22,8 @@ import url from 'node:url';
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const scenariosDir = path.join(repoRoot, 'docs', 'scenarios');
-const outDir = path.join(repoRoot, 'build', 'harness');
-const outFile = path.join(outDir, 'scenario-index.json');
+const outDir = path.join(repoRoot, 'build', 'harness', 'indexes');
+const outFile = path.join(outDir, 'scenarios.index.json');
 
 const STEP_KEYWORDS = ['Given', 'When', 'Then', 'And', 'But'];
 const UNSUPPORTED_KEYWORDS = ['Background:', 'Scenario Outline:', 'Examples:', 'Rule:'];
@@ -214,7 +214,7 @@ function main() {
   const issueCount =
     globalIssues.length + features.reduce((acc, f) => acc + f.issues.length, 0);
   console.log(
-    `scenario-index.json: ${features.length} feature(s), ${scenarioCount} scenario(s), ${issueCount} issue(s)`,
+    `scenarios.index.json: ${features.length} feature(s), ${scenarioCount} scenario(s), ${issueCount} issue(s)`,
   );
 }
 

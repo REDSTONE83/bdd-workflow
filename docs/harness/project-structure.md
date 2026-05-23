@@ -40,14 +40,30 @@ bdd-workflow/
       trace-requirements.mjs
       scenario-index.mjs
       terminology.mjs
-      validate-standards.mjs
+      validate-back-end-standards.mjs
   build/
     harness/
-      source-index.backend.json
-      source-index.front-end.json
-      scenario-index.json
-      trace-report.md
-      trace-report.json
+      indexes/
+        backend.source-index.json
+        front-end.source-index.json
+        scenarios.index.json
+        terminology.index.json
+        requirements.index.json
+        test-results.index.json
+      findings/
+        back-end-standards.findings.json
+        front-end-standards.findings.json
+        scenarios.findings.json
+        terminology.findings.json
+        requirement-cards.findings.json
+        cross-artifact.findings.json
+      state/
+        trace.state.json
+      reports/
+        trace-report.md
+        trace-report.json
+        back-end-standards-report.md
+        terminology-report.md
       schema-preview.sql
   back-end/
     README.md
@@ -196,7 +212,7 @@ docs/standards/
 - `acceptance-test.md`: Acceptance Test와 리뷰 체크리스트
 - `front-end-project-structure.md`: React/Vite/shadcn 기반 FE 폴더 구조
 - `front-end-api-contract.md`: OpenAPI 기반 FE API 연동 규칙
-- `front-end-ui.md`: shadcn/ui, Tailwind token, 반응형, 접근성, Storybook 상태 규칙
+- `front-end-ui.md`: shadcn/ui, Tailwind token, 데스크톱 화면, 접근성, Storybook 상태 규칙
 - `front-end-testing.md`: FE TDD/BDD/Visual Regression/E2E 테스트 규칙
 - `terminology.md`: 표준 용어 safe/strict 게이트 운영
 
@@ -246,13 +262,13 @@ JavaParser source index의 `entities[]`를 읽어 검토용 DDL(`build/harness/s
 back-end/src/harness/java/com/example/bddworkflow/harness/SourceIndexGenerator.java
 ```
 
-JavaParser로 컨트롤러, JPA `@Entity` 클래스, Acceptance Test 소스를 파싱해 `build/harness/source-index.backend.json`을 생성한다. Java 코드 내용은 Node 정규식이 아니라 이 인덱서가 구조적으로 읽는다. `@Requirement`는 클래스/메서드/필드 어디에 붙어 있어도 인덱싱되며, 단일값과 배열값(`{"REQ-001","REQ-002"}`)을 모두 지원한다.
+JavaParser로 컨트롤러, JPA `@Entity` 클래스, Acceptance Test 소스를 파싱해 `build/harness/indexes/backend.source-index.json`을 생성한다. Java 코드 내용은 Node 정규식이 아니라 이 인덱서가 구조적으로 읽는다. `@Requirement`는 클래스/메서드/필드 어디에 붙어 있어도 인덱싱되며, 단일값과 배열값(`{"REQ-001","REQ-002"}`)을 모두 지원한다.
 
 ```text
 front-end/tools/source-index.mjs
 ```
 
-TypeScript AST로 FE page/route/story 메타데이터와 Playwright FE BDD 테스트의 `Requirement`/`Covers` 메타데이터를 파싱해 `build/harness/source-index.front-end.json`을 생성한다. Gradle `generateFrontEndSourceIndex`, `traceRequirements`, `validateHarness`에서 이 파일을 사용한다.
+TypeScript AST로 FE page/route/story 메타데이터와 Playwright FE BDD 테스트의 `Requirement`/`Covers` 메타데이터를 파싱해 `build/harness/indexes/front-end.source-index.json`을 생성한다. Gradle `generateFrontEndSourceIndex`, `traceRequirements`, `validateHarness`에서 이 파일을 사용한다.
 
 ## Spring Boot 소스 구조
 
@@ -351,7 +367,7 @@ Storybook 설정을 둔다. 공통 컴포넌트는 주요 상태 story를 작성
 tests/e2e/
 ```
 
-Playwright E2E, 반응형 smoke, axe 접근성 smoke test를 둔다.
+Playwright E2E, 데스크톱 화면 smoke, axe 접근성 smoke test를 둔다.
 
 ## 테스트 구조
 
@@ -402,17 +418,19 @@ front-end/tests/e2e/**/*.spec.ts
 build/harness/
 ```
 
-통합 하네스 리포트 생성물이다. 사람이 직접 수정하지 않는다.
+통합 하네스 산출물 루트다. 사람이 직접 수정하지 않는다. 하위 폴더로 layer를 분리한다 (자세한 계약은 [`data-contracts.md`](./data-contracts.md)).
 
 ```text
-build/harness/trace-report.md
-build/harness/trace-report.json
-build/harness/source-index.backend.json
-build/harness/source-index.front-end.json
+build/harness/indexes/         # Layer 1 (collect)
+build/harness/findings/        # Layer 2 (validate)
+build/harness/state/           # Layer 3 (trace)
+build/harness/reports/         # Layer 4 (report)
 build/harness/schema-preview.sql
 ```
 
 요건, API, Entity, 테스트, 테스트 결과를 연결한 자동 생성 산출물이다. `schema-preview.sql`은 구현 전 사용자 검토용 DDL 미리보기다.
+
+모든 산출물은 `indexes/`, `findings/`, `state/`, `reports/` 하위로 정리한다. 평탄 경로(`build/harness/*.json`, `*.md`)에는 더 이상 어떤 도구도 쓰지 않는다.
 
 ```text
 front-end/dist/
