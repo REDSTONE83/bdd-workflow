@@ -16,10 +16,34 @@ try {
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const frontEndRoot = path.resolve(__dirname, "..")
-const repoRoot = path.resolve(frontEndRoot, "..")
-const outDir = path.join(repoRoot, "build", "harness", "indexes")
-const outFile = path.join(outDir, "front-end.source-index.json")
+
+function parseCliArgs(argv) {
+  const cfg = {
+    frontEndRoot: path.resolve(__dirname, ".."),
+    repoRoot: null,
+    outFile: null,
+  }
+  for (const arg of argv) {
+    if (arg.startsWith("--front-end-root=")) {
+      cfg.frontEndRoot = path.resolve(arg.slice("--front-end-root=".length))
+    } else if (arg.startsWith("--repo-root=")) {
+      cfg.repoRoot = path.resolve(arg.slice("--repo-root=".length))
+    } else if (arg.startsWith("--out=")) {
+      cfg.outFile = path.resolve(arg.slice("--out=".length))
+    } else if (arg.startsWith("--")) {
+      throw new Error(`Unknown argument: ${arg}`)
+    }
+  }
+  cfg.repoRoot ||= path.resolve(cfg.frontEndRoot, "..")
+  cfg.outFile ||= path.join(cfg.repoRoot, "build", "harness", "indexes", "front-end.source-index.json")
+  return cfg
+}
+
+const cli = parseCliArgs(process.argv.slice(2))
+const frontEndRoot = cli.frontEndRoot
+const repoRoot = cli.repoRoot
+const outFile = cli.outFile
+const outDir = path.dirname(outFile)
 
 const REQUIREMENT_PATTERN = /^REQ-\d{3,}$/
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"])
@@ -686,6 +710,51 @@ function collectFrontEndApiCalls(sourceFile, filePath) {
   return calls
 }
 
+function isDirectFetchExpression(expression) {
+  const callee = unwrapExpression(expression)
+  if (ts.isIdentifier(callee) && callee.text === "fetch") {
+    return true
+  }
+  if (ts.isPropertyAccessExpression(callee) && callee.name.text === "fetch") {
+    const target = unwrapExpression(callee.expression)
+    return ts.isIdentifier(target) && ["window", "globalThis"].includes(target.text)
+  }
+  return false
+}
+
+function collectDirectFetchBoundaryIssues(sourceFile, filePath) {
+  const feRel = frontEndRelative(filePath)
+  if (!feRel.startsWith("src/") || isInFrontEndApiModule(filePath)) {
+    return []
+  }
+
+  const fileRel = repoRelative(filePath)
+  const issues = []
+
+  function visit(node) {
+    if (ts.isCallExpression(node) && isDirectFetchExpression(node.expression)) {
+      issues.push({
+        severity: "error",
+        kind: "DIRECT_FETCH_OUTSIDE_API",
+        message: "Application source must call HTTP APIs through front-end/src/api/**, not direct fetch.",
+        location: {
+          file: fileRel,
+          line: lineOf(sourceFile, node),
+          identity: node.expression.getText(sourceFile),
+        },
+        evidence: {
+          allowedBoundary: "front-end/src/api/**",
+          callee: node.expression.getText(sourceFile),
+        },
+      })
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return issues
+}
+
 function collectTextChannelsFromSurfaces(surfaces, textChannels) {
   for (const page of surfaces.pages) {
     textChannels.push({
@@ -738,6 +807,7 @@ function main() {
     routes.push(...collectRoutes(sourceFile, filePath, metadata))
     stories.push(...collectStories(sourceFile, filePath, metadata))
     apiCalls.push(...collectFrontEndApiCalls(sourceFile, filePath))
+    issues.push(...collectDirectFetchBoundaryIssues(sourceFile, filePath))
   }
 
   for (const filePath of walk(e2eRoot)) {

@@ -39,6 +39,7 @@ Spring Boot OpenAPI JSON 기반 생성 타입과 클라이언트를 둔다.
 - 생성 명령은 `npm run api:generate`, 검증 명령은 `npm run api:check`로 고정한다.
 - 입력은 백엔드 빌드가 생성한 `build/harness/indexes/openapi.index.json`의 `rawOpenApi`를 사용한다.
 - 생성 시 같은 인덱스의 canonical `sha256` 값을 `src/api/generated/.openapi-source.sha256`에 기록한다.
+- `.openapi-source.sha256`이 없거나 현재 `openapi.index.json`의 `sha256`과 다르면 FE API 계약 drift로 본다.
 - 생성 타입이 아직 없으면 임시 타입을 쓸 수 있지만, 해당 요건 카드의 Skeleton 승인 이력에 전환 필요성을 남긴다.
 
 ### 도메인 API 모듈
@@ -118,7 +119,12 @@ ApiError(code, message, field)
 - `npm run api:check`: 생성 API client와 현재 OpenAPI 계약의 일치 여부 확인.
 - `npm run test`: API 상태별 UI 렌더링 단위 검증.
 - `npm run e2e`: 주요 사용자 흐름의 API 연동 화면 검증.
-- `validateHarness`: FE-API-* finding을 trace/gate에 반영.
+- `validateHarness`: FE-API-* finding을 trace/gate에 반영한다. 다음 finding은 `severity: error`라서 게이트를 차단한다.
+  - `FE-API-CONTRACT-MISSING`: OpenAPI 계약 산출물이 없음.
+  - `FE-API-UNKNOWN-OPERATION`: `src/api/**` 호출의 method + path가 OpenAPI 계약에 없음.
+  - `FE-API-CLIENT-NO-METADATA`: generated client의 OpenAPI SHA-256 메타파일이 없음.
+  - `FE-API-CLIENT-STALE`: generated client 메타파일이 현재 OpenAPI 계약 SHA-256과 다름.
+  - `FE-API-DIRECT-FETCH`: `src/api/**` 밖 애플리케이션 소스가 직접 `fetch`를 호출함.
 
 ## 수동 리뷰 항목
 

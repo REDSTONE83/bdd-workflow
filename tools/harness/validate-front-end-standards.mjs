@@ -11,6 +11,11 @@
 //   FE-TEST-COVERS-NO-REQ    Covers 메타데이터는 있으나 Requirement 메타데이터 없음
 //   FE-TEST-REQ-NO-COVERS    Requirement 메타데이터는 있으나 Covers 메타데이터 없음
 //   FE-STORY-MISSING-STATE   공통 UI primitive의 stories 파일에 표준 정의 필수 상태가 누락
+//   FE-API-CONTRACT-MISSING  OpenAPI 계약 산출물 부재
+//   FE-API-UNKNOWN-OPERATION FE src/api/** 호출이 OpenAPI 계약의 method+path에 없음
+//   FE-API-CLIENT-NO-METADATA FE generated client의 OpenAPI SHA-256 메타파일 부재
+//   FE-API-CLIENT-STALE      FE generated client의 OpenAPI SHA-256 메타파일이 현재 계약과 불일치
+//   FE-API-DIRECT-FETCH      FE src/api/** 밖 애플리케이션 소스의 직접 fetch 호출
 //   FE-INDEX-UNKNOWN         source index가 보고한 분류 불가 issue (안전망)
 //
 // 정책:
@@ -49,17 +54,19 @@ const REMEDIATION_TESTING = 'docs/standards/front-end-testing.md';
 const REMEDIATION_UI = 'docs/standards/front-end-ui.md';
 const REMEDIATION_API = 'docs/standards/front-end-api-contract.md';
 
-// REQ-006: FE-API-* 룰. 초기 severity는 warning (의사결정 로그). 표준 확정 후 error로 승격.
-const FE_API_CONTRACT_MISSING_SEVERITY = 'warning';
-const FE_API_UNKNOWN_OPERATION_SEVERITY = 'warning';
-const FE_API_CLIENT_STALE_SEVERITY = 'warning';
+// REQ-008: FE API 계약 drift는 validateHarness에서 차단한다.
+const FE_API_CONTRACT_MISSING_SEVERITY = 'error';
+const FE_API_UNKNOWN_OPERATION_SEVERITY = 'error';
+const FE_API_CLIENT_NO_METADATA_SEVERITY = 'error';
+const FE_API_CLIENT_STALE_SEVERITY = 'error';
 // FE generated client가 base OpenAPI hash를 기록해 두는 파일 경로(표시용).
 const FE_GENERATED_HASH_RELATIVE = 'front-end/src/api/generated/.openapi-source.sha256';
 
 const ISSUE_TO_RULE = {
     DYNAMIC_TEST_ANNOTATION:  { ruleId: 'FE-TEST-DYN',           remediation: REMEDIATION_TESTING },
     COVERS_WITHOUT_REQUIREMENT: { ruleId: 'FE-TEST-COVERS-NO-REQ', remediation: REMEDIATION_TESTING },
-    REQUIREMENT_WITHOUT_COVERS: { ruleId: 'FE-TEST-REQ-NO-COVERS', remediation: REMEDIATION_TESTING }
+    REQUIREMENT_WITHOUT_COVERS: { ruleId: 'FE-TEST-REQ-NO-COVERS', remediation: REMEDIATION_TESTING },
+    DIRECT_FETCH_OUTSIDE_API: { ruleId: 'FE-API-DIRECT-FETCH', remediation: REMEDIATION_API }
 };
 
 // 컴포넌트별 필수 stories 상태. 표준은 docs/standards/front-end-ui.md "필수 상태" 절.
@@ -105,7 +112,8 @@ function findingFromIssue(issue) {
             identity: issue.location?.identity ?? ''
         },
         evidence: {
-            sourceIndexKind: issue.kind ?? null
+            sourceIndexKind: issue.kind ?? null,
+            ...(issue.evidence ?? {})
         },
         remediation: mapping?.remediation ?? REMEDIATION_TESTING
     };
@@ -161,13 +169,14 @@ function findingsForMissingStoryStates(stories) {
     return findings;
 }
 
-// --- REQ-006 FE-API-* 룰 ---
-// Skeleton: 인덱스 입력 유무에 따라 다음을 본다.
+// --- FE-API-* 룰 ---
+// 인덱스 입력 유무에 따라 다음을 본다.
 //   - openapi.index.json 부재         → FE-API-CONTRACT-MISSING (전역 finding)
 //   - apiCalls의 (method, path)가 OpenAPI entries에 없음 → FE-API-UNKNOWN-OPERATION
+//   - FE generated 디렉터리의 OpenAPI hash 메타파일 부재 → FE-API-CLIENT-NO-METADATA
 //   - FE generated 디렉터리의 OpenAPI hash 메타파일과 인덱스 SHA-256 불일치 → FE-API-CLIENT-STALE
-// 실제 path 정규화(템플릿 변수 ↔ {param}), generated 디렉터리 자동 감지 등은
-// 후속 step에서 정확도를 보강한다.
+//   - src/api/** 밖 직접 fetch 호출은 source index issue를 FE-API-DIRECT-FETCH로 정규화한다.
+// 실제 path 정규화(템플릿 변수 ↔ {param})는 후속 step에서 정확도를 보강한다.
 
 function readOpenApiIndex(openApiIndexPath) {
     if (!fs.existsSync(openApiIndexPath)) return null;
@@ -198,6 +207,21 @@ function findingForContractMissing(openApiIndexPath) {
         requirements: [],
         location: { file: relIndex, line: 0, identity: '(global)' },
         evidence: { missingIndex: 'openapi.index.json' },
+        remediation: REMEDIATION_API
+    };
+}
+
+function findingForClientNoMetadata(generatedMetaPath) {
+    const relMeta = path.relative(repoRoot, generatedMetaPath).replace(/\\/g, '/');
+    return {
+        ruleId: 'FE-API-CLIENT-NO-METADATA',
+        severity: FE_API_CLIENT_NO_METADATA_SEVERITY,
+        strictSeverity: FE_API_CLIENT_NO_METADATA_SEVERITY,
+        kind: 'static',
+        message: `FE generated 클라이언트 OpenAPI SHA-256 메타파일(${relMeta})이 없음`,
+        requirements: [],
+        location: { file: relMeta, line: 0, identity: '(generated-client)' },
+        evidence: { missingMeta: relMeta },
         remediation: REMEDIATION_API
     };
 }
@@ -236,8 +260,7 @@ function findingsForUnknownOperations(apiCalls, contract) {
 function findingForClientStale(contract, generatedMetaPath) {
     const recordedHash = readGeneratedHashMetaSha(generatedMetaPath);
     if (recordedHash == null) {
-        // 메타파일이 아예 없으면 후속 룰(FE-API-CLIENT-NO-METADATA)이 잡을 영역. 현재는 noop.
-        return null;
+        return findingForClientNoMetadata(generatedMetaPath);
     }
     const contractHash = contract.sha256 ?? '';
     if (!contractHash || recordedHash === contractHash) return null;

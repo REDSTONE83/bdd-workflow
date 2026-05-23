@@ -36,9 +36,11 @@ FE-TEST-DYN               Playwright BDD annotation이 literal {type,description
 FE-TEST-COVERS-NO-REQ     Covers 메타데이터는 있으나 Requirement 메타데이터 없음
 FE-TEST-REQ-NO-COVERS     Requirement 메타데이터는 있으나 Covers 메타데이터 없음
 FE-INDEX-UNKNOWN          FE source index가 분류하지 못한 issue 보조 매핑
-FE-API-CONTRACT-MISSING   OpenAPI 계약 산출물 부재 (REQ-006, 초기 warning)
-FE-API-UNKNOWN-OPERATION  FE src/api/** 호출이 OpenAPI 계약의 method+path에 없음 (REQ-006, 초기 warning)
-FE-API-CLIENT-STALE       FE generated 클라이언트의 OpenAPI SHA-256 메타파일이 현재 계약과 불일치 (REQ-006, 초기 warning)
+FE-API-CONTRACT-MISSING   OpenAPI 계약 산출물 부재 (REQ-008부터 severity=error)
+FE-API-UNKNOWN-OPERATION  FE src/api/** 호출이 OpenAPI 계약의 method+path에 없음 (REQ-008부터 severity=error)
+FE-API-CLIENT-NO-METADATA FE generated 클라이언트의 OpenAPI SHA-256 메타파일 부재 (severity=error)
+FE-API-CLIENT-STALE       FE generated 클라이언트의 OpenAPI SHA-256 메타파일이 현재 계약과 불일치 (REQ-008부터 severity=error)
+FE-API-DIRECT-FETCH       FE src/api/** 밖 애플리케이션 소스의 직접 fetch 호출 (severity=error)
 
 SCN-01           scenario structural rule
 
