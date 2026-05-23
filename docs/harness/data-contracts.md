@@ -94,6 +94,7 @@ build/harness/
 - `api-operation` (REQ-006, `indexes/openapi.index.json`): `method` (대문자), `path` (OpenAPI paths 키 그대로 — 예: `/users/{id}`), `operationId`. `location.identity`는 `METHOD path`. 인덱스 최상위에 `sha256` (`rawOpenApi`를 객체 키 정렬 canonical JSON으로 직렬화한 값의 SHA-256), `rawOpenApi` (원본 `/v3/api-docs` JSON)을 함께 둔다. 이 인덱스는 `entries[]`와 함께 두 필드를 추가로 갖는 점에서 다른 source index와 다르다.
 - `api-call` (REQ-006, `front-end.source-index.json`의 `apiCalls[]`): `method` (대문자), `path` (정규화된 URL 표현). FE `src/api/**` 모듈에서 추출된다. 화면 컴포넌트의 직접 호출은 별도 경계 위반 룰의 입력이지 이 채널이 아니다. payload 최상위에 `apiCalls: [...]`로 둔다 (다른 표면과 같은 위치).
 - `front-end.source-index.json`의 `issues[]`: source index가 AST 스캔 중 발견한 FE 정적 위반을 담는다. REQ-008부터 `DIRECT_FETCH_OUTSIDE_API`는 `front-end/src/**` 중 `src/api/**` 밖 직접 `fetch` 호출을 의미하며, Layer 2에서 `FE-API-DIRECT-FETCH` finding으로 정규화된다.
+- `scenarios.index.json`의 `issues[]` (REQ-009): 전역 `issues[]`와 각 feature의 `issues[]`에 `{ line, message, kind }` 형태로 담긴다. `kind`는 다음 7개 enum 중 하나이며, Layer 2 validator(`validate-scenarios.mjs`)가 같은 이름의 SCN-* finding으로 정규화한다. `SCN-DIALECT-FORBIDDEN`, `SCN-FEATURE-HEADER-MISSING`, `SCN-REQ-TAG-MISSING`, `SCN-UNSUPPORTED-KEYWORD`, `SCN-STRAY-LINE`, `SCN-COVERS-OUTSIDE-SCENARIO`, `SCN-STEP-OUTSIDE-SCENARIO`. feature에 속한 issue의 SCN-* finding은 `requirements`로 feature의 `@REQ-XXX` 태그를 그대로 옮기고, 전역 issue 또는 태그가 없는 feature의 issue는 `requirements: []`로 두어 전체 게이트(`validateHarness`)만 차단한다.
 
 ## 텍스트 채널 (선택 추가 필드)
 
@@ -120,7 +121,7 @@ build/harness/
 {
   "generatedAt": "2026-05-23T00:00:00.000Z",
   "schemaVersion": "1",
-  "owner": "back-end-standards" | "front-end-standards" | ...,
+  "owner": "back-end-standards" | "front-end-standards" | "scenarios" | "terminology" | "requirement-cards" | "cross-artifact",
   "summary": {
     "error": 0,
     "warning": 0,

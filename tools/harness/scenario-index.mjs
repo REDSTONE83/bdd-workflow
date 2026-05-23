@@ -82,6 +82,7 @@ function parseFeatureFile(fileRel, source) {
       if (/^#\s*language\s*:/i.test(trimmed)) {
         feature.issues.push({
           line: lineNo,
+          kind: 'SCN-DIALECT-FORBIDDEN',
           message: '`# language:` dialect 지시자는 사용하지 않는다. 영어 Gherkin 키워드 + 한국어 본문이 표준이다.',
         });
       }
@@ -102,7 +103,7 @@ function parseFeatureFile(fileRel, source) {
         state = 'IN_FEATURE';
         continue;
       }
-      feature.issues.push({ line: lineNo, message: `Feature: 헤더 전에 알 수 없는 줄: ${trimmed}` });
+      feature.issues.push({ line: lineNo, kind: 'SCN-STRAY-LINE', message: `Feature: 헤더 전에 알 수 없는 줄: ${trimmed}` });
       continue;
     }
 
@@ -129,6 +130,7 @@ function parseFeatureFile(fileRel, source) {
     if (unsupportedHit) {
       feature.issues.push({
         line: lineNo,
+        kind: 'SCN-UNSUPPORTED-KEYWORD',
         message: `${unsupportedHit} 는 현재 하네스가 지원하지 않음`,
       });
       state = 'IN_UNSUPPORTED';
@@ -142,7 +144,7 @@ function parseFeatureFile(fileRel, source) {
 
     if (trimmed === 'Covers:' || /^Covers:\s*$/.test(trimmed)) {
       if (!scenario) {
-        feature.issues.push({ line: lineNo, message: 'Covers: 는 Scenario 안에서만 허용됨' });
+        feature.issues.push({ line: lineNo, kind: 'SCN-COVERS-OUTSIDE-SCENARIO', message: 'Covers: 는 Scenario 안에서만 허용됨' });
         continue;
       }
       state = 'IN_COVERS';
@@ -152,7 +154,7 @@ function parseFeatureFile(fileRel, source) {
     const step = parseStep(trimmed);
     if (step) {
       if (!scenario) {
-        feature.issues.push({ line: lineNo, message: `step은 Scenario 안에서만 허용됨: ${trimmed}` });
+        feature.issues.push({ line: lineNo, kind: 'SCN-STEP-OUTSIDE-SCENARIO', message: `step은 Scenario 안에서만 허용됨: ${trimmed}` });
         continue;
       }
       scenario.steps.push({ keyword: step.keyword, text: step.text, line: lineNo });
@@ -172,10 +174,10 @@ function parseFeatureFile(fileRel, source) {
   finishScenario();
 
   if (!feature.title) {
-    feature.issues.push({ line: 0, message: 'Feature: 헤더가 없음' });
+    feature.issues.push({ line: 0, kind: 'SCN-FEATURE-HEADER-MISSING', message: 'Feature: 헤더가 없음' });
   }
   if (feature.requirementIds.length === 0) {
-    feature.issues.push({ line: feature.line ?? 0, message: '@REQ-XXX Feature 태그가 없음' });
+    feature.issues.push({ line: feature.line ?? 0, kind: 'SCN-REQ-TAG-MISSING', message: '@REQ-XXX Feature 태그가 없음' });
   }
 
   return feature;

@@ -96,7 +96,13 @@ function buildMarkdown(model) {
         ? ''
         : ` (by rule: ${Object.entries(feByRule).map(([k, v]) => `${k}=${v}`).join(', ')})`;
     lines.push(`- Front-end standards findings: error=${feErr}, warning=${feWarn}${feByRuleStr}`);
-    lines.push(`- Scenario index issues: ${model.summary.scenarioIssues}`);
+    const scnErr = model.summary.scenarioStandardsErrors ?? 0;
+    const scnWarn = model.summary.scenarioStandardsWarnings ?? 0;
+    const scnByRule = model.summary.scenarioStandardsByRuleId || {};
+    const scnByRuleStr = Object.keys(scnByRule).length === 0
+        ? ''
+        : ` (by rule: ${Object.entries(scnByRule).map(([k, v]) => `${k}=${v}`).join(', ')})`;
+    lines.push(`- Scenario standards findings: error=${scnErr}, warning=${scnWarn}${scnByRuleStr}`);
     const sw = model.summary.scenarioWarnings;
     const swByKind = model.summary.scenarioWarningsByKind || {};
     const swKindStr = Object.keys(swByKind).length === 0
@@ -288,16 +294,13 @@ function buildMarkdown(model) {
         lines.push('');
     }
 
-    if ((model.scenarioIndex.globalIssues ?? []).length > 0 ||
-        (model.scenarioIndex.featureIssues ?? []).length > 0) {
-        lines.push('## Scenario Index Issues', '');
-        for (const issue of (model.scenarioIndex.globalIssues ?? [])) {
-            lines.push(`- (global) ${issue.message}`);
-        }
-        for (const feature of (model.scenarioIndex.featureIssues ?? [])) {
-            for (const issue of feature.issues) {
-                lines.push(`- ${feature.file}:${issue.line ?? 0} — ${issue.message}`);
-            }
+    const scenarioStandardsFindings = model.scenarioStandards?.findings ?? [];
+    if (scenarioStandardsFindings.length > 0) {
+        lines.push('## Scenario Standards Findings (SCN-*)', '');
+        for (const finding of scenarioStandardsFindings) {
+            const loc = finding.location || {};
+            const where = loc.file ? `${loc.file}:${loc.line ?? 0}` : '(global)';
+            lines.push(`- [${finding.severity ?? 'warning'}] ${finding.ruleId}: ${finding.message} — ${where}`);
         }
         lines.push('');
     }

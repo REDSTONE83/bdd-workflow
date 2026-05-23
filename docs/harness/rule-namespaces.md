@@ -10,7 +10,7 @@
 |---|---|---|---|
 | `BE-*` | 백엔드 정적 검사 (Entity/DTO/Controller/Repository/Service/Lombok/Framework 설정) | `tools/harness/validate-back-end-standards.mjs` | `backend.source-index.json` |
 | `FE-*` | 프런트엔드 정적 검사 (구조/API 경계/UI 상태/테스트 작성) | `tools/harness/validate-front-end-standards.mjs` | `front-end.source-index.json` |
-| `SCN-*` | Gherkin `.feature` 구조 검사 | `tools/harness/validate-scenarios.mjs` (예정, 현재는 `scenario-index.mjs` 내부 issue) | `scenarios.index.json` |
+| `SCN-*` | Gherkin `.feature` 구조 검사 | `tools/harness/validate-scenarios.mjs` | `scenarios.index.json` |
 | `TRM-*` | 표준 용어 검사 | `tools/harness/terminology.mjs validate` | `terminology.index.json` + 텍스트 채널 |
 | `CARD-*` | 요건 카드 본문 구조 검사 (필수 섹션, ID 형식, 상태값) | `tools/harness/validate-requirement-cards.mjs` | `requirements.index.json` |
 | `TRC-*` | 교차 산출물 일관성 (Test ↔ Scenario ↔ Card AC) | `tools/harness/validate-cross-artifact.mjs` | 모든 source/scenario/card/test-result 인덱스 |
@@ -42,7 +42,13 @@ FE-API-CLIENT-NO-METADATA FE generated 클라이언트의 OpenAPI SHA-256 메타
 FE-API-CLIENT-STALE       FE generated 클라이언트의 OpenAPI SHA-256 메타파일이 현재 계약과 불일치 (REQ-008부터 severity=error)
 FE-API-DIRECT-FETCH       FE src/api/** 밖 애플리케이션 소스의 직접 fetch 호출 (severity=error)
 
-SCN-01           scenario structural rule
+SCN-DIALECT-FORBIDDEN        '# language:' dialect 지시자 사용 금지 (severity=error)
+SCN-FEATURE-HEADER-MISSING   .feature 파일에 Feature 헤더가 없음 (severity=error)
+SCN-REQ-TAG-MISSING          Feature에 @REQ-XXX 태그가 없음 (severity=error)
+SCN-UNSUPPORTED-KEYWORD      Background / Scenario Outline 등 미지원 키워드 사용 (severity=error)
+SCN-STRAY-LINE               Feature 헤더 전 알 수 없는 줄 (severity=error)
+SCN-COVERS-OUTSIDE-SCENARIO  Covers: 가 Scenario 밖 (severity=error)
+SCN-STEP-OUTSIDE-SCENARIO    step이 Scenario 밖 (severity=error)
 
 TRM-CASING       terminology casing rule
 TRM-MISSING      terminology missing registration
@@ -135,6 +141,7 @@ TRACE-AC-NO-FEATURE  AC를 다루는 .feature Scenario가 없음 (예약 — 현
 - unknown reference (`REF-API/TEST/ENTITY/FE-SURFACE` finding 합산)
 - card structure issues (`CARD-*` + `REF-CARD` 머지)
 - **`summary.frontEndStandardsErrors > 0`** (FE-* 중 severity=error)
+- **`summary.scenarioStandardsErrors > 0`** (SCN-* 중 severity=error, REQ-009부터)
 - `--require-blue`는 위 + `summary.green > 0`도 실패 사유
 
 FE-* warning은 게이트 통과(리포트에만 남음). 향후 룰에 `severity: "error"`를 부여하면 자동으로 게이트가 차단한다. cross-artifact/terminology warning과 일관된 정책이다.

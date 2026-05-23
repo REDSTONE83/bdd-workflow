@@ -45,8 +45,9 @@ function main() {
         s.unknownEntities > 0 ||
         s.unknownFrontEndSurfaces > 0;
     const hasStructureIssues = s.structureIssues > 0;
-    // FE-* finding 정책: severity=error는 게이트 실패, warning은 통과(다른 layer 2 finding과 일관).
+    // FE-* / SCN-* finding 정책: severity=error는 게이트 실패, warning은 통과(다른 layer 2 finding과 일관).
     const hasFrontEndStandardsErrors = (s.frontEndStandardsErrors ?? 0) > 0;
+    const hasScenarioStandardsErrors = (s.scenarioStandardsErrors ?? 0) > 0;
 
     let exit = 0;
     const reasons = [];
@@ -56,6 +57,7 @@ function main() {
         if (hasUnknownReferences) { exit = 1; reasons.push('unknown-references'); }
         if (hasStructureIssues) { exit = 1; reasons.push(`structureIssues=${s.structureIssues}`); }
         if (hasFrontEndStandardsErrors) { exit = 1; reasons.push(`feStandardsErrors=${s.frontEndStandardsErrors}`); }
+        if (hasScenarioStandardsErrors) { exit = 1; reasons.push(`scenarioStandardsErrors=${s.scenarioStandardsErrors}`); }
     }
     if (cli.requireBlue) {
         if (s.total === 0) { exit = 1; reasons.push('no requirements'); }
@@ -64,6 +66,7 @@ function main() {
         if (hasUnknownReferences) { exit = 1; reasons.push('unknown-references'); }
         if (hasStructureIssues) { exit = 1; reasons.push(`structureIssues=${s.structureIssues}`); }
         if (hasFrontEndStandardsErrors) { exit = 1; reasons.push(`feStandardsErrors=${s.frontEndStandardsErrors}`); }
+        if (hasScenarioStandardsErrors) { exit = 1; reasons.push(`scenarioStandardsErrors=${s.scenarioStandardsErrors}`); }
     }
 
     if (cli.quiet) {

@@ -38,6 +38,7 @@ const testResultsIndexPath = path.join(indexesDir, 'test-results.index.json');
 const requirementCardFindingsPath = path.join(findingsDir, 'requirement-cards.findings.json');
 const crossArtifactFindingsPath = path.join(findingsDir, 'cross-artifact.findings.json');
 const frontEndStandardsFindingsPath = path.join(findingsDir, 'front-end-standards.findings.json');
+const scenariosFindingsPath = path.join(findingsDir, 'scenarios.findings.json');
 const terminologyReportPath = path.join(findingsDir, 'terminology.findings.json');
 const terminologyIndexPath = path.join(indexesDir, 'terminology.index.json');
 const stateOutFile = path.join(stateDir, 'trace.state.json');
@@ -160,6 +161,16 @@ function readFrontEndStandardsFindings() {
     if (!fs.existsSync(frontEndStandardsFindingsPath)) return { present: false, findings: [] };
     try {
         const payload = JSON.parse(fs.readFileSync(frontEndStandardsFindingsPath, 'utf8'));
+        return { present: true, findings: payload.findings ?? [] };
+    } catch {
+        return { present: false, findings: [] };
+    }
+}
+
+function readScenariosFindings() {
+    if (!fs.existsSync(scenariosFindingsPath)) return { present: false, findings: [] };
+    try {
+        const payload = JSON.parse(fs.readFileSync(scenariosFindingsPath, 'utf8'));
         return { present: true, findings: payload.findings ?? [] };
     } catch {
         return { present: false, findings: [] };
@@ -448,13 +459,22 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
         acc.byRuleId[finding.ruleId] = (acc.byRuleId[finding.ruleId] ?? 0) + 1;
         return acc;
     }, { error: 0, warning: 0, info: 0, byRuleId: {} });
-    const scenarioIssueFeatures = (scenarioIndex.features ?? [])
-        .filter((feature) => (feature.issues ?? []).length > 0)
-        .filter((feature) => {
-            const refs = feature.requirementIds ?? [];
-            if (refs.length === 0) return !selectedIds;
-            return intersectsSelection(refs);
-        });
+
+    // SCN-* findings 정합: FE-* 패턴과 동일하게 requirements[] 유무로 단일 카드 필터.
+    const scenarioStandards = readScenariosFindings();
+    const scenarioStandardsFindings = (scenarioStandards.findings ?? []).filter((finding) => {
+        const refs = finding.requirements ?? [];
+        if (refs.length === 0) return !selectedIds;
+        return intersectsSelection(refs);
+    });
+    const scenarioStandardsSummary = scenarioStandardsFindings.reduce((acc, finding) => {
+        const sev = finding.severity ?? 'warning';
+        acc[sev] = (acc[sev] ?? 0) + 1;
+        acc.byRuleId[finding.ruleId] = (acc.byRuleId[finding.ruleId] ?? 0) + 1;
+        return acc;
+    }, { error: 0, warning: 0, info: 0, byRuleId: {} });
+    // REQ-009: scenario index의 raw issues[]는 더 이상 trace에서 직접 소비하지 않는다.
+    // Layer 2 validator(validate-scenarios.mjs)가 SCN-* finding으로 정규화한 결과만 본다.
 
     const candidateCards = selectedIds ? allCards.filter((card) => selectedIds.has(card.id)) : allCards;
     const cardFindings = readRequirementCardFindings();
@@ -487,8 +507,6 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
         }
     }
     const structureIssueCount = structureReports.reduce((sum, report) => sum + report.issues.length, 0);
-    const scenarioFeatureIssueCount = scenarioIssueFeatures.reduce((sum, feature) => sum + (feature.issues ?? []).length, 0);
-    const globalScenarioIssues = selectedIds ? [] : (scenarioIndex.issues ?? []);
 
     const scenarioWarningRules = ['TRC-COV-01', 'TRC-COV-02'];
     const scenarioWarnings = scenarioWarningRules
@@ -513,7 +531,9 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
         frontEndStandardsErrors: frontEndStandardsSummary.error,
         frontEndStandardsWarnings: frontEndStandardsSummary.warning,
         frontEndStandardsByRuleId: frontEndStandardsSummary.byRuleId,
-        scenarioIssues: scenarioFeatureIssueCount + globalScenarioIssues.length,
+        scenarioStandardsErrors: scenarioStandardsSummary.error,
+        scenarioStandardsWarnings: scenarioStandardsSummary.warning,
+        scenarioStandardsByRuleId: scenarioStandardsSummary.byRuleId,
         scenarioWarnings: scenarioWarnings.length,
         scenarioWarningsByKind,
         structureIssues: structureIssueCount
@@ -531,17 +551,18 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
             findings: frontEndStandardsFindings,
             summary: frontEndStandardsSummary
         },
+        scenarioStandards: {
+            present: scenarioStandards.present,
+            findings: scenarioStandardsFindings,
+            summary: scenarioStandardsSummary
+        },
         frontEndIndex: {
             present: frontEndIndex.present !== false,
             generatedAt: frontEndIndex.generatedAt ?? null
         },
         scenarioIndex: {
             present: scenarioIndex.present !== false,
-            generatedAt: scenarioIndex.generatedAt ?? null,
-            globalIssues: globalScenarioIssues,
-            featureIssues: scenarioIssueFeatures.map((feature) => ({
-                file: feature.file, requirementIds: feature.requirementIds ?? [], issues: feature.issues ?? []
-            }))
+            generatedAt: scenarioIndex.generatedAt ?? null
         },
         scenarioWarnings,
         terminology: {

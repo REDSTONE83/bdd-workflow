@@ -149,6 +149,7 @@ tasks.register('traceRequirements', Exec) {
             tasks.named('validateRequirementCards'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
+            tasks.named('validateScenarios'),
             tasks.named('validateTerminology')
     workingDir workspaceDir
     commandLine 'node', harnessTool('trace-requirements.mjs')
@@ -165,6 +166,7 @@ tasks.register('traceRequirementsAfterTest', Exec) {
             tasks.named('validateRequirementCards'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
+            tasks.named('validateScenarios'),
             tasks.named('validateTerminology')
     workingDir workspaceDir
     commandLine 'node', harnessTool('trace-requirements.mjs'), '--quiet'
@@ -175,6 +177,14 @@ tasks.register('previewSchema', Exec) {
     description = 'Generate DDL preview from JPA @Entity classes for human review before migration.'
     dependsOn tasks.named('generateHarnessSourceIndex')
     commandLine 'node', 'tools/preview-schema.mjs'
+}
+
+tasks.register('validateScenarios', Exec) {
+    group = 'verification'
+    description = 'Normalize scenarios.index issues into SCN-* findings (REQ-009).'
+    dependsOn tasks.named('generateScenarioIndex')
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('validate-scenarios.mjs')
 }
 
 tasks.register('generateScenarioIndex', Exec) {
@@ -244,6 +254,7 @@ tasks.register('validateHarness', Exec) {
             tasks.named('validateRequirementCards'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
+            tasks.named('validateScenarios'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')
@@ -271,6 +282,7 @@ tasks.register('traceRequirementCard', Exec) {
             tasks.named('validateRequirementCards'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
+            tasks.named('validateScenarios'),
             tasks.named('validateTerminology')
     workingDir workspaceDir
     doFirst {
@@ -289,6 +301,7 @@ tasks.register('validateRequirementCard', Exec) {
             tasks.named('validateRequirementCards'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
+            tasks.named('validateScenarios'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')
@@ -309,6 +322,7 @@ tasks.register('validateRequirementCardBlue', Exec) {
             tasks.named('validateRequirementCards'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
+            tasks.named('validateScenarios'),
             tasks.named('validateStandardsStrict'),
             tasks.named('validateTerminology'),
             tasks.named('test')
