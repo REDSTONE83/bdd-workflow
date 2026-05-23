@@ -187,8 +187,16 @@ build/harness/
       "implementationTarget": "front-end",
       "state": "RED" | "GREEN" | "BLUE",
       "redReasons": [
-        "관련 API 없음",
-        "수용 기준 문장: NOT_RUN"
+        {
+          "ruleId": "TRACE-NO-FE-SURFACE",
+          "message": "관련 FE 화면/스토리 없음",
+          "evidence": { "requirementId": "REQ-005", "implementationTarget": "front-end" }
+        },
+        {
+          "ruleId": "TRACE-AC-FAIL",
+          "message": "수용 기준 문장: NOT_RUN",
+          "evidence": { "criterion": "수용 기준 문장", "status": "NOT_RUN", "requiredChecks": [{ "target": "front-end", "status": "NOT_RUN" }] }
+        }
       ],
       "blueBlockedBy": ["요건 카드 상태가 승인 아님: 검토중", "열린 질문 남음"],
       "apis": [/* 연결된 api 인덱스 항목 */],
@@ -208,7 +216,7 @@ build/harness/
 }
 ```
 
-현재 `redReasons`는 사람이 읽는 문자열이다. 후속 단계에서 `TRACE-*` ruleId가 필요해지면 문자열 대신 `{ ruleId, message, evidence }` 객체로 확장할 수 있다.
+`redReasons[]`는 `{ ruleId, message, evidence }` 객체 배열이다. `ruleId`는 [`rule-namespaces.md`](./rule-namespaces.md)의 `TRACE-*` prefix 중 하나(`TRACE-AC-EMPTY` / `TRACE-NO-API` / `TRACE-NO-FE-SURFACE` / `TRACE-AC-MISSING` / `TRACE-AC-FAIL` / `TRACE-AC-NO-FEATURE`)다. `message`는 리포트에 사람 친화적으로 노출되는 한 줄 문자열이고, `evidence`는 ruleId별로 의미 있는 보조 데이터(예: AC 문장, status, 대상 카드 ID)를 담는다. 리포터(`render-trace-report.mjs`)는 `- [{ruleId}] {message}` 형태로 prefix를 노출한다.
 
 ## 리포터 출력 (Layer 4)
 

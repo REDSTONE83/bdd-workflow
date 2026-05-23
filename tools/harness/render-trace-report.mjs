@@ -126,7 +126,9 @@ function buildMarkdown(model) {
 
         if (requirement.redReasons.length > 0) {
             lines.push('### RED Reasons', '');
-            for (const reason of requirement.redReasons) lines.push(`- ${reason}`);
+            for (const reason of requirement.redReasons) {
+                lines.push(`- [${reason.ruleId}] ${reason.message}`);
+            }
             lines.push('');
         }
 

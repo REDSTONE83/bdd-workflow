@@ -355,6 +355,10 @@ function targetCoverageForCriterion(criterion, requirementTests, requirementScen
     return { ...cov, requiredChecks: [{ target: 'back-end', status: cov.status }] };
 }
 
+function traceReason(ruleId, message, evidence = {}) {
+    return { ruleId, message, evidence };
+}
+
 function evaluateRequirement(card, apis, tests, scenarios, entities, results, frontEndIndex) {
     const requirementApis = apis.filter((api) => api.requirements.includes(card.id));
     const requirementTests = tests.filter((test) => test.requirements.includes(card.id));
@@ -368,10 +372,23 @@ function evaluateRequirement(card, apis, tests, scenarios, entities, results, fr
     }));
 
     const redReasons = [];
-    if (card.acceptanceCriteria.length === 0) redReasons.push('수용 기준 없음');
-    if (['back-end', 'full-stack'].includes(card.implementationTarget) && requirementApis.length === 0) redReasons.push('관련 API 없음');
-    if (['front-end', 'full-stack'].includes(card.implementationTarget) && !hasFrontEndSurface(frontEndSurfaces)) redReasons.push('관련 FE 화면/스토리 없음');
-    for (const row of coverage) if (row.status !== 'PASS') redReasons.push(`${row.criterion}: ${row.status}`);
+    if (card.acceptanceCriteria.length === 0) {
+        redReasons.push(traceReason('TRACE-AC-EMPTY', '수용 기준 없음', { requirementId: card.id }));
+    }
+    if (['back-end', 'full-stack'].includes(card.implementationTarget) && requirementApis.length === 0) {
+        redReasons.push(traceReason('TRACE-NO-API', '관련 API 없음',
+            { requirementId: card.id, implementationTarget: card.implementationTarget }));
+    }
+    if (['front-end', 'full-stack'].includes(card.implementationTarget) && !hasFrontEndSurface(frontEndSurfaces)) {
+        redReasons.push(traceReason('TRACE-NO-FE-SURFACE', '관련 FE 화면/스토리 없음',
+            { requirementId: card.id, implementationTarget: card.implementationTarget }));
+    }
+    for (const row of coverage) {
+        if (row.status === 'PASS') continue;
+        const ruleId = row.status === 'MISSING' ? 'TRACE-AC-MISSING' : 'TRACE-AC-FAIL';
+        redReasons.push(traceReason(ruleId, `${row.criterion}: ${row.status}`,
+            { criterion: row.criterion, status: row.status, requiredChecks: row.requiredChecks ?? [] }));
+    }
 
     if (redReasons.length > 0) {
         return { ...card, state: 'RED', redReasons, apis: requirementApis, tests: requirementTests,

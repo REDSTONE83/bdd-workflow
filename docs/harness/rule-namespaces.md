@@ -87,11 +87,12 @@ REF-FEATURE      unknown REQ on feature tag
 REF-FE-SURFACE   unknown REQ on FE page/route/story metadata
 REF-CARD         unknown REQ in requirement card body
 
+TRACE-AC-EMPTY       카드에 수용 기준이 없음
 TRACE-NO-API         back-end/full-stack 카드인데 매칭되는 API 없음
 TRACE-NO-FE-SURFACE  front-end/full-stack 카드인데 매칭되는 FE 표면 없음
-TRACE-AC-MISSING     AC를 커버하는 테스트 자체가 없음
+TRACE-AC-MISSING     AC를 커버하는 테스트 자체가 없음 (coverage status=MISSING)
 TRACE-AC-FAIL        AC를 커버하는 테스트가 FAIL/SKIP/NOT_RUN
-TRACE-AC-NO-FEATURE  AC를 다루는 .feature Scenario가 없음
+TRACE-AC-NO-FEATURE  AC를 다루는 .feature Scenario가 없음 (예약 — 현재 emit 안 됨)
 ```
 
 ## 기존 ID → 새 ID 매핑
