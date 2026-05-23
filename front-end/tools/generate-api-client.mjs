@@ -2,7 +2,7 @@
 
 import { spawnSync } from "node:child_process"
 import { mkdtempSync, rmSync } from "node:fs"
-import { mkdir, readFile, writeFile } from "node:fs/promises"
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -131,12 +131,14 @@ async function materialize({ openapiIndex, outDir, check }) {
   await mkdir(outDir, { recursive: true })
 
   const tempDir = mkdtempSync(join(tmpdir(), "bdd-api-client-"))
-  const schemaPath = check ? join(tempDir, "schema.ts") : resolve(outDir, "schema.ts")
+  const schemaFileName = "schema.d.ts"
+  const legacySchemaFileName = "schema.ts"
+  const schemaPath = check ? join(tempDir, schemaFileName) : resolve(outDir, schemaFileName)
   try {
     await generateSchema(index.rawOpenApi, schemaPath)
     const schema = await readFile(schemaPath, "utf8")
     const expected = new Map([
-      ["schema.ts", schema],
+      [schemaFileName, schema],
       ["client.ts", clientSource()],
       ["index.ts", indexSource()],
       [".openapi-source.sha256", `${index.sha256}\n`],
@@ -150,6 +152,9 @@ async function materialize({ openapiIndex, outDir, check }) {
           mismatches.push(fileName)
         }
       }
+      if ((await readOptional(resolve(outDir, legacySchemaFileName))) !== null) {
+        mismatches.push(legacySchemaFileName)
+      }
       if (mismatches.length > 0) {
         throw new Error(
           `Generated API client is out of date: ${mismatches.join(", ")}. Run npm run api:generate.`,
@@ -158,6 +163,7 @@ async function materialize({ openapiIndex, outDir, check }) {
       return
     }
 
+    await rm(resolve(outDir, legacySchemaFileName), { force: true })
     for (const [fileName, content] of expected) {
       await writeFile(resolve(outDir, fileName), content)
     }

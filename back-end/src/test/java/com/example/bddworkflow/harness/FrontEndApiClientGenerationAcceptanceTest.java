@@ -38,7 +38,7 @@ class FrontEndApiClientGenerationAcceptanceTest {
         runFrontEnd("npm", "run", "api:generate");
 
         Path generated = generatedDir();
-        Path schema = generated.resolve("schema.ts");
+        Path schema = generated.resolve("schema.d.ts");
         Path client = generated.resolve("client.ts");
         Path index = generated.resolve("index.ts");
 
@@ -68,7 +68,7 @@ class FrontEndApiClientGenerationAcceptanceTest {
                 ".openapi-source.sha256",
                 "client.ts",
                 "index.ts",
-                "schema.ts"
+                "schema.d.ts"
         );
     }
 
@@ -115,6 +115,7 @@ class FrontEndApiClientGenerationAcceptanceTest {
     @DisplayName("AC5 프런트엔드 전체 검증 명령이 API client check를 포함한다")
     @Covers("프런트엔드 전체 검증 명령은 API client 생성 결과와 계약 검사를 함께 확인한다")
     void frontEndValidationIncludesApiClientCheck() throws IOException, InterruptedException {
+        runFrontEnd("npm", "run", "api:generate");
         runFrontEnd("npm", "run", "api:check");
 
         JsonNode packageJson = MAPPER.readTree(frontEndRoot().resolve("package.json").toFile());

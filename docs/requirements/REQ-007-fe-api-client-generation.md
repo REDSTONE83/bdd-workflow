@@ -75,7 +75,7 @@
   검증 설계: `.feature`의 5개 Scenario가 카드 수용 기준 5개를 1:1로 `Covers:`로 연결. `validate-cross-artifact`에서 TRC-COV-* 0건.
   API Skeleton: 해당 없음.
   DB Skeleton: 해당 없음.
-  Service Skeleton: 해당 없음. 도구 파이프라인은 `front-end/tools/generate-api-client.mjs`로 구현. `build/harness/indexes/openapi.index.json`의 `rawOpenApi`를 `openapi-typescript` 입력으로 쓰고, canonical `sha256`을 `.openapi-source.sha256`에 기록한다.
+  Service Skeleton: 해당 없음. 도구 파이프라인은 `front-end/tools/generate-api-client.mjs`로 구현. `build/harness/indexes/openapi.index.json`의 `rawOpenApi`를 `openapi-typescript` 입력으로 쓰고, 생성 타입은 `schema.d.ts`로 두며, canonical `sha256`을 `.openapi-source.sha256`에 기록한다.
   화면/라우팅 Skeleton: 해당 없음.
   검증: `npm run api:generate`, `npm run api:check`, `npm run typecheck`, `npm run lint`, `./gradlew compileTestJava`, `./gradlew test`, `./gradlew validateRequirementCard -Preq=REQ-007` 통과. 카드 구조 위반 0건, scenario index issue 0건, terminology finding 0건. 실행 테스트 5개가 수용 기준을 커버해 REQ-007은 GREEN.
   승인자: 사용자
@@ -85,7 +85,7 @@
 
 - 리뷰일: 2026-05-23
   리뷰자: 사용자
-  확인: `back-end/src/test/java/com/example/bddworkflow/harness/FrontEndApiClientGenerationAcceptanceTest.java`의 5개 `@Test` × `@Covers`가 카드 수용 기준 5개를 1:1로 검증한다. AC1/AC2/AC3은 `npm run api:generate` 결과와 `front-end/src/api/generated` 경계, OpenAPI sha256 메타파일을 확인한다. AC4는 stale 메타파일 fixture로 `FE-API-CLIENT-STALE` finding 발생을 확인한다. AC5는 `npm run api:check`와 `validate`/`validate:full` script 배선을 확인한다. `./gradlew test` 통과, `traceRequirementsAfterTest` 결과 total=7 red=0 green=1 blue=6.
+  확인: `back-end/src/test/java/com/example/bddworkflow/harness/FrontEndApiClientGenerationAcceptanceTest.java`의 5개 `@Test` × `@Covers`가 카드 수용 기준 5개를 1:1로 검증한다. AC1/AC2/AC3은 `npm run api:generate` 결과와 `front-end/src/api/generated` 경계, `schema.d.ts` 타입 산출물, OpenAPI sha256 메타파일을 확인한다. AC4는 stale 메타파일 fixture로 `FE-API-CLIENT-STALE` finding 발생을 확인한다. AC5는 `npm run api:check`와 `validate`/`validate:full` script 배선을 확인한다. `./gradlew test` 통과, `traceRequirementsAfterTest` 결과 total=7 red=0 green=0 blue=7.
   결과: 승인
 
 ## 열린 질문
