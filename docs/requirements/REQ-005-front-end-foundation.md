@@ -3,7 +3,7 @@
 요건 ID: REQ-005
 제목: 프런트엔드 기반 앱 셸
 우선순위: 중간
-상태: 검토중
+상태: 승인
 구현 대상: front-end
 
 ## 사용자/목적
@@ -75,10 +75,10 @@
 
 ### 테스트 리뷰
 
-- 리뷰일: 2026-05-22
-  리뷰자: Tech Lead, QA
-  확인: Playwright BDD 테스트가 세 수용 기준을 `Covers`로 연결하고, Storybook은 대표 Button 상태를 통해 FE 표면을 제공한다.
-  결과: 미완료
+- 리뷰일: 2026-05-23
+  리뷰자: 사용자
+  확인: Playwright BDD 테스트 3개가 수용 기준 3개를 `Covers`로 1:1 연결하고 모두 PASS. Storybook은 Button의 Default/Disabled/Loading 필수 상태를 제공해 `FE-STORY-MISSING-STATE` 위반 없음. `./gradlew validateRequirementCardBlue -Preq=REQ-005` BUILD SUCCESSFUL.
+  결과: 승인
 
 ## 열린 질문
 
