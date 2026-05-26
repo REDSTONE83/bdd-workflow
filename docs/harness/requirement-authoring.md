@@ -93,6 +93,26 @@ D. 직접 입력
 - 오류 응답: 검증 실패, 중복, 없음, 타인 자원 접근의 HTTP 상태 코드와 오류 코드는 무엇인가?
 - 정량 기준: 허용되는 최소값/최대값과 차단되는 미만/초과값은 무엇인가?
 
+### 공통 리스크 패턴 점검
+
+요건의 기능 종류와 무관하게 아래 패턴이 보이면, 정책을 질문으로 확정한 뒤 `범위`, `제외 범위`, `수용 기준`, `의사결정 로그` 중 하나에 귀속한다. 이 항목은 정적 검증 룰이 아니라 작성자와 리뷰어가 누락을 찾기 위한 공통 사고 틀이다.
+
+- 실행 환경 경계: local/test/prod, FE/BE, browser/server, 배치/온라인, proxy/profile처럼 실행 위치나 환경에 따라 동작이 달라지는가? 달라진다면 환경별 정책과 검증 방법을 분리했는가?
+- 생명주기 대칭: 생성, 발급, 저장, 시작, 구독, 예약한 것이 어떻게 삭제, 만료, 해제, 취소, 정리되는가? 생성 scope와 정리 scope가 같은가?
+- 외부 계약 노출: API, route, OpenAPI, 이벤트, 메시지, 파일 형식, export/import, 화면 진입점처럼 사용자나 외부 클라이언트가 의존할 계약이 있는가? 공개/보호 범위와 호환성 정책이 명확한가?
+- 불신 입력: query, redirect target, callback URL, filter, sort, path, 업로드 값처럼 사용자가 이동 대상, 조회 범위, 처리 대상을 바꿀 수 있는 입력이 있는가? 허용 범위, 거절 기준, 안전한 fallback을 정했는가?
+- 실패 분류: validation failure, business rule failure, authentication/authorization failure, not found, conflict, transient failure를 같은 결과로 숨길지, 사용자가 구분하도록 드러낼지 정했는가?
+
+기능 중립 예시는 다음과 같다.
+
+```text
+- 환경 경계: 로컬과 운영에서 파일 저장 위치가 다르면 각각의 저장·검증 정책을 분리한다.
+- 생명주기 대칭: 예약 작업을 만들면 취소, 만료, 중복 실행 방지 정책도 함께 정한다.
+- 외부 계약 노출: CSV export를 제공하면 컬럼 순서, 인코딩, 기존 클라이언트 호환성 정책을 정한다.
+- 불신 입력: 정렬/필터 query는 허용값과 알 수 없는 값의 fallback을 정한다.
+- 실패 분류: 형식 오류와 업무 규칙 위반을 같은 안내로 볼지, 구분해서 보여줄지 정한다.
+```
+
 확정된 답변은 다음처럼 검증 가능한 조건과 기대 결과로 바꾼다.
 
 ```text
@@ -223,6 +243,11 @@ Skeleton 승인을 요청하기 전에 다음을 한 줄씩 확인한다.
 - 기대 결과(Then)가 사용자가 관찰 가능한 형태인가 (JSON 키나 상태 코드 그대로 노출 금지)
 - 이 행위가 정상 UI 흐름인가? 정상 흐름이 아니라면 북마크, 딥링크, 브라우저 뒤로가기/새로고침, 다중 기기에서 데이터가 줄어든 상태, 외부 통합 URL처럼 사용자가 실제로 마주칠 수 있는 경로를 `Given`에 명시했는가? 그런 경로를 설명할 수 없는 행위는 BDD 시나리오로 두지 말고 API 방어 계약으로 분류한다. ([`../standards/acceptance-test.md`](../standards/acceptance-test.md) "발생 경로가 설명되지 않는 행위는 시나리오로 두지 않는다")
 - Given/When/Then 본문이 일반 관계자가 읽는 사용자 관찰 언어로만 쓰여 있는가? `null`, `응답`, `필드`, DTO/JSON 키(`title`, `dueDate`, `categoryId`, `content`, `totalElements` 등), 오류 코드(`VALIDATION_FAILED`, `INVALID_CATEGORY` 등), HTTP 메서드/상태 코드 같은 기술 어휘는 `Covers:` 또는 Acceptance Test에서만 쓴다 ([`../standards/acceptance-test.md`](../standards/acceptance-test.md) "`Covers:`는 추적 메타, Given/When/Then은 관계자 언어").
+- 실행 환경 경계가 있다면 코드 Skeleton, 설정 Skeleton, 테스트 전략에서 그 차이를 재현할 수 있는가?
+- 생성, 발급, 저장, 시작되는 상태가 있다면 삭제, 만료, 해제, 정리의 scope가 같은가?
+- 외부 계약이 있다면 카드 AC와 Skeleton 코드 양쪽에 공개/보호 범위와 호환성 정책이 반영됐는가?
+- 사용자가 입력한 값으로 이동, 조회, 처리 대상이 바뀐다면 허용 범위와 fallback이 명확한가?
+- 실패 유형이 검증 가능한 단위로 분리되어 있는가? 같은 결과로 숨기는 경우에도 그 의도가 의사결정 로그에 남았는가?
 - Controller mapping, DTO, Entity, Repository, Service 공개 메서드가 같은 업무 단어와 같은 입출력 방향을 사용하는가
 - Service 내부 코멘트에 정상 흐름, 예외 흐름, 상태 변화, 알림/부수효과, 트랜잭션 경계 설계가 요약되어 있는가
 - FE 대상 요건이면 화면 이름, route 초안, 접근 권한, 주요 표시 정보, loading/empty/error 상태가 요약되어 있는가
