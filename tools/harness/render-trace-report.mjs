@@ -214,7 +214,8 @@ function buildMarkdown(model) {
 
         lines.push('### Acceptance Criteria Coverage', '');
         for (const row of requirement.coverage) {
-            lines.push(`- ${row.status}: ${row.criterion}`);
+            const marker = row.target ? `(${row.target}) ` : '';
+            lines.push(`- ${row.status}: ${marker}${row.criterion}`);
             if ((row.requiredChecks ?? []).length > 1) {
                 lines.push(`  - Required checks: ${row.requiredChecks.map((check) => `${check.target}=${check.status}`).join(', ')}`);
             }

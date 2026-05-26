@@ -67,6 +67,7 @@ CARD-TARGET-INVALID             구현 대상 값이 허용 목록 외
 CARD-SECTION-MISSING            필수 섹션 누락 (## 사용자/목적 등)
 CARD-AC-EMPTY                   수용 기준 섹션이 비어 있음
 CARD-AC-DUPLICATE               같은 수용 기준 문장이 중복
+CARD-AC-TARGET-INVALID          AC bullet 시작에 (BE)/(FE)/(FS) 외 마커 토큰 (REQ-012, severity=error)
 CARD-TERM-FORMAT                표준 용어가 `domain.name` 형식 아님
 CARD-TERM-UNREGISTERED          카드가 미등록 표준 용어를 참조
 CARD-TERM-DUPLICATE             같은 표준 용어가 중복 나열

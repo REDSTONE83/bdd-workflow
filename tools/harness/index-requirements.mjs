@@ -4,7 +4,7 @@
 // 필요로 하는 모든 필드를 미리 추출해 둔다.
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,6 +63,29 @@ function bulletItems(markdown) {
         .filter(Boolean);
 }
 
+const AC_TARGET_TOKENS = ['BE', 'FE', 'FS'];
+// 마커는 bullet 시작의 `(TOKEN) ` 형태로만 valid이다. 괄호 안에 공백이 없는 토큰을 마커
+// 후보로 넓게 잡고, 허용 토큰(BE/FE/FS)이며 뒤에 공백이 따라오는 경우만 stripped target으로
+// 인정한다. 그 외 — 허용 외 토큰이거나 뒤에 공백이 없는 malformed 형태(예: `(BE):`,
+// `(API-V1)`, `(be)`) — 는 invalidMarker로 보고한다. `(see foo)`, `(예: A)`처럼 괄호 안에
+// 공백이 있으면 자연어로 간주해 마커 후보에서 제외한다.
+const AC_MARKER_VALID_PATTERN = /^\(([^()\s]+)\)\s+/;
+const AC_MARKER_LOOSE_PATTERN = /^\(([^()\s]+)\)/;
+
+function acceptanceCriterionItems(markdown) {
+    return bulletItems(markdown).map((raw) => {
+        const validMatch = raw.match(AC_MARKER_VALID_PATTERN);
+        if (validMatch && AC_TARGET_TOKENS.includes(validMatch[1])) {
+            return { text: raw.slice(validMatch[0].length), target: validMatch[1] };
+        }
+        const looseMatch = raw.match(AC_MARKER_LOOSE_PATTERN);
+        if (looseMatch) {
+            return { text: raw, target: null, invalidMarker: looseMatch[1] };
+        }
+        return { text: raw, target: null };
+    });
+}
+
 function normalizeApprovalStatus(status) {
     const normalized = status.trim().toLowerCase();
     return ['승인', 'approved', 'blue'].includes(normalized);
@@ -76,7 +99,7 @@ function parseCard(file) {
     const priority = content.match(/^우선순위:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
     const status = content.match(/^상태:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
     const implementationTargetRaw = content.match(/^구현 대상:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
-    const acceptanceCriteria = bulletItems(section(content, '수용 기준'));
+    const acceptanceCriteria = acceptanceCriterionItems(section(content, '수용 기준'));
     const openQuestions = bulletItems(section(content, '열린 질문'))
         .filter((item) => !/^없음$/.test(item.trim()));
     const terms = bulletItems(section(content, '표준 용어'));
@@ -150,4 +173,8 @@ function main() {
     console.log(`requirements.index.json: ${entries.length} card(s)`);
 }
 
-main();
+export { acceptanceCriterionItems, AC_TARGET_TOKENS, AC_MARKER_VALID_PATTERN, AC_MARKER_LOOSE_PATTERN };
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+    main();
+}

@@ -336,14 +336,34 @@ function hasFrontEndSurface(s) {
     return (s.pages ?? []).length > 0 || (s.routes ?? []).length > 0 || (s.stories ?? []).length > 0;
 }
 
-function targetCoverageForCriterion(criterion, requirementTests, requirementScenarios, results, implementationTarget) {
+// REQ-012: AC target 마커가 있으면 마커 우선, 없으면 카드 구현 대상으로 fallback.
+// 'EITHER'는 harness 카드의 "BE 또는 FE 어느 한쪽이라도 커버" 정책 라벨.
+function effectiveCoveragePolicy(acTarget, implementationTarget) {
+    if (acTarget === 'BE') return 'BE';
+    if (acTarget === 'FE') return 'FE';
+    if (acTarget === 'FS') return 'FS';
+    switch (implementationTarget) {
+        case 'back-end': return 'BE';
+        case 'front-end': return 'FE';
+        case 'full-stack': return 'FS';
+        case 'harness': return 'EITHER';
+        default: return 'BE';
+    }
+}
+
+function targetCoverageForCriterion(criterion, requirementTests, requirementScenarios, results, acTarget, implementationTarget) {
     const backEndTests = requirementTests.filter((t) => t.source !== 'front-end');
     const frontEndTests = requirementTests.filter((t) => t.source === 'front-end');
-    if (implementationTarget === 'front-end') {
+    const policy = effectiveCoveragePolicy(acTarget, implementationTarget);
+    if (policy === 'BE') {
+        const cov = statusForCriterion(criterion, backEndTests, requirementScenarios, results);
+        return { ...cov, requiredChecks: [{ target: 'back-end', status: cov.status }] };
+    }
+    if (policy === 'FE') {
         const cov = statusForCriterion(criterion, frontEndTests, requirementScenarios, results);
         return { ...cov, requiredChecks: [{ target: 'front-end', status: cov.status }] };
     }
-    if (implementationTarget === 'full-stack') {
+    if (policy === 'FS') {
         const be = statusForCriterion(criterion, backEndTests, requirementScenarios, results);
         const fe = statusForCriterion(criterion, frontEndTests, requirementScenarios, results);
         return {
@@ -356,14 +376,9 @@ function targetCoverageForCriterion(criterion, requirementTests, requirementScen
             ]
         };
     }
-    if (implementationTarget === 'harness') {
-        // harness 대상은 백엔드 Acceptance Test 또는 FE BDD 테스트 어느 쪽이든 AC를 커버하면 통과.
-        // 어디서 검증해도 무방한 도구·계약·파이프라인 요건이라서다.
-        const cov = statusForCriterion(criterion, requirementTests, requirementScenarios, results);
-        return { ...cov, requiredChecks: [{ target: 'harness', status: cov.status }] };
-    }
-    const cov = statusForCriterion(criterion, backEndTests, requirementScenarios, results);
-    return { ...cov, requiredChecks: [{ target: 'back-end', status: cov.status }] };
+    // EITHER: BE+FE 합집합 — 어느 한쪽이라도 AC를 커버하면 PASS.
+    const cov = statusForCriterion(criterion, requirementTests, requirementScenarios, results);
+    return { ...cov, requiredChecks: [{ target: 'harness', status: cov.status }] };
 }
 
 function traceReason(ruleId, message, evidence = {}) {
@@ -378,9 +393,15 @@ function evaluateRequirement(card, apis, tests, scenarios, entities, results, fr
         .map((entity) => ({ ...entity, columns: entity.columns.filter((column) => column.requirements.includes(card.id)) }))
         .filter((entity) => entity.requirements.includes(card.id) || entity.columns.length > 0);
     const frontEndSurfaces = frontEndSurfacesForRequirement(card, frontEndIndex);
-    const coverage = card.acceptanceCriteria.map((criterion) => ({
-        criterion, ...targetCoverageForCriterion(criterion, requirementTests, requirementScenarios, results, card.implementationTarget)
-    }));
+    const coverage = card.acceptanceCriteria.map((criterion) => {
+        const text = typeof criterion === 'string' ? criterion : criterion.text;
+        const target = typeof criterion === 'string' ? null : (criterion.target ?? null);
+        return {
+            criterion: text,
+            target,
+            ...targetCoverageForCriterion(text, requirementTests, requirementScenarios, results, target, card.implementationTarget)
+        };
+    });
 
     const redReasons = [];
     if (card.acceptanceCriteria.length === 0) {

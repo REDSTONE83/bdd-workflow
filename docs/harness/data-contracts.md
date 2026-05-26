@@ -88,7 +88,7 @@ build/harness/
 - `story`: `title`, `story`, `component`
 - `scenario`: `title`, `featureTitle`, `featureTags[]`, `covers[]`, `steps[]`
 - `test`: `source` (`back-end` | `front-end`), `displayName`, `titlePath[]`, `covers[]`, `resultKeys[]`
-- `card`: `id`, `title`, `status`, `priority`, `implementationTarget`, `acceptanceCriteria[]`, `openQuestions[]`, `terms[]`, `sectionPresent`, `approved`, `bddReviewIncomplete`, `bddReviewApproved`
+- `card`: `id`, `title`, `status`, `priority`, `implementationTarget`, `acceptanceCriteria[]`, `openQuestions[]`, `terms[]`, `sectionPresent`, `approved`, `bddReviewIncomplete`, `bddReviewApproved`. `acceptanceCriteria[]`는 `string`이 아니라 `{ text, target, invalidMarker? }` 객체 배열이다 (REQ-012). `text`는 bullet 시작의 마커 토큰을 제거한 원문, `target`은 `BE | FE | FS | null`(마커 없음 + fallback 미적용), `invalidMarker`는 bullet 시작에 마커처럼 보이는 토큰이 있으나 허용 목록(`BE`/`FE`/`FS`) 밖일 때만 채워진다. 같은 카드의 `@Covers`, FE BDD `Covers`, `.feature` `Covers:` 매칭은 모두 `text` 값으로 한다.
 - `term`: `key`, `surfaces[]`, `mode`
 - `test-result`: `identity`, `alternateIdentities[]`, `status` (`PASS` | `FAIL` | `SKIP` | `NOT_RUN`), `runtime` (`junit` | `playwright`). 엔트리 `kind`는 항상 `"test-result"`이고, runner 구분은 `runtime` 필드를 쓴다.
 - `api-operation` (REQ-006, `indexes/openapi.index.json`): `method` (대문자), `path` (OpenAPI paths 키 그대로 — 예: `/users/{id}`), `operationId`. `location.identity`는 `METHOD path`. 인덱스 최상위에 `sha256` (`rawOpenApi`를 객체 키 정렬 canonical JSON으로 직렬화한 값의 SHA-256), `rawOpenApi` (원본 `/v3/api-docs` JSON)을 함께 둔다. 이 인덱스는 `entries[]`와 함께 두 필드를 추가로 갖는 점에서 다른 source index와 다르다.
@@ -206,8 +206,9 @@ build/harness/
       "coverage": [
         {
           "criterion": "프런트엔드 기반 앱 셸이 표시된다",
+          "target": "BE" | "FE" | "FS" | null,
           "status": "PASS" | "FAIL" | "SKIP" | "NOT_RUN" | "MISSING",
-          "requiredChecks": [{ "target": "front-end", "status": "PASS" }],
+          "requiredChecks": [{ "target": "back-end" | "front-end" | "harness", "status": "PASS" }],
           "tests": [/* 연결된 test 인덱스 항목 + result */],
           "scenarios": [/* 연결된 scenario 인덱스 항목 */]
         }
@@ -216,6 +217,14 @@ build/harness/
   ]
 }
 ```
+
+coverage row의 `target`은 AC 단위 마커(`BE`/`FE`/`FS`/`null`, REQ-012)이고, 같은 row의 `requiredChecks[].target`은 evaluator가 실제로 요구하는 검증 단위 라벨이라 의미가 다르다. 후자의 값은 다음 세 가지 중 하나다.
+
+- `back-end`: 백엔드 Acceptance Test 커버만 요구. AC marker가 `BE`거나, marker가 없고 카드 `구현 대상`이 `back-end`인 경우.
+- `front-end`: FE BDD 테스트 커버만 요구. AC marker가 `FE`거나, marker가 없고 카드 `구현 대상`이 `front-end`인 경우.
+- `harness`: 백엔드와 FE 어느 한쪽 커버라도 있으면 통과(EITHER 정책). marker 없는 AC + 카드 `구현 대상: harness`에서만 산출된다. 이름은 카드 분류와 같지만 의미는 "백엔드/FE 합집합 커버"다.
+
+AC marker가 `FS`거나 marker가 없고 카드 `구현 대상`이 `full-stack`인 경우는 `requiredChecks`에 `back-end`와 `front-end` 두 항목이 들어가고 양쪽 모두 PASS여야 row가 PASS다. AC marker가 `null`일 때의 전체 fallback 매핑은 `back-end`→`BE`, `front-end`→`FE`, `full-stack`→`FS`, `harness`→어느 한쪽이라도 커버다.
 
 `redReasons[]`는 `{ ruleId, message, evidence }` 객체 배열이다. `ruleId`는 [`rule-namespaces.md`](./rule-namespaces.md)의 `TRACE-*` prefix 중 하나(`TRACE-AC-EMPTY` / `TRACE-NO-API` / `TRACE-NO-FE-SURFACE` / `TRACE-AC-MISSING` / `TRACE-AC-FAIL` / `TRACE-AC-NO-FEATURE`)다. `message`는 리포트에 사람 친화적으로 노출되는 한 줄 문자열이고, `evidence`는 ruleId별로 의미 있는 보조 데이터(예: AC 문장, status, 대상 카드 ID)를 담는다. 리포터(`render-trace-report.mjs`)는 `- [{ruleId}] {message}` 형태로 prefix를 노출한다.
 

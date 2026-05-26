@@ -327,7 +327,8 @@ function main() {
         if (featureCards.length === 0) continue;
         for (const scenario of feature.scenarios ?? []) {
             for (const acText of scenarioCovers(scenario)) {
-                const found = featureCards.some((card) => (card.acceptanceCriteria ?? []).includes(acText));
+                const found = featureCards.some((card) => (card.acceptanceCriteria ?? [])
+                    .some((ac) => (typeof ac === 'string' ? ac : ac.text) === acText));
                 if (found) continue;
                 findings.push({
                     ruleId: 'TRC-COV-02',

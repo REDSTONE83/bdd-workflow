@@ -1,0 +1,18 @@
+{
+    "$schema": "../schema.json",
+    "note": "하네스(요건 카드, 추적 리포트, 검사기) 운영 어휘. 사람이 검토하는 산출물 명칭과 검사 단위 명칭을 한 곳에서 관리한다.",
+    "terms": {
+        "harness.requirementCard": {
+            "ko": "요건 카드",
+            "en": "requirement card",
+            "meaning": "REQ-XXX 단위로 사용자 요구사항, 범위, 수용 기준, 의사결정을 한 곳에 적은 사람 검토 산출물.",
+            "allow": ["카드"]
+        },
+        "harness.acceptanceCriteria": {
+            "ko": "수용 기준",
+            "en": "acceptance criteria",
+            "meaning": "요건 카드의 완료 기준 문장 묶음. 각 문장은 백엔드 Acceptance Test의 @Covers 또는 FE BDD 테스트의 Covers 값과 정확히 일치한다.",
+            "allow": ["AC"]
+        }
+    }
+}

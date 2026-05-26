@@ -62,6 +62,12 @@ function duplicateItems(items) {
     return [...dupes];
 }
 
+const AC_TARGET_TOKENS = ['BE', 'FE', 'FS'];
+
+function acText(criterion) {
+    return typeof criterion === 'string' ? criterion : criterion.text;
+}
+
 function hasRegisteredTerm(index, termKey) {
     return Boolean(index?.terms?.[termKey]);
 }
@@ -142,10 +148,19 @@ function validateCard(card, allCards, terminologyIndex) {
     if ((card.acceptanceCriteria ?? []).length === 0) {
         findings.push(findingForCard(card, 'CARD-AC-EMPTY', '수용 기준 비어 있음'));
     }
-    for (const dupe of duplicateItems(card.acceptanceCriteria ?? [])) {
+    const acceptanceCriteriaTexts = (card.acceptanceCriteria ?? []).map(acText);
+    for (const dupe of duplicateItems(acceptanceCriteriaTexts)) {
         findings.push(findingForCard(card, 'CARD-AC-DUPLICATE',
             `중복 수용 기준: "${dupe}"`,
             { criterion: dupe }));
+    }
+    for (const criterion of card.acceptanceCriteria ?? []) {
+        if (typeof criterion === 'string') continue;
+        if (criterion.invalidMarker) {
+            findings.push(findingForCard(card, 'CARD-AC-TARGET-INVALID',
+                `수용 기준 마커가 허용값(${AC_TARGET_TOKENS.join('/')}) 아님: "(${criterion.invalidMarker})"`,
+                { criterion: criterion.text, invalidMarker: criterion.invalidMarker, allowed: AC_TARGET_TOKENS }));
+        }
     }
 
     for (const term of card.terms ?? []) {
