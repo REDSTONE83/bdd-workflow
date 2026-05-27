@@ -384,7 +384,9 @@ test/harness/
 BDD 테스트 작성에 필요한 테스트 전용 애너테이션을 둔다.
 
 - `AcceptanceTest.java`
+- `ApiAcceptanceTest.java`
 - `Covers.java`
+- `ApiRequestSupport.java`
 
 ```text
 test/{domain}/
@@ -398,7 +400,7 @@ test/{domain}/
 {Feature}ApiAcceptanceTest.java
 ```
 
-테스트 클래스에는 `@AcceptanceTest`와 `@Requirement("REQ-000")`를 붙인다. 테스트 메서드는 수용 기준 문장을 `@Covers`에 그대로 사용하고, `@DisplayName`은 JUnit 표시용 자유 레이블로 작성한다.
+HTTP API 테스트 클래스에는 `@ApiAcceptanceTest`와 `@Requirement("REQ-000")`를 붙인다. HTTP API를 호출하지 않는 하네스 Acceptance Test는 `@AcceptanceTest`를 직접 쓴다. 테스트 메서드는 수용 기준 문장을 `@Covers`에 그대로 사용하고, `@DisplayName`은 JUnit 표시용 자유 레이블로 작성한다.
 
 ## Front-end 테스트 구조
 

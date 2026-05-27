@@ -1,13 +1,11 @@
 package com.example.bddworkflow.auth;
 
-import com.example.bddworkflow.harness.AcceptanceTest;
+import com.example.bddworkflow.harness.ApiAcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -18,9 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * REQ-011 OpenAPI 문서가 cookieAuth / bearerJwt 두 SecurityScheme 을 모두 등록하고,
  * 보호 API 에는 두 방식 모두를 표시한다. 로그인/로그아웃은 인증 요구 없이 표시된다.
  */
-@AcceptanceTest
-@SpringBootTest
-@AutoConfigureMockMvc
+@ApiAcceptanceTest
 @Requirement("REQ-011")
 class AuthOpenApiAcceptanceTest {
 

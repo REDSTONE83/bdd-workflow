@@ -4,27 +4,23 @@ import com.example.bddworkflow.todo.domain.Priority;
 import com.example.bddworkflow.todo.domain.Todo;
 import com.example.bddworkflow.todo.repository.TodoRepository;
 
-import com.example.bddworkflow.harness.AcceptanceTest;
+import com.example.bddworkflow.harness.ApiAcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
-import com.example.bddworkflow.harness.TestJwt;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static com.example.bddworkflow.harness.ApiRequestSupport.bearer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@AcceptanceTest
-@SpringBootTest
-@AutoConfigureMockMvc
+@ApiAcceptanceTest
 @Requirement("REQ-002")
 class TodoDeleteApiAcceptanceTest {
 
@@ -50,7 +46,7 @@ class TodoDeleteApiAcceptanceTest {
         Todo existing = todoRepository.save(USER_ID, "삭제할 할 일", null, null, Priority.MEDIUM, false, null);
 
         // When / Then
-        mockMvc.perform(delete("/todos/{id}", existing.id()).header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)))
+        mockMvc.perform(delete("/todos/{id}", existing.id()).header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)))
                 .andExpect(status().isNoContent());
 
         assertThat(todoRepository.findById(existing.id())).isEmpty();
@@ -65,7 +61,7 @@ class TodoDeleteApiAcceptanceTest {
                 Priority.MEDIUM, false, null);
         java.util.UUID missingTodoId = java.util.UUID.fromString("00000000-0000-0000-0000-00000000270f");
 
-        mockMvc.perform(delete("/todos/{id}", missingTodoId).header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)))
+        mockMvc.perform(delete("/todos/{id}", missingTodoId).header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("TODO_NOT_FOUND"));
 
@@ -81,7 +77,7 @@ class TodoDeleteApiAcceptanceTest {
         Todo othersTodo = todoRepository.save(OTHER_USER_ID, "타인 할 일", null, null, Priority.MEDIUM, false, null);
 
         // When / Then
-        mockMvc.perform(delete("/todos/{id}", othersTodo.id()).header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)))
+        mockMvc.perform(delete("/todos/{id}", othersTodo.id()).header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("TODO_NOT_FOUND"));
 

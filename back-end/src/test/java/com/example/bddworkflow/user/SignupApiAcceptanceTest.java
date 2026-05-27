@@ -2,15 +2,13 @@ package com.example.bddworkflow.user;
 
 import com.example.bddworkflow.user.repository.UserRepository;
 
-import com.example.bddworkflow.harness.AcceptanceTest;
+import com.example.bddworkflow.harness.ApiAcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -19,9 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@AcceptanceTest
-@SpringBootTest
-@AutoConfigureMockMvc
+@ApiAcceptanceTest
 @Requirement("REQ-001")
 class SignupApiAcceptanceTest {
 

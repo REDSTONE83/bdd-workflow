@@ -2,10 +2,9 @@ package com.example.bddworkflow.category;
 
 import com.example.bddworkflow.category.repository.CategoryRepository;
 
-import com.example.bddworkflow.harness.AcceptanceTest;
+import com.example.bddworkflow.harness.ApiAcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
-import com.example.bddworkflow.harness.TestJwt;
 import com.example.bddworkflow.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,23 +13,21 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.UUID;
+
+import static com.example.bddworkflow.harness.ApiRequestSupport.bearer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@AcceptanceTest
-@SpringBootTest
-@AutoConfigureMockMvc
+@ApiAcceptanceTest
 @Requirement("REQ-003")
 class CategoryDefaultSeedApiAcceptanceTest {
-
 
     @Autowired
     private MockMvc mockMvc;
@@ -74,7 +71,7 @@ class CategoryDefaultSeedApiAcceptanceTest {
         String userId = signupJson.get("userId").asText();
 
         // Then
-        mockMvc.perform(get("/categories").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(java.util.UUID.fromString(userId))))
+        mockMvc.perform(get("/categories").header(HttpHeaders.AUTHORIZATION, bearer(UUID.fromString(userId))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(3))
                 .andExpect(jsonPath("$.content[0].name").value("업무"))

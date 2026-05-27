@@ -5,26 +5,22 @@ import com.example.bddworkflow.todo.repository.TodoRepository;
 
 import com.example.bddworkflow.category.domain.Category;
 import com.example.bddworkflow.category.repository.CategoryRepository;
-import com.example.bddworkflow.harness.AcceptanceTest;
+import com.example.bddworkflow.harness.ApiAcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
-import com.example.bddworkflow.harness.TestJwt;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static com.example.bddworkflow.harness.ApiRequestSupport.bearer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@AcceptanceTest
-@SpringBootTest
-@AutoConfigureMockMvc
+@ApiAcceptanceTest
 @Requirement({"REQ-002", "REQ-004"})
 class TodoListApiAcceptanceTest {
 
@@ -59,7 +55,7 @@ class TodoListApiAcceptanceTest {
         todoRepository.save(OTHER_USER_ID, "타인의 할 일", null, null, Priority.HIGH, false, null);
 
         // When / Then
-        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)))
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.content[*].title", org.hamcrest.Matchers.containsInAnyOrder("내 할 일 A", "내 할 일 B")));
@@ -86,7 +82,7 @@ class TodoListApiAcceptanceTest {
         // 기대 순서:
         //   미완료 그룹: T3(HIGH), T1(MEDIUM, id1<id5), T5(MEDIUM), T4(LOW)
         //   완료 그룹:   T2(HIGH), T6(LOW)
-        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)))
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].title").value("T3"))
                 .andExpect(jsonPath("$.content[1].title").value("T1"))
@@ -106,7 +102,7 @@ class TodoListApiAcceptanceTest {
         todoRepository.save(USER_ID, "미분류 할 일", null, null, Priority.MEDIUM, false, null);
 
         // When / Then
-        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)))
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2))
                 // 분류된 항목

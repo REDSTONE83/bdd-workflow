@@ -6,11 +6,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.junit.jupiter.api.Tag;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 
 @Documented
-@Tag("acceptance")
+@AcceptanceTest
+@SpringBootTest
+@AutoConfigureMockMvc
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
-public @interface AcceptanceTest {
+@Target(ElementType.TYPE)
+public @interface ApiAcceptanceTest {
 }

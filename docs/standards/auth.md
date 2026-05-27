@@ -46,7 +46,8 @@ public ResponseEntity<CreateTodoResponse> create(
 
 ## 테스트
 
-- Acceptance Test는 표준 헤더 유틸(`MockMvc` 인터셉터 등)로 인증 토큰을 자동 부여한다.
+- 인증이 검증 대상이 아닌 Acceptance Test는 `ApiRequestSupport.bearer(userId)`로 인증 토큰을 부여한다. 테스트마다 `Authorization: Bearer ...` 문자열과 `TestJwt.signFor(...)`를 직접 조합하지 않는다.
+- JWT 검증, Cookie/Bearer 우선순위, 만료/서명/issuer/audience 오류처럼 인증 메커니즘 자체가 AC인 테스트에서는 `TestJwt`와 헤더/Cookie를 직접 다룰 수 있다.
 - 고정 UUID 리터럴을 테스트에 박지 않는다 ([`id-policy.md`](./id-policy.md)). 시드/픽스처에서 받은 ID를 그대로 사용한다.
 
 ## 금지 사항

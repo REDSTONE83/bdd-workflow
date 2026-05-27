@@ -3,28 +3,24 @@ package com.example.bddworkflow.todo;
 import com.example.bddworkflow.todo.domain.Priority;
 import com.example.bddworkflow.todo.repository.TodoRepository;
 
-import com.example.bddworkflow.harness.AcceptanceTest;
+import com.example.bddworkflow.harness.ApiAcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
-import com.example.bddworkflow.harness.TestJwt;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
+import static com.example.bddworkflow.harness.ApiRequestSupport.bearer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@AcceptanceTest
-@SpringBootTest
-@AutoConfigureMockMvc
+@ApiAcceptanceTest
 @Requirement("REQ-002")
 class TodoListPaginationApiAcceptanceTest {
 
@@ -47,19 +43,19 @@ class TodoListPaginationApiAcceptanceTest {
     void pageAndSizeQueryParametersSliceContent() throws Exception {
         seedSixTodos();
 
-        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)).param("page", "0").param("size", "2"))
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)).param("page", "0").param("size", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.content[0].title").value("T3"))
                 .andExpect(jsonPath("$.content[1].title").value("T1"));
 
-        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)).param("page", "1").param("size", "2"))
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)).param("page", "1").param("size", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.content[0].title").value("T5"))
                 .andExpect(jsonPath("$.content[1].title").value("T4"));
 
-        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)).param("page", "2").param("size", "2"))
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)).param("page", "2").param("size", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.content[0].title").value("T2"))
@@ -72,7 +68,7 @@ class TodoListPaginationApiAcceptanceTest {
     void pageResponseShapeContainsAllFields() throws Exception {
         seedSixTodos();
 
-        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)).param("page", "0").param("size", "2"))
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)).param("page", "0").param("size", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.page").value(0))
@@ -87,7 +83,7 @@ class TodoListPaginationApiAcceptanceTest {
     void defaultSizeIsTwenty() throws Exception {
         seedSixTodos();
 
-        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)))
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size").value(20))
                 .andExpect(jsonPath("$.page").value(0))
@@ -102,7 +98,7 @@ class TodoListPaginationApiAcceptanceTest {
     void sizeOverHundredIsCappedToHundred() throws Exception {
         seedSixTodos();
 
-        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)).param("page", "0").param("size", "500"))
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)).param("page", "0").param("size", "500"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size").value(100));
     }
@@ -113,7 +109,7 @@ class TodoListPaginationApiAcceptanceTest {
     void pageBeyondLastReturnsEmptyContentButKeepsTotals() throws Exception {
         seedSixTodos();
 
-        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)).param("page", "3").param("size", "2"))
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)).param("page", "3").param("size", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(0))
                 .andExpect(jsonPath("$.totalElements").value(6))
@@ -127,7 +123,7 @@ class TodoListPaginationApiAcceptanceTest {
         seedSixTodos();
         // 기본 정렬은 T3,T1,T5,T4,T2,T6.
         // sort=title,asc는 알파벳/문자열 오름차순이라 T1,T2,T3,T4,T5,T6이 되어야 한다.
-        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)).param("sort", "title,asc"))
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)).param("sort", "title,asc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].title").value("T1"))
                 .andExpect(jsonPath("$.content[1].title").value("T2"))

@@ -1,7 +1,7 @@
 package com.example.bddworkflow.auth;
 
 import com.example.bddworkflow.common.auth.AuthCookieProperties;
-import com.example.bddworkflow.harness.AcceptanceTest;
+import com.example.bddworkflow.harness.ApiAcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
 import com.example.bddworkflow.user.repository.UserRepository;
@@ -10,8 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,9 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * REQ-011 로그인 GREEN: 자격 증명 검증, 이메일 정규화, 실패 응답 통일, 형식 검증 분기,
  * 응답 본문 비어 있음, 만료 시각 60분, FS-1/FS-2 BE 측 진입점.
  */
-@AcceptanceTest
-@SpringBootTest
-@AutoConfigureMockMvc
+@ApiAcceptanceTest
 @Requirement("REQ-011")
 class AuthLoginAcceptanceTest {
 

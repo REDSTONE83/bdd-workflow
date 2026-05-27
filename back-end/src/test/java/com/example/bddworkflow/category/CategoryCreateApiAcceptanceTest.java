@@ -2,28 +2,24 @@ package com.example.bddworkflow.category;
 
 import com.example.bddworkflow.category.repository.CategoryRepository;
 
-import com.example.bddworkflow.harness.AcceptanceTest;
+import com.example.bddworkflow.harness.ApiAcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
-import com.example.bddworkflow.harness.TestJwt;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static com.example.bddworkflow.harness.ApiRequestSupport.bearer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@AcceptanceTest
-@SpringBootTest
-@AutoConfigureMockMvc
+@ApiAcceptanceTest
 @Requirement("REQ-003")
 class CategoryCreateApiAcceptanceTest {
 
@@ -57,7 +53,7 @@ class CategoryCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/categories")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -85,7 +81,7 @@ class CategoryCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/categories")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -109,7 +105,7 @@ class CategoryCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/categories")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -134,7 +130,7 @@ class CategoryCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/categories")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -157,7 +153,7 @@ class CategoryCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/categories")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -179,7 +175,7 @@ class CategoryCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/categories")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -202,7 +198,7 @@ class CategoryCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/categories")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isConflict())
@@ -227,7 +223,7 @@ class CategoryCreateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(post("/categories")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())

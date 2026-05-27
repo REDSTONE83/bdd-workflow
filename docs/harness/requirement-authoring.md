@@ -372,6 +372,8 @@ FE 테스트 계층은 [`front-end-testing.md`](../standards/front-end-testing.m
 - 정상, 예외, 경계 조건이 모두 시나리오로 반영되었는가?
 - 목록 조회 API가 있으면 페이징 AC와 시나리오가 포함되어 있고, `content` 슬라이스와 `page`/`size`/`totalElements`/`totalPages`를 검증하는가?
 - API 상태 코드, 응답 본문, 저장 상태가 필요한 만큼 검증되는가?
+- API Acceptance Test가 `@ApiAcceptanceTest`를 사용하고, 인증이 검증 대상이 아닌 경우 `ApiRequestSupport`로 로그인 상태를 구성하는가?
+- Given 데이터가 케이스 의도를 드러내며, UUID/토큰/JSON 반복이 테스트 본문을 가리지 않도록 fixture/helper로 정리되어 있는가?
 - 테스트가 구현 세부사항이 아니라 사용자 결과와 API 계약을 검증하는가?
 - FE 대상 요건이면 Playwright 테스트가 실제 사용자 행위, 주요 화면 표시, 권한/라우팅, 데스크톱 화면 또는 접근성 요구를 필요한 만큼 검증하는가?
 - FE TDD 테스트가 class/style 세부값보다 상태별 UI 결과를 검증하는가?

@@ -3,27 +3,23 @@ package com.example.bddworkflow.category;
 import com.example.bddworkflow.category.domain.Category;
 import com.example.bddworkflow.category.repository.CategoryRepository;
 
-import com.example.bddworkflow.harness.AcceptanceTest;
+import com.example.bddworkflow.harness.ApiAcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
-import com.example.bddworkflow.harness.TestJwt;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static com.example.bddworkflow.harness.ApiRequestSupport.bearer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@AcceptanceTest
-@SpringBootTest
-@AutoConfigureMockMvc
+@ApiAcceptanceTest
 @Requirement("REQ-003")
 class CategoryDeleteApiAcceptanceTest {
 
@@ -50,7 +46,7 @@ class CategoryDeleteApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(delete("/categories/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)))
                 .andExpect(status().isNoContent());
 
         assertThat(categoryRepository.findById(existing.id())).isEmpty();
@@ -65,7 +61,7 @@ class CategoryDeleteApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(delete("/categories/{id}", missingId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("CATEGORY_NOT_FOUND"));
     }
@@ -79,7 +75,7 @@ class CategoryDeleteApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(delete("/categories/{id}", othersCategory.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID)))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("CATEGORY_NOT_FOUND"));
 

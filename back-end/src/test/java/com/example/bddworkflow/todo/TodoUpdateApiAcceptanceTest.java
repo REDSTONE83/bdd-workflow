@@ -6,30 +6,26 @@ import com.example.bddworkflow.todo.repository.TodoRepository;
 
 import com.example.bddworkflow.category.domain.Category;
 import com.example.bddworkflow.category.repository.CategoryRepository;
-import com.example.bddworkflow.harness.AcceptanceTest;
+import com.example.bddworkflow.harness.ApiAcceptanceTest;
 import com.example.bddworkflow.harness.Covers;
 import com.example.bddworkflow.harness.Requirement;
-import com.example.bddworkflow.harness.TestJwt;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static com.example.bddworkflow.harness.ApiRequestSupport.bearer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@AcceptanceTest
-@SpringBootTest
-@AutoConfigureMockMvc
+@ApiAcceptanceTest
 @Requirement("REQ-002")
 class TodoUpdateApiAcceptanceTest {
 
@@ -86,7 +82,7 @@ class TodoUpdateApiAcceptanceTest {
 
         // When / Then: 응답에 title만 바뀌고 나머지는 유지된다.
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
@@ -121,7 +117,7 @@ class TodoUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk());
@@ -146,7 +142,7 @@ class TodoUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk());
@@ -172,7 +168,7 @@ class TodoUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk());
@@ -189,7 +185,7 @@ class TodoUpdateApiAcceptanceTest {
     void updateWithExplicitNullTitleReturnsBadRequest() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\": null}"))
                 .andExpect(status().isBadRequest())
@@ -204,7 +200,7 @@ class TodoUpdateApiAcceptanceTest {
     void updateWithExplicitNullPriorityReturnsBadRequest() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"priority\": null}"))
                 .andExpect(status().isBadRequest())
@@ -219,7 +215,7 @@ class TodoUpdateApiAcceptanceTest {
     void updateWithExplicitNullCompletedReturnsBadRequest() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"completed\": null}"))
                 .andExpect(status().isBadRequest())
@@ -234,7 +230,7 @@ class TodoUpdateApiAcceptanceTest {
     void updateTrimsTitle() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\": \"  새 제목  \"}"))
                 .andExpect(status().isOk())
@@ -252,7 +248,7 @@ class TodoUpdateApiAcceptanceTest {
     void updateWithBlankTitleReturnsBadRequest() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\": \"   \"}"))
                 .andExpect(status().isBadRequest())
@@ -268,7 +264,7 @@ class TodoUpdateApiAcceptanceTest {
         Todo existing = seedTodo();
         String longTitle = "가".repeat(101);
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\": \"" + longTitle + "\"}"))
                 .andExpect(status().isBadRequest())
@@ -284,7 +280,7 @@ class TodoUpdateApiAcceptanceTest {
         Todo existing = seedTodo();
         String longDesc = "가".repeat(1001);
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"description\": \"" + longDesc + "\"}"))
                 .andExpect(status().isBadRequest())
@@ -299,7 +295,7 @@ class TodoUpdateApiAcceptanceTest {
     void updateWithInvalidDueDateFormatReturnsBadRequest() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"dueDate\": \"2026/06/01\"}"))
                 .andExpect(status().isBadRequest())
@@ -314,7 +310,7 @@ class TodoUpdateApiAcceptanceTest {
     void updateWithInvalidPriorityReturnsBadRequest() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"priority\": \"URGENT\"}"))
                 .andExpect(status().isBadRequest())
@@ -334,7 +330,7 @@ class TodoUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categoryId\": \"" + after.id() + "\"}"))
                 .andExpect(status().isOk())
@@ -357,7 +353,7 @@ class TodoUpdateApiAcceptanceTest {
 
         // 타인 소유
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categoryId\": \"" + othersCategoryId + "\"}"))
                 .andExpect(status().isBadRequest())
@@ -368,7 +364,7 @@ class TodoUpdateApiAcceptanceTest {
         // 부재
         java.util.UUID missingCategoryId = java.util.UUID.fromString("00000000-0000-0000-0000-00000000270f");
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categoryId\": \"" + missingCategoryId + "\"}"))
                 .andExpect(status().isBadRequest())
@@ -383,7 +379,7 @@ class TodoUpdateApiAcceptanceTest {
     void updateCompletedTrueMarksDone() throws Exception {
         Todo existing = seedTodo();
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"completed\": true}"))
                 .andExpect(status().isOk())
@@ -404,7 +400,7 @@ class TodoUpdateApiAcceptanceTest {
 
         // When / Then
         mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"completed\": false}"))
                 .andExpect(status().isOk())
@@ -425,7 +421,7 @@ class TodoUpdateApiAcceptanceTest {
         java.util.UUID missingTodoId = java.util.UUID.fromString("00000000-0000-0000-0000-00000000270f");
 
         mockMvc.perform(patch("/todos/{id}", missingTodoId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\": \"새 제목\"}"))
                 .andExpect(status().isNotFound())
@@ -442,7 +438,7 @@ class TodoUpdateApiAcceptanceTest {
         Todo othersTodo = todoRepository.save(OTHER_USER_ID, "타인 할 일", null, null, Priority.MEDIUM, false, null);
 
         mockMvc.perform(patch("/todos/{id}", othersTodo.id())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwt.signFor(USER_ID))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\": \"새 제목\"}"))
                 .andExpect(status().isNotFound())
