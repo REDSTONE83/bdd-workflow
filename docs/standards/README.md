@@ -24,7 +24,7 @@
 - [`java-code-style.md`](./java-code-style.md): Lombok 허용/금지 범위와 금지 애너테이션 목록
 - [`front-end-project-structure.md`](./front-end-project-structure.md): React/Vite/shadcn 기반 FE 폴더 구조, 생성 산출물, 검증 명령
 - [`front-end-api-contract.md`](./front-end-api-contract.md): OpenAPI 기반 FE 타입/클라이언트, 인증, 오류, 페이징 연동
-- [`front-end-ui.md`](./front-end-ui.md): shadcn/ui, Tailwind token, 데스크톱 화면, 접근성, Storybook 상태 표준
+- [`front-end-ui.md`](./front-end-ui.md): shadcn/ui, Tailwind token, 데스크톱 화면, 폼 입력 UX(자동 포커스/autocomplete/비밀번호 show/hide 토글), 접근성, Storybook 상태 표준
 - [`front-end-testing.md`](./front-end-testing.md): FE TDD, BDD, Playwright, Storybook visual regression, 접근성 테스트 계층
 
 런타임 정책:
