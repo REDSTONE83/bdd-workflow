@@ -362,6 +362,7 @@ function collectPages(sourceFile, sourceText, filePath, metadata) {
       requirements: metadata.requirements,
       name: pageNameFromSource(sourceFile, feRel, metadata),
       route: metadata.route,
+      usesApis: metadata.usesApis,
       file: fileRel,
       line: 1,
     },
@@ -378,6 +379,7 @@ function collectRoutes(sourceFile, filePath, metadata) {
       requirements: metadata.requirements,
       path: metadata.route,
       component: metadata.page,
+      usesApis: metadata.usesApis,
       file: fileRel,
       line: 1,
     })
@@ -659,14 +661,10 @@ function collectPlaywrightTests(sourceFile, filePath, issues, textChannels) {
   return tests
 }
 
-// REQ-006 Skeleton: src/api/** 모듈에서 (method, path) 쌍을 수집한다.
-// 화면 컴포넌트의 직접 호출은 별도 룰이 잡으므로 여기서는 보지 않는다.
-// 추출 패턴은 SDK/생성 도구 선택 전 단계라 잠정적이다:
-//   - client.METHOD(path, ...) 형태 (예: client.get("/users/signup"))
-//   - fetch(path, { method: "POST" }) 형태
-//   - 템플릿 리터럴은 첫 부분만 본다(예: `/users/${id}` → `/users/`)
-// Skeleton에서는 최소 패턴만 잡고 정확도는 후속 단계에서 보강한다.
-const FE_API_DIR_SEGMENT = `${path.sep}api${path.sep}`
+// FE API 계약:
+//   - @UsesApi METHOD /path [trigger] 는 파일 상단 JSDoc 에 선언된 화면/파일 단위 API 사용 계약이다.
+//   - apiClient.METHOD("/path", ...) 는 실제 정적 호출 증거다.
+//   - fetch("/path", { method }) 는 src/api/** 경계 안에서만 실제 호출로 수집한다.
 const HTTP_METHOD_RE = /^(get|post|put|patch|delete|head|options)$/i
 
 function isInFrontEndApiModule(filePath) {
@@ -677,43 +675,126 @@ function isInFrontEndApiModule(filePath) {
 function literalPathFromArg(arg) {
   if (!arg) return null
   if (isString(arg)) return arg.text
-  if (ts.isTemplateExpression(arg)) {
-    return arg.head.text || null
-  }
   if (ts.isNoSubstitutionTemplateLiteral(arg)) {
     return arg.text
   }
   return null
 }
 
-function methodFromPropertyAccess(node) {
+function methodFromApiClientPropertyAccess(node, filePath) {
   if (!ts.isPropertyAccessExpression(node)) return null
   const name = node.name?.text ?? ""
-  if (HTTP_METHOD_RE.test(name)) return name.toUpperCase()
+  if (!HTTP_METHOD_RE.test(name)) return null
+  const target = unwrapExpression(node.expression)
+  if (!ts.isIdentifier(target)) return null
+  const targetName = target.text
+  if (targetName === "apiClient" || targetName.endsWith("ApiClient")) {
+    return name.toUpperCase()
+  }
+  if (targetName === "client" && isInFrontEndApiModule(filePath)) {
+    return name.toUpperCase()
+  }
   return null
 }
 
-function collectFrontEndApiCalls(sourceFile, filePath) {
-  if (!isInFrontEndApiModule(filePath)) return []
+function collectDeclaredApiUsages(filePath, metadata) {
   const fileRel = repoRelative(filePath)
+  return (metadata.usesApis ?? []).map((usage) => ({
+    source: "front-end",
+    requirements: metadata.requirements,
+    method: usage.method,
+    path: usage.path,
+    trigger: usage.trigger,
+    route: metadata.route,
+    page: metadata.page,
+    surfaceType: metadata.route ? "route" : metadata.page ? "page" : "file",
+    file: fileRel,
+    line: usage.line,
+  }))
+}
+
+function collectDeclaredApiUsageIssues(filePath, metadata) {
+  const fileRel = repoRelative(filePath)
+  const issues = []
+
+  for (const invalid of metadata.invalidUsesApis ?? []) {
+    issues.push({
+      severity: "error",
+      kind: "INVALID_USES_API",
+      message: invalid.message,
+      location: {
+        file: fileRel,
+        line: invalid.line,
+        identity: "@UsesApi",
+      },
+      evidence: {
+        value: invalid.value,
+      },
+    })
+  }
+
+  if ((metadata.usesApis ?? []).length > 0 && metadata.requirements.length === 0) {
+    issues.push({
+      severity: "error",
+      kind: "USES_API_WITHOUT_REQUIREMENT",
+      message: "@UsesApi must be declared in a file that also declares @Requirement.",
+      location: {
+        file: fileRel,
+        line: metadata.usesApis[0].line,
+        identity: "@UsesApi",
+      },
+      evidence: {
+        usesApis: metadata.usesApis.map((usage) => `${usage.method} ${usage.path}`),
+      },
+    })
+  }
+
+  return issues
+}
+
+function pushDynamicApiCallIssue(issues, sourceFile, fileRel, node, callee, literalPath) {
+  issues.push({
+    severity: "error",
+    kind: "DYNAMIC_API_CALL",
+    message: "API client calls must use a literal OpenAPI path without query string.",
+    location: {
+      file: fileRel,
+      line: lineOf(sourceFile, node),
+      identity: callee.getText(sourceFile),
+    },
+    evidence: {
+      callee: callee.getText(sourceFile),
+      path: literalPath,
+    },
+  })
+}
+
+function collectFrontEndApiCalls(sourceFile, filePath, metadata, issues) {
+  const fileRel = repoRelative(filePath)
+  const inApiModule = isInFrontEndApiModule(filePath)
   const calls = []
 
   function visit(node) {
     if (ts.isCallExpression(node)) {
       const callee = node.expression
-      const method = methodFromPropertyAccess(callee)
+      const method = methodFromApiClientPropertyAccess(callee, filePath)
       if (method) {
         const literalPath = literalPathFromArg(node.arguments[0])
-        if (literalPath) {
+        if (literalPath && literalPath.startsWith("/") && !literalPath.includes("?")) {
           calls.push({
             source: "front-end",
+            requirements: metadata.requirements,
             method,
             path: literalPath,
+            callee: callee.getText(sourceFile),
+            apiModule: inApiModule,
             file: fileRel,
             line: lineOf(sourceFile, node),
           })
+        } else {
+          pushDynamicApiCallIssue(issues, sourceFile, fileRel, node, callee, literalPath)
         }
-      } else if (ts.isIdentifier(callee) && callee.text === "fetch") {
+      } else if (inApiModule && ts.isIdentifier(callee) && callee.text === "fetch") {
         const literalPath = literalPathFromArg(node.arguments[0])
         const opts = node.arguments[1]
         let fetchMethod = "GET"
@@ -722,11 +803,14 @@ function collectFrontEndApiCalls(sourceFile, filePath) {
           const methodValue = methodProp ? stringValue(methodProp) : null
           if (methodValue) fetchMethod = methodValue.toUpperCase()
         }
-        if (literalPath) {
+        if (literalPath && literalPath.startsWith("/") && !literalPath.includes("?")) {
           calls.push({
             source: "front-end",
+            requirements: metadata.requirements,
             method: fetchMethod,
             path: literalPath,
+            callee: "fetch",
+            apiModule: inApiModule,
             file: fileRel,
             line: lineOf(sourceFile, node),
           })
@@ -826,6 +910,7 @@ function main() {
   const routes = []
   const stories = []
   const tests = []
+  const apiUsages = []
   const apiCalls = []
 
   for (const filePath of walk(srcRoot)) {
@@ -835,7 +920,9 @@ function main() {
     pages.push(...collectPages(sourceFile, sourceText, filePath, metadata))
     routes.push(...collectRoutes(sourceFile, filePath, metadata))
     stories.push(...collectStories(sourceFile, filePath, metadata))
-    apiCalls.push(...collectFrontEndApiCalls(sourceFile, filePath))
+    apiUsages.push(...collectDeclaredApiUsages(filePath, metadata))
+    apiCalls.push(...collectFrontEndApiCalls(sourceFile, filePath, metadata, issues))
+    issues.push(...collectDeclaredApiUsageIssues(filePath, metadata))
     issues.push(...collectDirectFetchBoundaryIssues(sourceFile, filePath))
   }
 
@@ -875,6 +962,7 @@ function main() {
     routes,
     stories,
     tests,
+    apiUsages,
     apiCalls,
     textChannels,
     issues,
@@ -883,7 +971,7 @@ function main() {
   fs.mkdirSync(outDir, { recursive: true })
   fs.writeFileSync(outFile, `${JSON.stringify(payload, null, 2)}\n`)
   console.log(
-    `front-end.source-index.json: ${pages.length} page(s), ${routes.length} route(s), ${stories.length} story/stories, ${tests.length} BDD test(s), ${apiCalls.length} api call(s), ${issues.length} issue(s)`,
+    `front-end.source-index.json: ${pages.length} page(s), ${routes.length} route(s), ${stories.length} story/stories, ${tests.length} BDD test(s), ${apiUsages.length} api usage(s), ${apiCalls.length} api call(s), ${issues.length} issue(s)`,
   )
 }
 

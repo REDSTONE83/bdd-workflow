@@ -12,7 +12,13 @@
 //   FE-TEST-REQ-NO-COVERS    Requirement 메타데이터는 있으나 Covers 메타데이터 없음
 //   FE-STORY-MISSING-STATE   공통 UI primitive의 stories 파일에 표준 정의 필수 상태가 누락
 //   FE-API-CONTRACT-MISSING  OpenAPI 계약 산출물 부재
-//   FE-API-UNKNOWN-OPERATION FE src/api/** 호출이 OpenAPI 계약의 method+path에 없음
+//   FE-API-UNKNOWN-OPERATION FE actual API 호출이 OpenAPI 계약의 method+path에 없음
+//   FE-API-USAGE-UNKNOWN-OPERATION FE @UsesApi 선언이 OpenAPI 계약의 method+path에 없음
+//   FE-API-DECLARED-NOT-CALLED @UsesApi 선언을 뒷받침하는 정적 API 호출이 없음
+//   FE-API-CALL-NOT-DECLARED 정적 API 호출을 설명하는 @UsesApi 선언이 없음
+//   FE-API-CALL-DYNAMIC      정적 대조가 불가능한 동적 API path 호출
+//   FE-API-USAGE-INVALID     @UsesApi 선언 형식이 표준과 다름
+//   FE-API-USAGE-NO-REQ      @UsesApi 선언 파일에 @Requirement가 없음
 //   FE-API-CLIENT-NO-METADATA FE generated client의 OpenAPI SHA-256 메타파일 부재
 //   FE-API-CLIENT-STALE      FE generated client의 OpenAPI SHA-256 메타파일이 현재 계약과 불일치
 //   FE-API-DIRECT-FETCH      FE src/api/** 밖 애플리케이션 소스의 직접 fetch 호출
@@ -57,6 +63,9 @@ const REMEDIATION_API = 'docs/standards/front-end-api-contract.md';
 // REQ-008: FE API 계약 drift는 validateHarness에서 차단한다.
 const FE_API_CONTRACT_MISSING_SEVERITY = 'error';
 const FE_API_UNKNOWN_OPERATION_SEVERITY = 'error';
+const FE_API_USAGE_UNKNOWN_OPERATION_SEVERITY = 'error';
+const FE_API_DECLARED_NOT_CALLED_SEVERITY = 'error';
+const FE_API_CALL_NOT_DECLARED_SEVERITY = 'error';
 const FE_API_CLIENT_NO_METADATA_SEVERITY = 'error';
 const FE_API_CLIENT_STALE_SEVERITY = 'error';
 // FE generated client가 base OpenAPI hash를 기록해 두는 파일 경로(표시용).
@@ -66,7 +75,10 @@ const ISSUE_TO_RULE = {
     DYNAMIC_TEST_ANNOTATION:  { ruleId: 'FE-TEST-DYN',           remediation: REMEDIATION_TESTING },
     COVERS_WITHOUT_REQUIREMENT: { ruleId: 'FE-TEST-COVERS-NO-REQ', remediation: REMEDIATION_TESTING },
     REQUIREMENT_WITHOUT_COVERS: { ruleId: 'FE-TEST-REQ-NO-COVERS', remediation: REMEDIATION_TESTING },
-    DIRECT_FETCH_OUTSIDE_API: { ruleId: 'FE-API-DIRECT-FETCH', remediation: REMEDIATION_API }
+    DIRECT_FETCH_OUTSIDE_API: { ruleId: 'FE-API-DIRECT-FETCH', remediation: REMEDIATION_API },
+    INVALID_USES_API: { ruleId: 'FE-API-USAGE-INVALID', remediation: REMEDIATION_API },
+    USES_API_WITHOUT_REQUIREMENT: { ruleId: 'FE-API-USAGE-NO-REQ', remediation: REMEDIATION_API },
+    DYNAMIC_API_CALL: { ruleId: 'FE-API-CALL-DYNAMIC', remediation: REMEDIATION_API }
 };
 
 // 컴포넌트별 필수 stories 상태. 표준은 docs/standards/front-end-ui.md "필수 상태" 절.
@@ -173,6 +185,8 @@ function findingsForMissingStoryStates(stories) {
 // 인덱스 입력 유무에 따라 다음을 본다.
 //   - openapi.index.json 부재         → FE-API-CONTRACT-MISSING (전역 finding)
 //   - apiCalls의 (method, path)가 OpenAPI entries에 없음 → FE-API-UNKNOWN-OPERATION
+//   - apiUsages(@UsesApi)의 (method, path)가 OpenAPI entries에 없음 → FE-API-USAGE-UNKNOWN-OPERATION
+//   - @UsesApi 선언과 실제 API 호출의 요건 단위 집합 불일치 → FE-API-DECLARED-NOT-CALLED / FE-API-CALL-NOT-DECLARED
 //   - FE generated 디렉터리의 OpenAPI hash 메타파일 부재 → FE-API-CLIENT-NO-METADATA
 //   - FE generated 디렉터리의 OpenAPI hash 메타파일과 인덱스 SHA-256 불일치 → FE-API-CLIENT-STALE
 //   - src/api/** 밖 직접 fetch 호출은 source index issue를 FE-API-DIRECT-FETCH로 정규화한다.
@@ -227,16 +241,10 @@ function findingForClientNoMetadata(generatedMetaPath) {
 }
 
 function findingsForUnknownOperations(apiCalls, contract) {
-    const known = new Set();
-    for (const entry of contract.entries ?? []) {
-        if (entry.kind !== 'api-operation') continue;
-        const method = (entry.method ?? '').toUpperCase();
-        const opPath = entry.path ?? '';
-        if (method && opPath) known.add(`${method} ${opPath}`);
-    }
+    const known = openApiOperationSet(contract);
     const findings = [];
     for (const call of apiCalls ?? []) {
-        const key = `${(call.method ?? '').toUpperCase()} ${call.path ?? ''}`;
+        const key = operationKey(call);
         if (known.has(key)) continue;
         findings.push({
             ruleId: 'FE-API-UNKNOWN-OPERATION',
@@ -244,13 +252,155 @@ function findingsForUnknownOperations(apiCalls, contract) {
             strictSeverity: FE_API_UNKNOWN_OPERATION_SEVERITY,
             kind: 'static',
             message: `FE가 호출하는 ${call.method} ${call.path} 가 OpenAPI 계약에 없음`,
-            requirements: [],
+            requirements: call.requirements ?? [],
             location: {
                 file: call.file ?? '',
                 line: call.line ?? 0,
-                identity: `${call.method} ${call.path}`
+                identity: key
             },
-            evidence: { method: call.method, path: call.path },
+            evidence: { method: call.method, path: call.path, callee: call.callee ?? null },
+            remediation: REMEDIATION_API
+        });
+    }
+    return findings;
+}
+
+function openApiOperationSet(contract) {
+    const known = new Set();
+    for (const entry of contract.entries ?? []) {
+        if (entry.kind !== 'api-operation') continue;
+        const method = (entry.method ?? '').toUpperCase();
+        const opPath = entry.path ?? '';
+        if (method && opPath) known.add(`${method} ${opPath}`);
+    }
+    return known;
+}
+
+function operationKey(entry) {
+    return `${(entry.method ?? '').toUpperCase()} ${entry.path ?? ''}`;
+}
+
+function pushByRequirement(map, entry) {
+    const key = operationKey(entry);
+    const requirements = entry.requirements ?? [];
+    for (const req of requirements) {
+        if (!map.has(req)) map.set(req, new Map());
+        const byKey = map.get(req);
+        if (!byKey.has(key)) byKey.set(key, []);
+        byKey.get(key).push(entry);
+    }
+}
+
+function entriesByRequirement(entries) {
+    const byRequirement = new Map();
+    const unscoped = new Map();
+    const anyRequirement = new Map();
+    for (const entry of entries ?? []) {
+        const key = operationKey(entry);
+        if (!anyRequirement.has(key)) anyRequirement.set(key, []);
+        anyRequirement.get(key).push(entry);
+        if ((entry.requirements ?? []).length === 0) {
+            if (!unscoped.has(key)) unscoped.set(key, []);
+            unscoped.get(key).push(entry);
+        }
+        pushByRequirement(byRequirement, entry);
+    }
+    return { byRequirement, unscoped, anyRequirement };
+}
+
+function hasOperationForRequirements(grouped, entry) {
+    const key = operationKey(entry);
+    const requirements = entry.requirements ?? [];
+    if (requirements.length === 0) {
+        return grouped.anyRequirement.has(key);
+    }
+    return requirements.some((req) => grouped.byRequirement.get(req)?.has(key)) || grouped.unscoped.has(key);
+}
+
+function findingsForUnknownDeclaredApiUsages(apiUsages, contract) {
+    const known = openApiOperationSet(contract);
+    const findings = [];
+    for (const usage of apiUsages ?? []) {
+        const key = operationKey(usage);
+        if (known.has(key)) continue;
+        findings.push({
+            ruleId: 'FE-API-USAGE-UNKNOWN-OPERATION',
+            severity: FE_API_USAGE_UNKNOWN_OPERATION_SEVERITY,
+            strictSeverity: FE_API_USAGE_UNKNOWN_OPERATION_SEVERITY,
+            kind: 'static',
+            message: `FE @UsesApi ${usage.method} ${usage.path} 가 OpenAPI 계약에 없음`,
+            requirements: usage.requirements ?? [],
+            location: {
+                file: usage.file ?? '',
+                line: usage.line ?? 0,
+                identity: key
+            },
+            evidence: {
+                method: usage.method,
+                path: usage.path,
+                route: usage.route ?? null,
+                page: usage.page ?? null,
+                trigger: usage.trigger ?? null
+            },
+            remediation: REMEDIATION_API
+        });
+    }
+    return findings;
+}
+
+function findingsForDeclaredButNotCalled(apiUsages, apiCalls) {
+    const actual = entriesByRequirement(apiCalls ?? []);
+    const findings = [];
+    for (const usage of apiUsages ?? []) {
+        if (hasOperationForRequirements(actual, usage)) continue;
+        const key = operationKey(usage);
+        findings.push({
+            ruleId: 'FE-API-DECLARED-NOT-CALLED',
+            severity: FE_API_DECLARED_NOT_CALLED_SEVERITY,
+            strictSeverity: FE_API_DECLARED_NOT_CALLED_SEVERITY,
+            kind: 'static',
+            message: `FE @UsesApi ${usage.method} ${usage.path} 선언을 뒷받침하는 정적 API 호출이 없음`,
+            requirements: usage.requirements ?? [],
+            location: {
+                file: usage.file ?? '',
+                line: usage.line ?? 0,
+                identity: key
+            },
+            evidence: {
+                declared: { method: usage.method, path: usage.path },
+                route: usage.route ?? null,
+                page: usage.page ?? null,
+                trigger: usage.trigger ?? null
+            },
+            remediation: REMEDIATION_API
+        });
+    }
+    return findings;
+}
+
+function findingsForCallsNotDeclared(apiCalls, apiUsages) {
+    const declared = entriesByRequirement(apiUsages ?? []);
+    const findings = [];
+    for (const call of apiCalls ?? []) {
+        if (hasOperationForRequirements(declared, call)) continue;
+        const key = operationKey(call);
+        findings.push({
+            ruleId: 'FE-API-CALL-NOT-DECLARED',
+            severity: FE_API_CALL_NOT_DECLARED_SEVERITY,
+            strictSeverity: FE_API_CALL_NOT_DECLARED_SEVERITY,
+            kind: 'static',
+            message: `FE 실제 API 호출 ${call.method} ${call.path} 를 설명하는 @UsesApi 선언이 없음`,
+            requirements: call.requirements ?? [],
+            location: {
+                file: call.file ?? '',
+                line: call.line ?? 0,
+                identity: key
+            },
+            evidence: {
+                actual: { method: call.method, path: call.path },
+                callee: call.callee ?? null,
+                apiModule: call.apiModule ?? false
+            },
             remediation: REMEDIATION_API
         });
     }
@@ -284,6 +434,9 @@ function feApiFindings(frontEndIndex, cfg) {
     }
     const findings = [];
     findings.push(...findingsForUnknownOperations(frontEndIndex.apiCalls ?? [], contract));
+    findings.push(...findingsForUnknownDeclaredApiUsages(frontEndIndex.apiUsages ?? [], contract));
+    findings.push(...findingsForDeclaredButNotCalled(frontEndIndex.apiUsages ?? [], frontEndIndex.apiCalls ?? []));
+    findings.push(...findingsForCallsNotDeclared(frontEndIndex.apiCalls ?? [], frontEndIndex.apiUsages ?? []));
     const staleFinding = findingForClientStale(contract, cfg.generatedMeta);
     if (staleFinding) findings.push(staleFinding);
     return findings;

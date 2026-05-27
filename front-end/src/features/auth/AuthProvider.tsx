@@ -1,5 +1,8 @@
 /**
  * @Requirement REQ-011
+ * @UsesApi GET /auth/me auth-state
+ * @UsesApi POST /auth/login login
+ * @UsesApi POST /auth/logout logout
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 

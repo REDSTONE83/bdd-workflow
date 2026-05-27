@@ -159,6 +159,7 @@ React Fast Refresh 가 비-컴포넌트 export 를 경고하므로, 컴포넌트
  * @Requirement REQ-002
  * @Route /todos
  * @Page TodoListPage
+ * @UsesApi GET /todos mount
  */
 export function TodoListPage() {
   // ...
@@ -170,6 +171,7 @@ export function TodoListPage() {
 - `@Requirement REQ-XXX` (또는 `@Requirement REQ-XXX, REQ-YYY` 로 다중 연결): `REQ-XXX` 형식.
 - `@Route /path`: 화면 route. 페이지 파일에만 의미가 있다.
 - `@Page PageName`: 화면 이름. 페이지 파일에만 의미가 있다.
+- `@UsesApi METHOD /path [trigger]`: 해당 파일/화면/route가 기대하는 백엔드 API 사용 계약. `METHOD`는 `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS` 중 하나이고, `/path`는 OpenAPI paths 키와 같은 형식으로 query string을 포함하지 않는다. 마지막 `trigger`는 `mount`, `submit`, `click` 같은 짧은 호출 맥락이다.
 
 JSDoc 블록은 파일 상단 60줄 안에 있어야 `source-index.mjs` 가 인식한다. import 보다 위에 두는 것을 권장한다.
 

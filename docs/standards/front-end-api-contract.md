@@ -54,6 +54,28 @@ src/api/todo.ts
 - DTO shape를 화면 컴포넌트에 흘리지 않고 필요한 view model로 변환한다.
 - 빈 값, 날짜, 페이지네이션 기본값은 백엔드 계약과 충돌하지 않게 한 곳에서 처리한다.
 
+### 화면 API 사용 계약
+
+화면/route/provider/header처럼 사용자 흐름에서 API 사용을 기대하는 파일은 파일 상단 JSDoc 에 `@UsesApi`를 선언한다.
+
+```ts
+/**
+ * @Requirement REQ-002
+ * @Route /todos
+ * @Page TodoListPage
+ * @UsesApi GET /todos mount
+ * @UsesApi POST /todos submit
+ */
+```
+
+- 형식은 `@UsesApi METHOD /path [trigger]` 이다.
+- `METHOD`는 `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS` 중 하나다.
+- `/path`는 OpenAPI paths 키와 같은 형식으로 쓰며 query string을 포함하지 않는다.
+- 실제 `apiClient.METHOD(...)` 호출도 같은 literal path를 사용한다. 동적 문자열, 템플릿 문자열, query string 포함 path는 정적 대조가 불가능하므로 금지한다.
+- `trigger`는 `mount`, `submit`, `click`, `auth-state`처럼 호출 맥락을 짧게 적는 선택 필드다.
+- 같은 파일에 `@UsesApi`가 있으면 `@Requirement`도 있어야 한다.
+- 정적 검증은 같은 요건 안에서 `@UsesApi` 선언 집합과 실제 `apiClient.METHOD("/path")` 호출 집합을 비교한다. React Context, provider, hook을 통한 간접 호출 때문에 route 단위 실행 여부는 정적 검증만으로 확정하지 않는다. route별 실제 발생 여부는 Playwright request 관측을 추가해 보강한다.
+
 ## 인증
 
 인증 방식은 [`auth.md`](./auth.md)의 JWT Bearer 정책을 따른다.
@@ -121,7 +143,13 @@ ApiError(code, message, field)
 - `npm run e2e`: 주요 사용자 흐름의 API 연동 화면 검증.
 - `validateHarness`: FE-API-* finding을 trace/gate에 반영한다. 다음 finding은 `severity: error`라서 게이트를 차단한다.
   - `FE-API-CONTRACT-MISSING`: OpenAPI 계약 산출물이 없음.
-  - `FE-API-UNKNOWN-OPERATION`: `src/api/**` 호출의 method + path가 OpenAPI 계약에 없음.
+  - `FE-API-UNKNOWN-OPERATION`: 실제 FE API 호출의 method + path가 OpenAPI 계약에 없음.
+  - `FE-API-USAGE-UNKNOWN-OPERATION`: `@UsesApi` 선언의 method + path가 OpenAPI 계약에 없음.
+  - `FE-API-DECLARED-NOT-CALLED`: `@UsesApi` 선언을 뒷받침하는 정적 API 호출이 없음.
+  - `FE-API-CALL-NOT-DECLARED`: 실제 API 호출을 설명하는 `@UsesApi` 선언이 없음.
+  - `FE-API-CALL-DYNAMIC`: 실제 API 호출 path가 literal OpenAPI path가 아니어서 정적 대조가 불가능함.
+  - `FE-API-USAGE-INVALID`: `@UsesApi` 선언 형식이 표준과 다름.
+  - `FE-API-USAGE-NO-REQ`: `@UsesApi` 선언 파일에 `@Requirement`가 없음.
   - `FE-API-CLIENT-NO-METADATA`: generated client의 OpenAPI SHA-256 메타파일이 없음.
   - `FE-API-CLIENT-STALE`: generated client 메타파일이 현재 OpenAPI 계약 SHA-256과 다름.
   - `FE-API-DIRECT-FETCH`: `src/api/**` 밖 애플리케이션 소스가 직접 `fetch`를 호출함.

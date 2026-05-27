@@ -194,7 +194,7 @@ function readSourceIndex() {
 
 function readFrontEndSourceIndex() {
     if (!fs.existsSync(frontEndSourceIndexPath)) {
-        return { present: false, pages: [], routes: [], stories: [], tests: [], issues: [], textChannels: [] };
+        return { present: false, pages: [], routes: [], stories: [], tests: [], apiUsages: [], apiCalls: [], issues: [], textChannels: [] };
     }
     const frontEndSourceIndex = JSON.parse(fs.readFileSync(frontEndSourceIndexPath, 'utf8'));
     return {
@@ -204,6 +204,8 @@ function readFrontEndSourceIndex() {
         routes: frontEndSourceIndex.routes ?? [],
         stories: frontEndSourceIndex.stories ?? [],
         tests: (frontEndSourceIndex.tests ?? []).map((test) => ({ source: 'front-end', ...test })),
+        apiUsages: frontEndSourceIndex.apiUsages ?? [],
+        apiCalls: frontEndSourceIndex.apiCalls ?? [],
         issues: frontEndSourceIndex.issues ?? [],
         textChannels: frontEndSourceIndex.textChannels ?? []
     };
@@ -328,7 +330,9 @@ function frontEndSurfacesForRequirement(card, frontEndIndex) {
     return {
         pages: (frontEndIndex.pages ?? []).filter((page) => (page.requirements ?? []).includes(card.id)),
         routes: (frontEndIndex.routes ?? []).filter((route) => (route.requirements ?? []).includes(card.id)),
-        stories: (frontEndIndex.stories ?? []).filter((story) => (story.requirements ?? []).includes(card.id))
+        stories: (frontEndIndex.stories ?? []).filter((story) => (story.requirements ?? []).includes(card.id)),
+        apiUsages: (frontEndIndex.apiUsages ?? []).filter((usage) => (usage.requirements ?? []).includes(card.id)),
+        apiCalls: (frontEndIndex.apiCalls ?? []).filter((call) => (call.requirements ?? []).includes(card.id))
     };
 }
 

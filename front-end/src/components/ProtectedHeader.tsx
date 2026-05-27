@@ -1,5 +1,6 @@
 /**
  * @Requirement REQ-011
+ * @UsesApi POST /auth/logout click
  */
 import { ChevronDown, LogOut } from "lucide-react"
 import { useState } from "react"

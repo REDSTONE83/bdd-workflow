@@ -177,7 +177,9 @@ function buildMarkdown(model) {
         const pages = requirement.frontEnd?.pages ?? [];
         const routes = requirement.frontEnd?.routes ?? [];
         const stories = requirement.frontEnd?.stories ?? [];
-        if (pages.length === 0 && routes.length === 0 && stories.length === 0) {
+        const apiUsages = requirement.frontEnd?.apiUsages ?? [];
+        const apiCalls = requirement.frontEnd?.apiCalls ?? [];
+        if (pages.length === 0 && routes.length === 0 && stories.length === 0 && apiUsages.length === 0 && apiCalls.length === 0) {
             if (requirement.implementationTarget === 'harness') {
                 lines.push('- (harness 대상 - FE 화면/스토리 요구 없음)');
             } else {
@@ -186,14 +188,30 @@ function buildMarkdown(model) {
         } else {
             for (const route of routes) {
                 lines.push(`- route ${route.path} (${route.file}:${route.line ?? 0}) [${route.requirements.join(', ')}]`);
+                for (const usage of route.usesApis ?? []) {
+                    const trigger = usage.trigger ? ` ${usage.trigger}` : '';
+                    lines.push(`  - uses ${usage.method} ${usage.path}${trigger}`);
+                }
             }
             for (const page of pages) {
                 const routeLabel = page.route ? ` route=${page.route}` : '';
                 lines.push(`- page ${page.name}${routeLabel} (${page.file}:${page.line ?? 0}) [${page.requirements.join(', ')}]`);
+                for (const usage of page.usesApis ?? []) {
+                    const trigger = usage.trigger ? ` ${usage.trigger}` : '';
+                    lines.push(`  - uses ${usage.method} ${usage.path}${trigger}`);
+                }
             }
             for (const story of stories) {
                 const storyTitle = [story.title, story.story].filter(Boolean).join(' / ');
                 lines.push(`- story ${storyTitle} (${story.file}:${story.line ?? 0}) [${story.requirements.join(', ')}]`);
+            }
+            for (const usage of apiUsages) {
+                const trigger = usage.trigger ? ` ${usage.trigger}` : '';
+                const surface = [usage.route, usage.page].filter(Boolean).join(' ') || usage.surfaceType || 'file';
+                lines.push(`- api usage ${usage.method} ${usage.path}${trigger} (${usage.file}:${usage.line ?? 0}) surface=${surface} [${usage.requirements.join(', ')}]`);
+            }
+            for (const call of apiCalls) {
+                lines.push(`- api call ${call.method} ${call.path} (${call.file}:${call.line ?? 0}) [${call.requirements.join(', ')}]`);
             }
         }
         lines.push('');

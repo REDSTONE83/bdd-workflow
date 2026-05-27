@@ -2,6 +2,7 @@
  * @Requirement REQ-011
  * @Route /login
  * @Page LoginPage
+ * @UsesApi POST /auth/login submit
  */
 import { Eye, EyeOff } from "lucide-react"
 import { useEffect, useRef, useState, type FormEvent } from "react"
