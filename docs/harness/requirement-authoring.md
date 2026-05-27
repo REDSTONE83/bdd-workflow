@@ -156,7 +156,7 @@ AC가 만족해야 하는 조건:
 - **AC에 남기는 정량/계약값**: `100자`, `8자 이상`, `기본 20`, `최대 100`. 사용자가 인지하는 한계이고 테스트 어셔션이 그대로 검증한다.
 - **API 계약 (컨트롤러/DTO/OpenAPI)**: `null`, JSON 키, HTTP 메서드/상태 코드 같은 직렬화·전송 형식.
 - **의사결정 로그**: 정책 선택(예: "다른 사용자의 자원은 부재와 동일하게 404"), 명세에 명시적으로 박아 둘 결정.
-- **테스트 assertion**: `INVALID_CATEGORY`, `VALIDATION_FAILED` 같은 오류 코드. AC는 "사용할 수 없는 카테고리라는 안내가 보인다" 같은 사용자 관찰 어휘로 둔다.
+- **테스트 assertion**: `INVALID_CATEGORY`, `INVALID_REQUEST` 같은 오류 코드. AC는 "사용할 수 없는 카테고리라는 안내가 보인다" 같은 사용자 관찰 어휘로 둔다.
 
 좋은 예:
 
@@ -255,6 +255,8 @@ Skeleton 승인을 요청하기 전에 다음을 한 줄씩 확인한다.
 - 설정 Skeleton이 있다면 프로젝트 소유 `app.*` 키가 typed `@ConfigurationProperties`에 바인딩되고, profile override 정책이 명확한가?
 - FE 대상 요건이면 화면 이름, route 초안, 접근 권한, 주요 표시 정보, loading/empty/error 상태가 요약되어 있는가
 - FE 대상 요건이면 Storybook으로 고정할 컴포넌트 상태와 Playwright로 검증할 사용자 흐름이 구분되어 있는가
+- FE route/page를 새로 만들거나 바꾸는 요건이면 승인 후 구현 단계에서 작성할 route 기준 page mock story 대상이 명시되어 있는가
+- FE 공통 UI primitive나 주요 화면 조각을 새로 만들거나 바꾸는 요건이면 승인 후 구현 단계에서 작성할 Storybook story 대상이 명시되어 있는가
 - `@Covers`가 붙은 JUnit Acceptance Test나 FE BDD `Covers` 메타데이터가 아직 저장소의 추적 대상 경로에 생성되지 않았는가?
 - Skeleton 코드에 실제 업무 로직이나 임시 성공 응답이 들어가지 않았는가
 
@@ -273,7 +275,7 @@ Skeleton 승인 전까지는 "인터페이스와 계약"까지만 만든다.
 - `previewSchema` 산출물
 - 화면/라우팅 Skeleton: 화면 이름, 업무 진입점, 예상 route 초안, 접근 권한, 주요 표시 정보. 카드의 `BDD 테스트 리뷰 > 요건 Skeleton 승인 이력`에 한두 줄로 남긴다.
 - FE route placeholder 또는 타입/인터페이스 초안. 실제 화면 구현 없이 컴파일을 위해 필요한 최소 수준만 허용한다.
-- Storybook 상태 목록 초안. 실제 Story 구현은 승인 후 작성한다.
+- route 기준 page mock story와 Storybook 상태 목록 초안. 실제 Story 구현은 승인 후 작성한다.
 
 금지:
 
@@ -359,6 +361,8 @@ void pageResponseShapeContainsAllFields() {
 시나리오 문서와 Acceptance Test 연결 규칙의 세부는 [`acceptance-test.md`](../standards/acceptance-test.md)에 둔다.
 
 FE 테스트 계층은 [`front-end-testing.md`](../standards/front-end-testing.md)를 따른다. FE BDD 테스트는 Playwright `test.info().annotations.push(...)`에 `Requirement`/`Covers` literal 메타데이터를 남긴다. 하네스는 `generateFrontEndSourceIndex`로 이 값을 읽고, 전체 Playwright JSON 결과(`front-end/test-results/e2e-results.json`)와 병합해 RED/GREEN/BLUE를 판정한다. 부분 Playwright 실행 결과(`front-end/test-results/e2e-results.partial.json`)는 디버깅용이며 하네스 입력이 아니다.
+
+FE 구현에서 route/page를 추가하거나 변경하면 같은 구현 단위에서 route 기준 page mock story를 작성하거나 갱신한다. page mock story는 실제 page 컴포넌트를 `MemoryRouter`, mock auth provider, mock API provider처럼 필요한 최소 provider로 감싸 route 진입 화면을 Storybook에서 확인할 수 있게 만든다. 공통 UI primitive(`front-end/src/components/ui`) 또는 주요 화면 조각을 추가하거나 변경할 때도 Storybook story를 작성하거나 갱신한다. Storybook은 완료 판정의 직접 근거가 아니라 상태 카탈로그와 visual regression 기준 화면이므로, story에는 `parameters.harness.requirements`로 관련 요건을 연결하고 normal/disabled/loading/error/open/empty 같은 사용자가 관찰할 상태를 고정한다. Skeleton 단계에서는 story 목록만 승인받고 실제 `*.stories.tsx` 구현은 승인 후 작성한다.
 
 ## 테스트 리뷰 체크리스트
 

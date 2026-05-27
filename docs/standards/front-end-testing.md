@@ -156,7 +156,7 @@ BDD Scenario
   -> E2E Screenshot
 ```
 
-- Story는 상태 카탈로그다.
+- Story는 상태 카탈로그이며, route가 있는 page는 route 기준 page mock story로 첫 화면을 확인한다.
 - E2E는 사용자 흐름 검증이다.
 - Storybook story 이름은 요건 추적 ID가 아니다.
 - 요건 추적은 `Requirement` 값(`REQ-XXX`)과 `Covers`만 사용한다.

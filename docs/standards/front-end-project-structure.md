@@ -65,6 +65,7 @@ src/features/todo/
 ```
 
 - page 컴포넌트는 route 진입점이다.
+- page/route를 새로 만들거나 바꾸면 같은 구현 단위에서 `PageName.stories.tsx`를 추가하거나 갱신한다. 이 story는 실제 page 컴포넌트를 `MemoryRouter`와 필요한 mock provider로 감싸 route 기준 page mock을 보여준다.
 - feature 내부 컴포넌트는 해당 도메인에서만 재사용한다.
 - 도메인 간 공유가 확인된 뒤에만 `src/components/` 또는 `src/lib/`로 이동한다.
 - `routes.tsx` 는 그 feature 가 노출하는 `<Route>` JSX 묶음을 named export 한다 (`export const todoRoutes = (<>...</>)`). 가드/wrapper(`RequireAuth` 등)도 같이 둔다. `AppRouter` 가 이 묶음을 `<Routes>` 안에 합성한다.
@@ -77,6 +78,7 @@ shadcn/ui CLI 또는 shadcn/ui 규약으로 생성한 primitive 컴포넌트를 
 - 직접 수정은 허용하지만, 수정 이유가 디자인 시스템 규칙인지 단일 화면 임시 대응인지 구분한다.
 - `button.tsx`, `input.tsx`, `dialog.tsx`처럼 shadcn/ui 파일 단위를 유지한다.
 - 공통 variant는 `class-variance-authority`와 `cn()`으로 표현한다.
+- 공통 UI primitive를 추가하거나 동작/상태를 바꾸면 같은 구현 단위에서 `*.stories.tsx`를 추가하거나 갱신한다.
 
 ### `src/components/`
 

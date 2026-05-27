@@ -43,14 +43,15 @@ export function ProtectedHeader() {
       <header className="flex h-12 items-center justify-between border-b px-6">
         <div className="text-sm font-medium">BDD Workflow</div>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" aria-label="사용자 메뉴 열기">
-              <span>{user?.email ?? ""}</span>
-              <ChevronDown className="size-4" aria-hidden="true" />
-            </Button>
+          <DropdownMenuTrigger
+            render={<Button variant="ghost" size="sm" />}
+            aria-label="사용자 메뉴 열기"
+          >
+            <span>{user?.email ?? ""}</span>
+            <ChevronDown className="size-4" aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={handleLogout}>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="size-4" aria-hidden="true" />
               로그아웃
             </DropdownMenuItem>
