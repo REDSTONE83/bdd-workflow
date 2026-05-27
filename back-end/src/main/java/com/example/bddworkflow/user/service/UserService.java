@@ -8,7 +8,6 @@ import com.example.bddworkflow.user.domain.UserAccount;
 import com.example.bddworkflow.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,10 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserService {
 
-    private static final PasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
-
     private final UserRepository userRepository;
     private final CategorySeedService categorySeedService;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public SignupResponse signup(SignupRequest request) {
@@ -31,7 +29,7 @@ public class UserService {
         UserAccount account = userRepository.save(
                 request.name(),
                 request.email(),
-                PASSWORD_ENCODER.encode(request.password())
+                passwordEncoder.encode(request.password())
         );
 
         categorySeedService.seedDefaults(account.id());

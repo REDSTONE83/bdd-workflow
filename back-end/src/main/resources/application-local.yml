@@ -1,0 +1,6 @@
+# REQ-011: 로컬 개발 프로파일. Vite dev server + 로컬 BE 는 http://127.0.0.1 위에서
+# 동작하므로 Cookie Secure 를 끈다.
+app:
+  auth:
+    cookie:
+      secure: false

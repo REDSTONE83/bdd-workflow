@@ -83,6 +83,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 로그아웃
+         * @description Requirement: REQ-011
+         *
+         *     인증 여부와 무관하게 호출 가능하며, 로그인 시 발급한 Cookie 와 동일한 속성으로
+         *     즉시 만료시키는 Set-Cookie 를 응답한다.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 이메일·비밀번호 로그인
+         * @description Requirement: REQ-011
+         *
+         *     이메일과 비밀번호로 인증하고, 성공 시 access token 을 HttpOnly Cookie 로 발급한다.
+         *     응답 본문은 비어 있다.
+         */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/todos/{todoId}": {
         parameters: {
             query?: never;
@@ -139,6 +185,29 @@ export interface paths {
          *     color와 description은 명시적으로 null을 보내면 값을 비운다.
          */
         patch: operations["updateCategory"];
+        trace?: never;
+    };
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 현재 사용자 정보 조회
+         * @description Requirement: REQ-011
+         *
+         *     HttpOnly Cookie 환경에서 FE 가 자신의 로그인 상태와 사용자 표시 정보를
+         *     얻기 위한 단일 진입점.
+         */
+        get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -368,6 +437,19 @@ export interface components {
              */
             displayOrder?: number;
         };
+        /** @description 로그인 요청 */
+        LoginRequest: {
+            /**
+             * @description 이메일
+             * @example hong@example.com
+             */
+            email: string;
+            /**
+             * @description 비밀번호
+             * @example password123
+             */
+            password: string;
+        };
         JsonNullableBoolean: {
             present?: boolean;
         };
@@ -474,6 +556,20 @@ export interface components {
              * @example 7
              */
             totalPages?: number;
+        };
+        /** @description 현재 사용자 정보 */
+        UserMeResponse: {
+            /**
+             * Format: uuid
+             * @description 사용자 식별자
+             * @example 01910000-0000-7000-8000-000000000000
+             */
+            id?: string;
+            /**
+             * @description 사용자 이메일
+             * @example hong@example.com
+             */
+            email?: string;
         };
     };
     responses: never;
@@ -681,6 +777,64 @@ export interface operations {
             };
         };
     };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 로그아웃 처리 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description 인증 성공 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 요청 본문 형식 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 자격 증명 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     deleteTodo: {
         parameters: {
             query?: never;
@@ -863,6 +1017,35 @@ export interface operations {
             };
             /** @description 중복 카테고리 이름 */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 현재 사용자 정보 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserMeResponse"];
+                };
+            };
+            /** @description 인증 정보 없음 */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

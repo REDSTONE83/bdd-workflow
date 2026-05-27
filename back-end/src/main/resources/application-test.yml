@@ -1,0 +1,5 @@
+# REQ-011: 테스트 프로파일. Playwright/MockMvc 가 http 위에서 동작하므로 Secure 를 끈다.
+app:
+  auth:
+    cookie:
+      secure: false

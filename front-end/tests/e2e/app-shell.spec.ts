@@ -1,7 +1,15 @@
 import AxeBuilder from "@axe-core/playwright"
 import { expect, test } from "@playwright/test"
 
+import { installAuthRoutes } from "./_helpers/auth-mocks"
+
 test.describe("App shell", () => {
+  // REQ-005 화면은 인증과 무관하지만 AuthProvider 가 /auth/me 를 호출하므로
+  // BE 없이도 안정적으로 돌도록 401 mock 을 깔아둔다.
+  test.beforeEach(async ({ page }) => {
+    await installAuthRoutes(page, { authenticated: null })
+  })
+
   test("renders the React/Vite/shadcn foundation", async ({ page }, testInfo) => {
     testInfo.annotations.push(
       { type: "Requirement", description: "REQ-005" },

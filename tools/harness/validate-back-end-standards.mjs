@@ -400,9 +400,12 @@ for (const api of apis) {
     // C3: list endpoints (GET that returns multiple) must accept Pageable
     const isGet = api.http.startsWith('GET ');
     const httpPath = api.http.split(' ')[1] ?? '';
-    // heuristic: GET without a trailing {id} path variable is a list endpoint
+    // heuristic: GET without a trailing {id} path variable is a list endpoint,
+    // except for conventional singleton paths like /me, /current, /self that
+    // return the caller's own resource.
     const isItemFetch = /\/\{[^}]+\}$/.test(httpPath);
-    const looksLikeList = isGet && !isItemFetch;
+    const isSingletonFetch = /\/(me|current|self)$/.test(httpPath);
+    const looksLikeList = isGet && !isItemFetch && !isSingletonFetch;
     if (looksLikeList) {
         const hasPageable = params.some(p => isPageable(p.javaType));
         if (!hasPageable) {

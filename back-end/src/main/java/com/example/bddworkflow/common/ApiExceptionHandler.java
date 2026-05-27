@@ -1,5 +1,6 @@
 package com.example.bddworkflow.common;
 
+import com.example.bddworkflow.auth.exception.InvalidCredentialsException;
 import com.example.bddworkflow.category.exception.CategoryNotFoundException;
 import com.example.bddworkflow.category.exception.CategoryValidationException;
 import com.example.bddworkflow.category.exception.DuplicateCategoryNameException;
@@ -27,6 +28,15 @@ public class ApiExceptionHandler {
                                                         HttpServletRequest request) {
         return error(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", "이미 등록된 이메일입니다.",
                 List.of(new ApiError.FieldError("email", "이미 등록된 이메일입니다.")), request);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiError> handleInvalidCredentials(InvalidCredentialsException exception,
+                                                             HttpServletRequest request) {
+        // REQ-011 결정 #5: 가입되지 않은 이메일과 비밀번호 불일치를 구분하지 않고 동일 응답.
+        return error(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS",
+                "이메일 또는 비밀번호가 올바르지 않습니다.",
+                List.of(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

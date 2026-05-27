@@ -6,6 +6,15 @@ app:
       issuer: "bdd-workflow"
       audience: "bdd-workflow-api"
       clock-skew-seconds: 60
+      # REQ-011: 로그인 시 발급되는 access token 의 유효 기간 (초).
+      access-token-ttl-seconds: 3600
+    cookie:
+      # REQ-011: access token 을 담을 Cookie 의 속성. Secure 는 profile 에서 분기한다.
+      name: "ACCESS_TOKEN"
+      path: "/"
+      same-site: "Strict"
+      max-age-seconds: 3600
+      secure: false
 
 spring:
   application:
