@@ -224,7 +224,7 @@ AC 자체도 관계자 언어를 기본으로 한다. AC 작성 규칙은 [`requ
 
 - `null`, `명시적 null`, `필드`, `응답`, `request`, `response`
 - DTO/JSON 키 (`title`, `dueDate`, `priority`, `categoryId`, `content`, `totalElements` 등)
-- 오류 코드 (`VALIDATION_FAILED`, `INVALID_CATEGORY`, `TODO_NOT_FOUND` 등)
+- 오류 코드 (`INVALID_REQUEST`, `INVALID_CATEGORY`, `TODO_NOT_FOUND` 등)
 - HTTP 메서드/상태 코드, 헤더 이름, URL, 쿼리 파라미터 이름
 
 대신 다음과 같이 사용자 관찰 어휘로 옮긴다.

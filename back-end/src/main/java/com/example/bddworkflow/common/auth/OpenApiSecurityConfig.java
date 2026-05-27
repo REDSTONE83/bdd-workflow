@@ -29,15 +29,10 @@ public class OpenApiSecurityConfig {
     public static final String COOKIE_SCHEME_NAME = "cookieAuth";
 
     /**
-     * OpenAPI 문서에 노출되는 공개 endpoint 경로. {@link SecurityConfig#PUBLIC_PATHS} 와 의미가
-     * 같지만, Springdoc 의 내부 path (/v3/api-docs, /swagger-ui) 는 OpenAPI 문서에 표시되지
-     * 않으므로 여기서는 실제로 문서화되는 경로만 둔다.
+     * OpenAPI 문서에 노출되는 공개 endpoint 경로. Springdoc 내부 path 는 OpenAPI 문서에 표시되지
+     * 않아 {@link SecurityConfig#PUBLIC_APP_PATHS} 를 그대로 사용한다.
      */
-    private static final Set<String> PUBLIC_AUTH_PATHS = Set.of(
-            "/users/signup",
-            "/auth/login",
-            "/auth/logout"
-    );
+    private static final Set<String> PUBLIC_AUTH_PATHS = Set.copyOf(SecurityConfig.PUBLIC_APP_PATHS);
 
     @Bean
     public OpenAPI bddWorkflowOpenAPI() {

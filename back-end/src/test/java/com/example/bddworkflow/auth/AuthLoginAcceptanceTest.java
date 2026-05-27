@@ -106,19 +106,19 @@ class AuthLoginAcceptanceTest {
 
     @Test
     @Covers("이메일 또는 비밀번호가 비어 있거나 이메일 형식이 아닌 로그인 요청은 인증을 시도하기 전에 형식 검증 오류 응답으로 거절되고, 자격 증명 인증 실패 응답과 구분된다")
-    @DisplayName("형식 오류는 400 VALIDATION_FAILED 로 응답하고 401 자격 증명 실패와 구분된다")
+    @DisplayName("형식 오류는 400 INVALID_REQUEST 로 응답하고 401 자격 증명 실패와 구분된다")
     void invalidRequestFormatReturnsValidationError() throws Exception {
         perform("", PASSWORD)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
 
         perform(EMAIL, "")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
 
         perform("not-an-email", PASSWORD)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     }
 
     @Test

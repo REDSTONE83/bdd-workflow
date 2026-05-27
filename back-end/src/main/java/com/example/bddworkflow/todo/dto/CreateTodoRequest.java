@@ -1,8 +1,8 @@
 package com.example.bddworkflow.todo.dto;
 
-import com.example.bddworkflow.todo.domain.Priority;
-
+import com.example.bddworkflow.common.Strings;
 import com.example.bddworkflow.harness.Requirement;
+import com.example.bddworkflow.todo.domain.Priority;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -33,8 +33,7 @@ public record CreateTodoRequest(
         UUID categoryId
 ) {
     public CreateTodoRequest {
-        if (title != null) {
-            title = title.trim();
-        }
+        title = Strings.trimToNull(title);
+        description = Strings.trimToNull(description);
     }
 }

@@ -172,7 +172,7 @@
   결정: 할 일 수정은 PATCH 의미. 누락 필드는 유지, `description`/`dueDate`/`categoryId`는 명시적 `null`로 비울 수 있고 `title`/`priority`/`completed`는 `null` 거절. 완료 토글도 동일 PATCH의 `completed` 필드로 처리한다. 수정 시 모든 필드는 생성과 동일한 검증 규칙(trim, 길이, enum, ISO 날짜 형식, 카테고리 유효성)을 적용한다.
   이유: REQ-003 PATCH 정책과 통일해 API 표면을 줄이고, 수정 후에도 저장 상태가 검증 규칙을 만족하게 한다.
   결정자: Product Owner, Tech Lead
-  영향: `UpdateTodoRequest`는 ObjectNode 기반으로 "필드 미포함"과 "명시적 null"을 구분한다. 비허용 필드의 `null`은 400 `VALIDATION_FAILED`.
+  영향: `UpdateTodoRequest`는 `JsonNullable<T>` 기반으로 "필드 미포함"과 "명시적 null"을 구분한다. 비허용 필드의 `null`은 400 `INVALID_REQUEST`.
 
 - 결정일: 2026-05-21
   결정: 카테고리 삭제 시 연결된 본인 할 일의 `categoryId`를 `null`로 설정(SET NULL)한다. 할 일 자체는 유지된다.
@@ -190,7 +190,7 @@
   결정: 마감일은 ISO 8601 날짜(`YYYY-MM-DD`)만 사용한다. 시각은 다루지 않는다.
   이유: 할 일 관리 UX는 보통 날짜 단위이며 시각까지 다루면 스케줄 도구 영역이 된다.
   결정자: Product Owner
-  영향: DTO/Entity의 `dueDate` 타입은 `LocalDate`이며, 형식 위반은 400 `VALIDATION_FAILED`로 응답한다.
+  영향: DTO/Entity의 `dueDate` 타입은 `LocalDate`이며, 형식 위반은 400 `INVALID_REQUEST`로 응답한다.
 
 - 결정일: 2026-05-21 (2026-05-22 갱신)
   결정: 목록 기본 정렬은 `completed` 오름차순 → `priority` 내림차순(HIGH→MEDIUM→LOW) → `id` 오름차순. 클라이언트가 `sort`를 보내면 그 정렬이 기본 정렬을 덮어쓴다.
@@ -209,6 +209,12 @@
   이유: 생성된 할 일의 완료 상태는 항상 `false`로 고정되므로 입력 필드는 의미 중복이며, 비공식 입력 처리 정책을 본 카드 BDD로 고정할 필요가 없다.
   결정자: Product Owner, Tech Lead
   영향: `CreateTodoRequest`에 `completed` 필드를 두지 않는다. Jackson 설정상 알 수 없는 필드의 거동은 본 카드 BDD로 검증하지 않으며, 필요 시 후속 카드에서 보강한다.
+
+- 결정일: 2026-05-27
+  결정: 할 일 목록 sort 허용 키 화이트리스트는 `title`, `dueDate`, `createdAt` 세 개로 한정한다. 그 외 키가 들어오면 `400 INVALID_REQUEST` + `details[].field=sort`, `code=INVALID_FORMAT` 로 거절한다. 사용자가 sort 를 정한 경우 동률은 `id` 오름차순으로 끊는다.
+  이유: 표준 api-contract.md 의 sort key 화이트리스트 강제. 임의 컬럼 정렬을 허용하면 PII 컬럼이 정렬 키로 노출될 위험이 있다. 사용자 시점에서 의미가 있는 표시 가능 필드 세 개로 제한한다.
+  결정자: REDSTONE
+  영향: `TodoController.ALLOWED_SORT_KEYS` 와 `SortKeys.requireAllowed` 를 통해 정렬 키 검증을 컨트롤러 진입 단계에서 수행한다. 기본 정렬은 도메인 고정(`findAllByUserIdOrderedForListing`) 그대로다.
 
 ## BDD 테스트 리뷰
 

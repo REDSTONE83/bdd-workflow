@@ -18,7 +18,7 @@ Feature: 요건 카드 제목과 동등한 업무 언어 문장
   #   라우팅 자체가 AC인 경우에 한해 예외적으로 명시한다.
   # - GWT 본문은 관계자 언어, `Covers:`는 추적 메타.
   #   `null`, `응답`, `필드`, DTO/JSON 키(`title`, `dueDate`, `categoryId`, `content`, `totalElements`),
-  #   오류 코드(`VALIDATION_FAILED`, `INVALID_CATEGORY` 등)는 GWT에서 쓰지 말고 사용자 관찰 어휘로 옮긴다.
+  #   오류 코드(`INVALID_REQUEST`, `INVALID_CATEGORY` 등)는 GWT에서 쓰지 말고 사용자 관찰 어휘로 옮긴다.
   #   예: `null로 보낸다` → `비운다`/`선택하지 않는다`, `응답에 카테고리 정보가 포함된다` → `카테고리 이름과 색상이 보인다`,
   #       `INVALID_CATEGORY 오류 코드가 응답된다` → `사용할 수 없는 카테고리라는 안내가 보인다`.
   # - 정상 UI 흐름이 아닌 행위는 북마크/딥링크/뒤로가기/다중 기기/외부 통합 같은 실제 사용자 경로를 Given에 명시한다.

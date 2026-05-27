@@ -133,6 +133,17 @@ class TodoListPaginationApiAcceptanceTest {
                 .andExpect(jsonPath("$.content[5].title").value("T6"));
     }
 
+    @Test
+    @DisplayName("허용되지 않는 sort key 는 400 INVALID_REQUEST + sort 필드 INVALID_FORMAT 으로 거절된다 (TDD)")
+    void invalidSortKeyReturnsBadRequest() throws Exception {
+        seedSixTodos();
+        mockMvc.perform(get("/todos").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)).param("sort", "id,asc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.details[0].field").value("sort"))
+                .andExpect(jsonPath("$.details[0].code").value("INVALID_FORMAT"));
+    }
+
     /**
      * REQ-002 기본 정렬 결과:
      *   미완료 그룹: T3(HIGH) → T1(MEDIUM) → T5(MEDIUM) → T4(LOW)

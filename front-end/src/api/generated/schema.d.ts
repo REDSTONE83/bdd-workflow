@@ -214,7 +214,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description 회원 가입 요청 */
+        /** @description 회원 가입 요청. 이름은 trim, 이메일은 trim + 소문자 정규화 후 검증된다. */
         SignupRequest: {
             /**
              * @description 사용자 이름
@@ -227,10 +227,29 @@ export interface components {
              */
             email: string;
             /**
-             * @description 비밀번호
+             * @description 비밀번호 (8자 이상 72자 이하, ASCII 출력 가능 문자만 허용)
              * @example password123
              */
             password: string;
+        };
+        /** @description 회원 가입 응답 */
+        SignupResponse: {
+            /**
+             * Format: uuid
+             * @description 생성된 사용자 ID
+             * @example 01900000-0000-7000-8000-000000000000
+             */
+            userId?: string;
+            /**
+             * @description 이메일
+             * @example hong@example.com
+             */
+            email?: string;
+            /**
+             * @description 사용자 이름
+             * @example 홍길동
+             */
+            name?: string;
         };
         /** @description API 오류 응답 */
         ApiError: {
@@ -272,29 +291,15 @@ export interface components {
              */
             field?: string;
             /**
+             * @description 정규화된 사유 코드
+             * @example NOT_BLANK
+             */
+            code?: string;
+            /**
              * @description 필드 단위 오류 메시지
              * @example 이미 등록된 이메일입니다.
              */
             message?: string;
-        };
-        /** @description 회원 가입 응답 */
-        SignupResponse: {
-            /**
-             * Format: uuid
-             * @description 생성된 사용자 ID
-             * @example 01900000-0000-7000-8000-000000000000
-             */
-            userId?: string;
-            /**
-             * @description 이메일
-             * @example hong@example.com
-             */
-            email?: string;
-            /**
-             * @description 사용자 이름
-             * @example 홍길동
-             */
-            name?: string;
         };
         /** @description 할 일 생성 요청. 제목은 trim된 뒤 검증되고 저장된다. completed 필드는 받지 않으며 항상 false로 시작한다. */
         CreateTodoRequest: {

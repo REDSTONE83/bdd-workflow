@@ -4,29 +4,19 @@ import com.example.bddworkflow.user.domain.UserAccount;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<UserAccount, UUID> {
 
-    default boolean existsByEmail(String email) {
-        return existsByEmailIgnoreCase(normalize(email));
-    }
+    boolean existsByEmail(String email);
 
-    default Optional<UserAccount> findByEmail(String email) {
-        return findByEmailIgnoreCase(normalize(email));
-    }
+    Optional<UserAccount> findByEmail(String email);
 
+    /**
+     * 테스트/시드 진입점. 이메일 정규화는 DTO canonical constructor 가 끝낸 결과만 받는다.
+     */
     default UserAccount save(String name, String email, String passwordHash) {
-        return save(new UserAccount(null, name, normalize(email), passwordHash));
-    }
-
-    boolean existsByEmailIgnoreCase(String email);
-
-    Optional<UserAccount> findByEmailIgnoreCase(String email);
-
-    private static String normalize(String email) {
-        return email.trim().toLowerCase(Locale.ROOT);
+        return save(new UserAccount(null, name, email, passwordHash));
     }
 }

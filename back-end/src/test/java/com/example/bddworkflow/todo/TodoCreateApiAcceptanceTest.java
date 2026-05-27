@@ -118,7 +118,7 @@ class TodoCreateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("title"));
 
         assertThat(todoRepository.findAllByUserId(USER_ID, org.springframework.data.domain.Pageable.unpaged()).getContent()).isEmpty();
@@ -143,7 +143,7 @@ class TodoCreateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("title"));
 
         assertThat(todoRepository.findAllByUserId(USER_ID, org.springframework.data.domain.Pageable.unpaged()).getContent()).isEmpty();
@@ -168,7 +168,7 @@ class TodoCreateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("description"));
 
         assertThat(todoRepository.findAllByUserId(USER_ID, org.springframework.data.domain.Pageable.unpaged()).getContent()).isEmpty();
@@ -242,7 +242,7 @@ class TodoCreateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("dueDate"));
 
         assertThat(todoRepository.findAllByUserId(USER_ID, org.springframework.data.domain.Pageable.unpaged()).getContent()).isEmpty();
@@ -337,7 +337,7 @@ class TodoCreateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("priority"));
 
         assertThat(todoRepository.findAllByUserId(USER_ID, org.springframework.data.domain.Pageable.unpaged()).getContent()).isEmpty();

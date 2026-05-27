@@ -189,7 +189,7 @@ class TodoUpdateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\": null}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("title"));
         assertTodoUnchanged(existing);
     }
@@ -204,7 +204,7 @@ class TodoUpdateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"priority\": null}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("priority"));
         assertTodoUnchanged(existing);
     }
@@ -219,7 +219,7 @@ class TodoUpdateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"completed\": null}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("completed"));
         assertTodoUnchanged(existing);
     }
@@ -252,7 +252,7 @@ class TodoUpdateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\": \"   \"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("title"));
         assertTodoUnchanged(existing);
     }
@@ -268,7 +268,7 @@ class TodoUpdateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\": \"" + longTitle + "\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("title"));
         assertTodoUnchanged(existing);
     }
@@ -284,7 +284,7 @@ class TodoUpdateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"description\": \"" + longDesc + "\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("description"));
         assertTodoUnchanged(existing);
     }
@@ -299,7 +299,7 @@ class TodoUpdateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"dueDate\": \"2026/06/01\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("dueDate"));
         assertTodoUnchanged(existing);
     }
@@ -314,7 +314,7 @@ class TodoUpdateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"priority\": \"URGENT\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("priority"));
         assertTodoUnchanged(existing);
     }

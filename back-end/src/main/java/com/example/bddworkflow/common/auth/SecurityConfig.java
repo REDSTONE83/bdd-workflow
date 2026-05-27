@@ -21,20 +21,36 @@ import org.springframework.security.web.SecurityFilterChain;
 import javax.crypto.spec.SecretKeySpec;
 import java.time.Duration;
 import java.util.List;
+import java.util.stream.Stream;
 
 @Requirement({"REQ-004", "REQ-011"})
 @Configuration
 @EnableConfigurationProperties({JwtProperties.class, AuthCookieProperties.class})
 public class SecurityConfig {
 
-    public static final String[] PUBLIC_PATHS = {
+    /**
+     * OpenAPI 에 노출되는 인증 불필요 app endpoint. {@link OpenApiSecurityConfig} 가 같은 목록을
+     * 그대로 읽어 SecurityScheme 제외 대상으로 사용한다.
+     */
+    public static final List<String> PUBLIC_APP_PATHS = List.of(
             "/users/signup",
             "/auth/login",
-            "/auth/logout",
+            "/auth/logout"
+    );
+
+    /**
+     * Springdoc 내부 endpoint. OpenAPI 문서에는 노출되지 않으므로
+     * {@link OpenApiSecurityConfig} 의 SecurityScheme 적용 대상도 아니다.
+     */
+    private static final List<String> SPRINGDOC_PUBLIC_PATHS = List.of(
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html"
-    };
+    );
+
+    public static final String[] PUBLIC_PATHS = Stream
+            .concat(PUBLIC_APP_PATHS.stream(), SPRINGDOC_PUBLIC_PATHS.stream())
+            .toArray(String[]::new);
 
     @Bean
     public SecurityFilterChain securityFilterChain(

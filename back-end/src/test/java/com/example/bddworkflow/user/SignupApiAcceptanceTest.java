@@ -77,7 +77,8 @@ class SignupApiAcceptanceTest {
                         .content(requestBody))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DUPLICATE_EMAIL"))
-                .andExpect(jsonPath("$.details[0].field").value("email"));
+                .andExpect(jsonPath("$.details[0].field").value("email"))
+                .andExpect(jsonPath("$.details[0].code").value("DUPLICATE"));
     }
 
     @Test
@@ -98,8 +99,58 @@ class SignupApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.details[0].field").value("password"));
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.details[0].field").value("password"))
+                .andExpect(jsonPath("$.details[0].code").value("OUT_OF_LENGTH"));
+
+        assertThat(userRepository.existsByEmail("hong@example.com")).isFalse();
+    }
+
+    @Test
+    @DisplayName("비밀번호에 ASCII 출력 가능 문자가 아닌 글자가 섞이면 가입이 거절된다 (TDD)")
+    void signupWithNonAsciiPasswordReturnsBadRequest() throws Exception {
+        // Given: 한글이 섞인 비밀번호 (BCrypt 72바이트 한계와 글자 수를 일치시키기 위해 ASCII printable 만 허용)
+        String requestBody = """
+                {
+                  "name": "홍길동",
+                  "email": "hong@example.com",
+                  "password": "비밀번호password"
+                }
+                """;
+
+        // When / Then
+        mockMvc.perform(post("/users/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.details[0].field").value("password"))
+                .andExpect(jsonPath("$.details[0].code").value("INVALID_FORMAT"));
+
+        assertThat(userRepository.existsByEmail("hong@example.com")).isFalse();
+    }
+
+    @Test
+    @DisplayName("비밀번호가 72자를 초과하면 가입이 거절된다 (TDD, BCrypt 한계)")
+    void signupWithOverlyLongPasswordReturnsBadRequest() throws Exception {
+        // Given: 73 글자 비밀번호
+        String longPassword = "a".repeat(73);
+        String requestBody = """
+                {
+                  "name": "홍길동",
+                  "email": "hong@example.com",
+                  "password": "%s"
+                }
+                """.formatted(longPassword);
+
+        // When / Then
+        mockMvc.perform(post("/users/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.details[0].field").value("password"))
+                .andExpect(jsonPath("$.details[0].code").value("OUT_OF_LENGTH"));
 
         assertThat(userRepository.existsByEmail("hong@example.com")).isFalse();
     }

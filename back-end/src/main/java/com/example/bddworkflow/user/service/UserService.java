@@ -1,6 +1,7 @@
 package com.example.bddworkflow.user.service;
 
 import com.example.bddworkflow.category.service.CategorySeedService;
+import com.example.bddworkflow.harness.Requirement;
 import com.example.bddworkflow.user.exception.DuplicateEmailException;
 import com.example.bddworkflow.user.dto.SignupRequest;
 import com.example.bddworkflow.user.dto.SignupResponse;
@@ -12,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Requirement("REQ-001")
 @Service
 @RequiredArgsConstructor
 public class UserService {

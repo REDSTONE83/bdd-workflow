@@ -2,6 +2,8 @@ package com.example.bddworkflow.common;
 
 import org.openapitools.jackson.nullable.JsonNullable;
 
+import java.util.Locale;
+
 public final class Strings {
 
     private Strings() {
@@ -13,6 +15,11 @@ public final class Strings {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    public static String normalizeEmail(String value) {
+        String trimmed = trimToNull(value);
+        return trimmed == null ? null : trimmed.toLowerCase(Locale.ROOT);
     }
 
     /**

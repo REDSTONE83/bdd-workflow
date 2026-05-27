@@ -1,8 +1,8 @@
 package com.example.bddworkflow.todo.dto;
 
-import com.example.bddworkflow.todo.domain.Priority;
-
+import com.example.bddworkflow.common.Strings;
 import com.example.bddworkflow.harness.Requirement;
+import com.example.bddworkflow.todo.domain.Priority;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -50,14 +50,11 @@ public class UpdateTodoRequest {
     public JsonNullable<UUID> categoryId() { return categoryId; }
 
     public void setTitle(JsonNullable<String> title) {
-        if (!title.isPresent()) {
-            this.title = title;
-            return;
-        }
-        String v = title.get();
-        this.title = JsonNullable.of(v == null ? null : v.trim());
+        this.title = Strings.trimInsideNullable(title);
     }
-    public void setDescription(JsonNullable<String> description) { this.description = description; }
+    public void setDescription(JsonNullable<String> description) {
+        this.description = Strings.trimInsideNullable(description);
+    }
     public void setDueDate(JsonNullable<LocalDate> dueDate) { this.dueDate = dueDate; }
     public void setPriority(JsonNullable<Priority> priority) { this.priority = priority; }
     public void setCompleted(JsonNullable<Boolean> completed) { this.completed = completed; }

@@ -52,6 +52,12 @@
   결정자: Product Owner, Tech Lead
   영향: 특수문자, 숫자, 대소문자 조합은 검증하지 않는다.
 
+- 결정일: 2026-05-27
+  결정: 비밀번호는 8자 이상 72자 이하 ASCII 출력 가능 문자(U+0020 ~ U+007E)만 허용한다. 한글/이모지 등 멀티바이트 문자는 가입 시 거절한다.
+  이유: BCrypt 해시 알고리즘은 72바이트까지만 의미 있게 사용한다. `@Size(max=72)` 만으로는 자바 글자 수 기준이라 한글 24자(=72바이트) 이상에서 BCrypt 가 보이지 않게 잘라먹는 위험이 남는다. 입력 자체를 ASCII printable 로 좁히면 글자 수와 바이트 수가 일치해 BCrypt 한계와 검증 한계가 정확히 같아지고, 다국어 비밀번호의 "보이지 않는 잘림" 위험이 사라진다.
+  결정자: REDSTONE
+  영향: `SignupRequest.password` 에 `@Pattern("^[\\x20-\\x7E]+$")` 를 추가한다. 위반은 400 `INVALID_REQUEST` + `details[].field=password`, `code=INVALID_FORMAT`. 로그인 화면/`LoginRequest` 에는 같은 제약을 두지 않는다 (이 결정 이전에 가입된 legacy 계정의 비밀번호 입력을 막지 않기 위함, BCrypt 가 비교 시점에 동일하게 72바이트로 잘라 비교한다).
+
 ## BDD 테스트 리뷰
 
 - 시나리오 문서: docs/scenarios/REQ-001-email-signup.feature

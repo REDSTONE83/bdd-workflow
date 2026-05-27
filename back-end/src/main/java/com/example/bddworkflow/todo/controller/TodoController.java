@@ -7,6 +7,7 @@ import com.example.bddworkflow.todo.dto.UpdateTodoRequest;
 
 import com.example.bddworkflow.common.ApiError;
 import com.example.bddworkflow.common.PageResponse;
+import com.example.bddworkflow.common.SortKeys;
 import com.example.bddworkflow.common.auth.AuthenticatedUser;
 import com.example.bddworkflow.harness.Requirement;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -39,6 +42,10 @@ import java.util.UUID;
 @ApiResponses(@ApiResponse(responseCode = "401", description = "인증 누락 또는 실패",
         content = @Content(schema = @Schema(implementation = ApiError.class))))
 public class TodoController {
+
+    // REQ-002 의사결정 #(sort-keys, 2026-05-27): 기본 정렬은 도메인 고정(미완료 → 우선순위 → id),
+    // 사용자가 sort 를 직접 정하면 title/dueDate/createdAt 세 키만 허용한다. 다른 키는 InvalidSortKey 로 거절.
+    private static final Set<String> ALLOWED_SORT_KEYS = Set.of("title", "dueDate", "createdAt");
 
     private final TodoService todoService;
 
@@ -82,7 +89,8 @@ public class TodoController {
     @GetMapping
     public ResponseEntity<PageResponse<TodoResponse>> listTodos(
             @AuthenticationPrincipal AuthenticatedUser principal,
-            Pageable pageable) {
+            @PageableDefault(size = 20) Pageable pageable) {
+        SortKeys.requireAllowed(pageable.getSort(), ALLOWED_SORT_KEYS);
         return ResponseEntity.ok(todoService.listTodos(principal.id(), pageable));
     }
 

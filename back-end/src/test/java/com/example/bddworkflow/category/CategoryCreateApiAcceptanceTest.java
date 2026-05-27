@@ -109,7 +109,7 @@ class CategoryCreateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("name"));
 
         assertThat(categoryRepository.findAllByUserId(USER_ID, org.springframework.data.domain.Pageable.unpaged()).getContent()).isEmpty();
@@ -134,7 +134,7 @@ class CategoryCreateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("name"));
     }
 
@@ -157,7 +157,7 @@ class CategoryCreateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("description"));
     }
 
@@ -179,7 +179,7 @@ class CategoryCreateApiAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.details[0].field").value("color"));
     }
 

@@ -4,6 +4,7 @@ import com.example.bddworkflow.category.domain.Category;
 import com.example.bddworkflow.category.repository.CategoryRepository;
 import com.example.bddworkflow.common.PageResponse;
 import com.example.bddworkflow.harness.Requirement;
+
 import com.example.bddworkflow.todo.domain.Priority;
 import com.example.bddworkflow.todo.domain.Todo;
 import com.example.bddworkflow.todo.dto.CreateTodoRequest;
@@ -15,7 +16,9 @@ import com.example.bddworkflow.todo.exception.TodoNotFoundException;
 import com.example.bddworkflow.todo.repository.TodoRepository;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,11 +51,18 @@ public class TodoService {
         return toResponse(saved, lookupCategory(userId, saved.categoryId()));
     }
 
+    private static final Sort ID_TIEBREAKER = Sort.by(Sort.Order.asc("id"));
+
     @Transactional(readOnly = true)
     public PageResponse<TodoResponse> listTodos(UUID userId, Pageable pageable) {
-        Page<Todo> page = pageable.getSort().isUnsorted()
-                ? todoRepository.findAllByUserIdOrderedForListing(userId, pageable)
-                : todoRepository.findAllByUserId(userId, pageable);
+        Page<Todo> page;
+        if (pageable.getSort().isUnsorted()) {
+            page = todoRepository.findAllByUserIdOrderedForListing(userId, pageable);
+        } else {
+            Sort effectiveSort = pageable.getSort().and(ID_TIEBREAKER);
+            Pageable effective = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), effectiveSort);
+            page = todoRepository.findAllByUserId(userId, effective);
+        }
         Map<UUID, Category> categoriesById = loadCategoriesFor(userId, page.getContent());
         Page<TodoResponse> mapped = page.map(t ->
                 toResponse(t, t.categoryId() == null ? null : categoriesById.get(t.categoryId())));
@@ -107,6 +117,10 @@ public class TodoService {
         todoRepository.deleteById(existing.id());
     }
 
+    /**
+     * REQ-003 카테고리 삭제 시 비-cascade 연결 해제. 호출 트랜잭션 안에서 일괄 update 한다.
+     */
+    @Requirement("REQ-003")
     @Transactional
     public void detachCategoryFromAllTodos(UUID categoryId) {
         todoRepository.detachCategoryFromAllTodos(categoryId);

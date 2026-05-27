@@ -30,6 +30,8 @@ public record ApiError(
     public record FieldError(
             @Schema(description = "필드명", example = "email")
             String field,
+            @Schema(description = "정규화된 사유 코드", example = "NOT_BLANK")
+            String code,
             @Schema(description = "필드 단위 오류 메시지", example = "이미 등록된 이메일입니다.")
             String message
     ) {

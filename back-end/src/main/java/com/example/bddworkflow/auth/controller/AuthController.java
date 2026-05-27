@@ -2,6 +2,7 @@ package com.example.bddworkflow.auth.controller;
 
 import com.example.bddworkflow.auth.dto.LoginRequest;
 import com.example.bddworkflow.auth.dto.UserMeResponse;
+import com.example.bddworkflow.auth.service.AccessTokenCookieFactory;
 import com.example.bddworkflow.auth.service.AuthService;
 import com.example.bddworkflow.common.ApiError;
 import com.example.bddworkflow.common.auth.AuthenticatedUser;
@@ -38,6 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final AccessTokenCookieFactory cookieFactory;
 
     @Requirement("REQ-011")
     @Operation(
@@ -85,7 +87,7 @@ public class AuthController {
     })
     @PostMapping("/logout")
     public ResponseEntity<Void> logout() {
-        ResponseCookie expired = authService.buildLogoutCookie();
+        ResponseCookie expired = cookieFactory.expire();
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, expired.toString())
                 .build();

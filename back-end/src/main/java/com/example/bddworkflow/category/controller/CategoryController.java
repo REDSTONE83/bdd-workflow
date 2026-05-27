@@ -8,6 +8,7 @@ import com.example.bddworkflow.category.dto.UpdateCategoryRequest;
 
 import com.example.bddworkflow.common.ApiError;
 import com.example.bddworkflow.common.PageResponse;
+import com.example.bddworkflow.common.SortKeys;
 import com.example.bddworkflow.common.auth.AuthenticatedUser;
 import com.example.bddworkflow.harness.Requirement;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +20,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -40,6 +44,9 @@ import java.util.UUID;
 @ApiResponses(@ApiResponse(responseCode = "401", description = "인증 누락 또는 실패",
         content = @Content(schema = @Schema(implementation = ApiError.class))))
 public class CategoryController {
+
+    // REQ-003: 카테고리 목록은 사용자 표시 순서를 기준으로 한다. id 는 동률 보조 정렬이므로 클라이언트에 노출하지 않는다.
+    private static final Set<String> ALLOWED_SORT_KEYS = Set.of("displayOrder");
 
     private final CategoryService categoryService;
 
@@ -85,7 +92,8 @@ public class CategoryController {
     @GetMapping
     public ResponseEntity<PageResponse<CategoryResponse>> listCategories(
             @AuthenticationPrincipal AuthenticatedUser principal,
-            Pageable pageable) {
+            @PageableDefault(size = 20, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable pageable) {
+        SortKeys.requireAllowed(pageable.getSort(), ALLOWED_SORT_KEYS);
         return ResponseEntity.ok(categoryService.listCategories(principal.id(), pageable));
     }
 

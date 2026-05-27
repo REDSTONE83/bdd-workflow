@@ -58,15 +58,12 @@ public class CategoryService {
         );
     }
 
-    private static final Sort DEFAULT_LIST_SORT = Sort.by(Sort.Order.asc("displayOrder"), Sort.Order.asc("id"));
+    private static final Sort ID_TIEBREAKER = Sort.by(Sort.Order.asc("id"));
 
     @Transactional(readOnly = true)
     public PageResponse<CategoryResponse> listCategories(UUID userId, Pageable pageable) {
-        Pageable effective = pageable.getSort().isUnsorted()
-                ? (pageable.isPaged()
-                        ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), DEFAULT_LIST_SORT)
-                        : PageRequest.of(0, Integer.MAX_VALUE, DEFAULT_LIST_SORT))
-                : pageable;
+        Sort effectiveSort = pageable.getSort().and(ID_TIEBREAKER);
+        Pageable effective = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), effectiveSort);
         Page<CategoryResponse> page = categoryRepository.findAllByUserId(userId, effective)
                 .map(category -> new CategoryResponse(
                         category.id(),
