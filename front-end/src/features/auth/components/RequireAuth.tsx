@@ -15,7 +15,13 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   if (state.status === "checking") {
     return (
-      <div data-testid="auth-skeleton" aria-busy="true" className="min-h-svh">
+      <div
+        data-testid="auth-skeleton"
+        role="status"
+        aria-busy="true"
+        aria-live="polite"
+        className="min-h-svh"
+      >
         <div className="h-12 border-b" />
         <div className="px-6 py-6 text-sm text-muted-foreground">불러오는 중...</div>
       </div>

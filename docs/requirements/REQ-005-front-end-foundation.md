@@ -57,6 +57,12 @@
   결정자: Product Owner, Tech Lead
   영향: REQ-005의 모바일 수용 기준과 Playwright 테스트를 데스크톱 기준으로 바꾼다.
 
+- 결정일: 2026-05-27
+  결정: `/` 경로는 자체 화면을 두지 않고 인증 상태에 따라 `/login` 또는 `/todos` 로 redirect 한다. 앱 셸 수용 기준은 비인증 진입점인 `/login` 화면 셸에서 검증한다.
+  이유: `front-end-ui.md` 의 "장식 hero 금지", "첫 화면은 실제 사용 가능한 화면" 표준과 REQ-011 인증 흐름 도입에 맞춘다. 기존 `App.tsx` 의 foundation hero 는 표준 위반이고 인증 사용자에게는 워크스페이스 진입에 방해가 된다.
+  결정자: REDSTONE
+  영향: `src/App.tsx`/`src/App.test.tsx` 제거, `src/app/RootRedirect.tsx` 가 `/` 라우트를 보유, `app-shell.spec.ts` 는 `/login` 화면 셸 기준으로 갱신. AC 문장은 그대로 유지한다.
+
 ## BDD 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-005-front-end-foundation.feature`

@@ -28,7 +28,7 @@ front-end/
         components/
         hooks/
         pages/
-        routes.tsx
+        routes.tsx        # feature 가 노출하는 Route JSX 묶음 (AppRouter 가 모은다)
         types.ts
     lib/
     test/
@@ -44,6 +44,8 @@ front-end/
 
 - 도메인 업무 로직을 두지 않는다.
 - 전역 레이아웃은 route shell과 분리해 관리한다.
+- 도메인에 속하지 않는 글로벌 라우트 — `/` 진입점 redirect, 404 fallback 등 — 도 이곳에 둔다.
+- 라우트 합성은 `app/AppRouter.tsx` 에서 각 feature 의 `routes.tsx` 를 import 해 모은다.
 
 ### `src/features/{domain}/`
 
@@ -65,6 +67,8 @@ src/features/todo/
 - page 컴포넌트는 route 진입점이다.
 - feature 내부 컴포넌트는 해당 도메인에서만 재사용한다.
 - 도메인 간 공유가 확인된 뒤에만 `src/components/` 또는 `src/lib/`로 이동한다.
+- `routes.tsx` 는 그 feature 가 노출하는 `<Route>` JSX 묶음을 named export 한다 (`export const todoRoutes = (<>...</>)`). 가드/wrapper(`RequireAuth` 등)도 같이 둔다. `AppRouter` 가 이 묶음을 `<Routes>` 안에 합성한다.
+- 요건/경로/페이지명 추적 메타데이터(JSDoc `@Requirement` `@Route` `@Page`)는 page 파일 또는 `src/app/` 진입 파일에 둔다. `routes.tsx` 는 plumbing 이므로 metadata 를 다시 쓰지 않는다.
 
 ### `src/components/ui/`
 
@@ -151,8 +155,10 @@ Something.stories.tsx # Storybook story
 - `full-stack`: 같은 수용 기준을 API와 화면 양쪽에서 검증한다.
 
 화면/route가 요건에 연결되어야 하는 경우 파일 상단 JSDoc 블록의 태그로 표시한다.
-React Fast Refresh 가 비-컴포넌트 export 를 경고하므로, 컴포넌트 파일에 별도
-`export const harness = {...}` 객체를 두지 않는다.
+요건 메타데이터는 JSDoc 단일 방식으로 통일하며, 컴포넌트/훅/유틸 어느 파일에도 별도
+`export const harness = {...}` 객체를 두지 않는다. React Fast Refresh 가 비-컴포넌트
+export 를 경고하고, 하네스 소스 인덱서도 JSDoc 만 읽으므로 객체 표기는 dead metadata 다.
+Storybook story 만 예외로 `parameters.harness.requirements` 객체를 사용한다.
 
 ```ts
 /**

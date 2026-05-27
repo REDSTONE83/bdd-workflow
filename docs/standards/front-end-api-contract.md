@@ -17,10 +17,11 @@
 src/api/
   client.ts
   generated/
-  errors.ts
   auth.ts
   todo.ts
 ```
+
+`errors.ts` 같은 공통 에러 매핑 모듈은 표준화된 오류 변환이 필요한 시점에 도입한다. 단일 도메인만 다루는 동안에는 도메인 모듈 안에서 처리해도 된다.
 
 ### `client.ts`
 
@@ -47,12 +48,14 @@ Spring Boot OpenAPI JSON 기반 생성 타입과 클라이언트를 둔다.
 도메인별 API 호출 함수를 둔다.
 
 ```text
+src/api/auth.ts
 src/api/todo.ts
 ```
 
-- 함수명은 사용자 행위나 유스케이스를 표현한다.
+- 함수명은 사용자 행위나 유스케이스를 표현한다 (`fetchCurrentUser`, `loginWithCredentials`, `logout` 등).
 - DTO shape를 화면 컴포넌트에 흘리지 않고 필요한 view model로 변환한다.
 - 빈 값, 날짜, 페이지네이션 기본값은 백엔드 계약과 충돌하지 않게 한 곳에서 처리한다.
+- AuthProvider / 도메인 hook / page 는 이 모듈만 호출하고 `apiClient` 를 직접 사용하지 않는다. `@UsesApi` 정적 추적은 호출 측 (Provider/Page) 의 JSDoc 에 그대로 둔다.
 
 ### 화면 API 사용 계약
 

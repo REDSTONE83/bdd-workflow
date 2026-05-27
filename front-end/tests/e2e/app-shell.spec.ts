@@ -4,8 +4,8 @@ import { expect, test } from "@playwright/test"
 import { installAuthRoutes } from "./_helpers/auth-mocks"
 
 test.describe("App shell", () => {
-  // REQ-005 화면은 인증과 무관하지만 AuthProvider 가 /auth/me 를 호출하므로
-  // BE 없이도 안정적으로 돌도록 401 mock 을 깔아둔다.
+  // / 는 인증 상태에 따라 /todos 또는 /login 으로 redirect 한다.
+  // 비인증 진입점인 /login 화면 셸을 기준으로 REQ-005 의 앱 셸 수용 기준을 확인한다.
   test.beforeEach(async ({ page }) => {
     await installAuthRoutes(page, { authenticated: null })
   })
@@ -17,12 +17,9 @@ test.describe("App shell", () => {
     )
 
     await page.goto("/")
-
-    await expect(
-      page.getByRole("heading", { name: "Front-end foundation" }),
-    ).toBeVisible()
-    await expect(page.getByRole("button", { name: "Start a screen" })).toBeVisible()
-    await expect(page.getByText("shadcn/ui component registry ready")).toBeVisible()
+    await expect(page).toHaveURL(/\/login$/)
+    await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible()
+    await expect(page.getByRole("button", { name: "로그인" })).toBeVisible()
   })
 
   test("keeps the shell inside the desktop viewport", async ({ page }, testInfo) => {
@@ -35,9 +32,9 @@ test.describe("App shell", () => {
     )
 
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto("/")
+    await page.goto("/login")
 
-    await expect(page.getByRole("heading", { name: "Front-end foundation" })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible()
 
     const hasHorizontalOverflow = await page.evaluate(() => {
       return document.documentElement.scrollWidth > document.documentElement.clientWidth
@@ -51,7 +48,7 @@ test.describe("App shell", () => {
       { type: "Covers", description: "자동 접근성 검사에서 위반이 없어야 한다" },
     )
 
-    await page.goto("/")
+    await page.goto("/login")
 
     const results = await new AxeBuilder({ page }).analyze()
 
