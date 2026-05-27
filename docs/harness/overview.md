@@ -183,7 +183,7 @@ npm run validate
 
 루트 `npm run validate`는 내부적으로 `back-end`의 `validateHarness` Gradle 태스크를 호출한다. Java 테스트와 JavaParser source index 생성은 Gradle 소유라 Gradle 태스크를 유지하되, 작업자는 루트에서 통합 게이트를 실행한다.
 
-이 명령은 테스트를 먼저 실행한 뒤, 요건 카드와 코드(API, Entity, Acceptance Test, FE BDD 테스트) 연결 상태를 검사한다. 알려지지 않은 요건 ID가 하나라도 섞여 있으면 실패한다. FE BDD 테스트 결과는 `front-end/test-results/e2e-results.json`을 읽는다. FE 대상 카드가 있으면 `cd front-end && npm run e2e` 또는 `npm run validate:full`로 Playwright JSON 결과를 먼저 갱신한다.
+이 명령은 테스트를 먼저 실행한 뒤, 요건 카드와 코드(API, Entity, Acceptance Test, FE BDD 테스트) 연결 상태를 검사한다. 알려지지 않은 요건 ID가 하나라도 섞여 있으면 실패한다. FE BDD 테스트 결과는 `front-end/test-results/e2e-results.json`만 읽는다. 부분 Playwright 실행은 `front-end/test-results/e2e-results.partial.json`에 기록되므로 FE 대상 카드가 있으면 `cd front-end && npm run e2e` 또는 `npm run validate:full`로 전체 Playwright JSON 결과를 먼저 갱신한다.
 
 백엔드 상세 태스크를 직접 실행해야 할 때는 다음 호환 진입점을 쓴다.
 

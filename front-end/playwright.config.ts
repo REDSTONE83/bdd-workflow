@@ -1,10 +1,14 @@
 import { defineConfig, devices } from "@playwright/test"
 
+const e2eResultsFile =
+  process.env.E2E_RESULTS_FILE ?? "test-results/e2e-results.partial.json"
+
 export default defineConfig({
   testDir: "./tests/e2e",
+  outputDir: "test-results/artifacts",
   reporter: [
     ["list"],
-    ["json", { outputFile: "test-results/e2e-results.json" }],
+    ["json", { outputFile: e2eResultsFile }],
     ["html", { open: "never" }],
   ],
   use: {

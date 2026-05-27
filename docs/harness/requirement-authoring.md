@@ -358,7 +358,7 @@ void pageResponseShapeContainsAllFields() {
 
 시나리오 문서와 Acceptance Test 연결 규칙의 세부는 [`acceptance-test.md`](../standards/acceptance-test.md)에 둔다.
 
-FE 테스트 계층은 [`front-end-testing.md`](../standards/front-end-testing.md)를 따른다. FE BDD 테스트는 Playwright `test.info().annotations.push(...)`에 `Requirement`/`Covers` literal 메타데이터를 남긴다. 하네스는 `generateFrontEndSourceIndex`로 이 값을 읽고, Playwright JSON 결과(`front-end/test-results/e2e-results.json`)와 병합해 RED/GREEN/BLUE를 판정한다.
+FE 테스트 계층은 [`front-end-testing.md`](../standards/front-end-testing.md)를 따른다. FE BDD 테스트는 Playwright `test.info().annotations.push(...)`에 `Requirement`/`Covers` literal 메타데이터를 남긴다. 하네스는 `generateFrontEndSourceIndex`로 이 값을 읽고, 전체 Playwright JSON 결과(`front-end/test-results/e2e-results.json`)와 병합해 RED/GREEN/BLUE를 판정한다. 부분 Playwright 실행 결과(`front-end/test-results/e2e-results.partial.json`)는 디버깅용이며 하네스 입력이 아니다.
 
 ## 테스트 리뷰 체크리스트
 

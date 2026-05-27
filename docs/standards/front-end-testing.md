@@ -75,7 +75,9 @@ test("사용자가 할 일 목록을 확인한다", async ({ page }) => {
 
 `generateFrontEndSourceIndex`는 위 literal annotation만 AC 커버리지 대상으로 수집한다. `type`은 `Requirement`와 `Covers`를 사용한다. 동적으로 만든 annotation 객체는 추적 누락을 막기 위해 source index issue로 보고한다.
 
-Playwright JSON 결과는 `front-end/test-results/e2e-results.json`으로 남긴다. `traceRequirements`와 `validateHarness`는 FE BDD 테스트 상태를 이 파일에서 읽는다. FE 대상 카드가 있으면 `npm run e2e` 또는 `npm run validate:full`을 먼저 실행해 결과를 갱신한다.
+Playwright 전체 실행 결과는 `front-end/test-results/e2e-results.json`으로 남긴다. `traceRequirements`와 `validateHarness`는 FE BDD 테스트 상태를 이 파일에서만 읽는다. `npm run e2e`와 `npm run validate:full`만 이 canonical 결과 파일을 갱신한다.
+
+개별 spec 또는 `-g` 필터로 부분 실행할 때는 `npm run e2e:partial -- ...` 또는 직접 `playwright test ...`를 사용한다. 부분 실행의 JSON 결과는 기본적으로 `front-end/test-results/e2e-results.partial.json`에 기록하며, canonical 결과를 덮어쓰지 않는다. FE 대상 카드 검증 전에는 반드시 `npm run e2e` 또는 `npm run validate:full`로 전체 결과를 새로 갱신한다.
 
 ## DOM 기반 스타일 검증
 
