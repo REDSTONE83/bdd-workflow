@@ -211,9 +211,18 @@ public class JacksonConfig {
 - 요청 본문에 알 수 없는 필드가 오면 400 `INVALID_REQUEST`로 거절한다.
 - API 진화 시 deprecated 필드는 명시적으로 DTO에 유지하고, 제거할 때 한 릴리스 사이클의 deprecation 안내를 둔다.
 
+### 단건 GET과 목록 GET 구분
+
+GET endpoint가 path variable 없이 열려 있더라도 항상 목록 조회는 아니다.
+
+- `/auth/me`, `/profile`, `/settings`처럼 현재 인증 actor 기준의 단일 리소스를 반환하는 endpoint는 단건 조회다. 이 경우 `Pageable`을 받지 않고 `PageResponse<T>`를 반환하지 않는다.
+- 단건 GET은 요건 카드와 OpenAPI 설명에서 "현재 사용자", "내 프로필", "내 설정"처럼 actor 기준 singleton임을 분명히 한다.
+- 새 단건 GET 경로가 목록 조회와 혼동될 수 있으면 `/me`, `/current`, `/self` 같은 singleton 의미가 드러나는 path segment를 사용하거나, path variable 기반 단건 조회로 모델링한다.
+- 실제 목록 조회, lookup, enum 목록, 작은 고정 컬렉션은 아래 Pagination / Sorting 기본을 따른다.
+
 ### Pagination / Sorting 기본
 
-목록 조회는 **예외 없이** 다음을 따른다. lookup, enum 목록, 작은 고정 컬렉션도 동일하게 페이징을 적용한다. (일관된 클라이언트 처리, 향후 데이터 증가 대비.)
+목록 조회로 정의된 endpoint는 **예외 없이** 다음을 따른다. lookup, enum 목록, 작은 고정 컬렉션도 동일하게 페이징을 적용한다. (일관된 클라이언트 처리, 향후 데이터 증가 대비.)
 
 - 쿼리 파라미터: `page` (0부터), `size` (기본 20, 최대 100), `sort` (`field,asc` 또는 `field,desc`).
 - 컨트롤러 시그니처는 Spring Data `Pageable`을 받는다. (`@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)` 등으로 도메인 기본을 명시.)
@@ -274,6 +283,7 @@ private static final Set<String> ALLOWED_SORT_KEYS = Set.of("createdAt", "name")
 
 - `validateHarness`: 컨트롤러의 `@Requirement` ID가 카드에 존재하는지, 카드의 수용 기준이 테스트로 커버되는지 검사.
 - `generateHarnessSourceIndex`: JavaParser로 컨트롤러를 파싱해 source index를 만든다. 결과는 `build/harness/indexes/backend.source-index.json`.
+- `validateStandards` C3: 목록 GET이 `Pageable`과 `PageResponse<T>`를 사용하는지 검사한다. `/me`, `/current`, `/self`로 끝나는 현재 actor 기준 singleton GET은 목록 조회로 보지 않는다.
 
 ## 수동 리뷰 항목
 
@@ -282,5 +292,6 @@ private static final Set<String> ALLOWED_SORT_KEYS = Set.of("createdAt", "name")
 - DTO의 Bean Validation이 수용 기준의 입력 정책을 반영하는가
 - OpenAPI 설명이 사용자가 읽기에 충분한가
 - PATCH 본문 처리에서 `JsonNullable<T>` 기반으로 누락과 명시적 `null`이 올바로 구분되는가
+- path variable 없는 GET이 단건 singleton인지 목록인지 요건 카드와 OpenAPI 설명에서 구분되는가
 - 목록 API가 `Pageable`을 받아 `{content,page,size,totalElements,totalPages}` 형식으로 응답하는가
 - 목록 정렬 기본값이 요건 카드 의사결정 로그에 명시되었는가

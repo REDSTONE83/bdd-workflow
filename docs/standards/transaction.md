@@ -8,6 +8,8 @@
 - 읽기 전용 메서드는 `@Transactional(readOnly = true)`.
 - 쓰기 메서드는 `@Transactional`. (전파/격리는 기본값을 사용한다.)
 - 한 비즈니스 단위 = 한 서비스 메서드 = 한 트랜잭션이 기본이다. 여러 서비스를 묶어야 하는 경우 호출 측 서비스에 트랜잭션을 둔다.
+- Skeleton 단계에서 본문이 `UnsupportedOperationException`으로 닫혀 있어도 public 서비스 메서드는 같은 규칙을 따른다. 조회 계약은 `@Transactional(readOnly = true)`, 쓰기·발급·상태 변경 계약은 `@Transactional`을 메서드 레벨에 명시한다.
+- 트랜잭션 경계가 필요 없는 순수 helper는 public `@Service` 메서드로 노출하지 않는다. private 메서드로 두거나, 별도 component의 명확한 순수 함수 계약으로 분리한다.
 
 ```java
 @Service
@@ -83,6 +85,7 @@ spring:
 ## 수동 리뷰 항목
 
 - 쓰기 메서드에 `@Transactional`, 읽기 메서드에 `@Transactional(readOnly = true)`가 명시되었는가
+- Skeleton 메서드도 public 서비스 계약이라면 메서드 레벨 트랜잭션이 명시되었는가
 - 도메인 부수효과(시드, 연결해제 등)가 같은 트랜잭션 안에서 수행되는가
 - `CascadeType.REMOVE` / DB cascade가 표준이 금지하는 영역에서 쓰이지 않았는가
 - 외부 호출이 트랜잭션 안에서 직접 수행되지 않는가

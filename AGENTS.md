@@ -68,6 +68,7 @@ front-end/tools/**/*
 런타임 정책:
 
 - [`auth.md`](docs/standards/auth.md): 인증/행위자 식별 (JWT Bearer)
+- [`configuration.md`](docs/standards/configuration.md): `app.*` 프로젝트 소유 설정, typed binding, profile override 정책
 - [`transaction.md`](docs/standards/transaction.md): 서비스 트랜잭션 경계와 부수효과
 - [`validation.md`](docs/standards/validation.md): DTO Bean Validation과 서비스 명세 검증 분담, 정규화
 

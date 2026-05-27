@@ -30,6 +30,7 @@
 런타임 정책:
 
 - [`auth.md`](./auth.md): 인증/행위자 식별 (JWT Bearer)
+- [`configuration.md`](./configuration.md): `app.*` 프로젝트 소유 설정, typed binding, profile override 정책
 - [`transaction.md`](./transaction.md): 서비스 트랜잭션 경계, 부수효과 (시드, 연결해제)
 - [`validation.md`](./validation.md): DTO Bean Validation과 서비스 명세 검증 분담, 정규화
 
@@ -59,4 +60,5 @@
 - `Long id` + `GenerationType.IDENTITY` → 시간 정렬 UUID ([`id-policy.md`](./id-policy.md))
 - 비페이징 목록 응답 → `PageResponse<T>` + `Pageable` ([`api-contract.md`](./api-contract.md))
 - `application.yml`의 `spring.jackson.*` → `Jackson2ObjectMapperBuilderCustomizer` ([`api-contract.md`](./api-contract.md))
+- 미바인딩 `app.*` 프로젝트 설정 → typed `@ConfigurationProperties` 또는 명시적 예외 기록 ([`configuration.md`](./configuration.md))
 - 프런트엔드가 필요한 기존 BLUE 요건 → 별도 FE 마이그레이션 REQ 발급 후 `front-end` 또는 `full-stack` 구현 대상으로 진행 ([`front-end-project-structure.md`](./front-end-project-structure.md))
