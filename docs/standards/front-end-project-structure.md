@@ -150,23 +150,30 @@ Something.stories.tsx # Storybook story
 - `front-end`: API/DB 변경 없이 화면, 라우팅, 클라이언트 상태, 데스크톱 시각/접근성 품질을 구현한다.
 - `full-stack`: 같은 수용 기준을 API와 화면 양쪽에서 검증한다.
 
-화면/route/story가 요건에 연결되어야 하는 경우 파일 상단 JSDoc 또는 exported metadata를 사용한다.
+화면/route가 요건에 연결되어야 하는 경우 파일 상단 JSDoc 블록의 태그로 표시한다.
+React Fast Refresh 가 비-컴포넌트 export 를 경고하므로, 컴포넌트 파일에 별도
+`export const harness = {...}` 객체를 두지 않는다.
 
 ```ts
-export const harness = {
-  requirements: ["REQ-002"],
-  route: "/todos",
-  page: "TodoListPage",
+/**
+ * @Requirement REQ-002
+ * @Route /todos
+ * @Page TodoListPage
+ */
+export function TodoListPage() {
+  // ...
 }
 ```
 
-지원하는 필드:
+지원하는 태그:
 
-- `requirements` 또는 `requirementIds`: `REQ-XXX` 배열.
-- `route`, `path`, `routePath`: 화면 route.
-- `page`, `screen`, `name`: 화면 이름.
+- `@Requirement REQ-XXX` (또는 `@Requirement REQ-XXX, REQ-YYY` 로 다중 연결): `REQ-XXX` 형식.
+- `@Route /path`: 화면 route. 페이지 파일에만 의미가 있다.
+- `@Page PageName`: 화면 이름. 페이지 파일에만 의미가 있다.
 
-Storybook story는 default export 또는 story export의 `parameters.harness.requirements`로 요건을 연결할 수 있다.
+JSDoc 블록은 파일 상단 60줄 안에 있어야 `source-index.mjs` 가 인식한다. import 보다 위에 두는 것을 권장한다.
+
+Storybook story 는 컴포넌트가 아니므로 JSDoc 대신 default export 또는 story export 의 `parameters.harness.requirements` 객체 메타데이터로 요건을 연결한다.
 
 ```ts
 export default {

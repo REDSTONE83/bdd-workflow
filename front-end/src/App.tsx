@@ -1,3 +1,8 @@
+/**
+ * @Requirement REQ-005
+ * @Route /
+ * @Page Front-end foundation
+ */
 import { ArrowRight, CheckCircle2, Code2, Layers3 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"

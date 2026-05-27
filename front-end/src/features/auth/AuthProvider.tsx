@@ -1,3 +1,6 @@
+/**
+ * @Requirement REQ-011
+ */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 
 import { apiClient } from "@/api/client"

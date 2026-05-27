@@ -1,3 +1,8 @@
+/**
+ * @Requirement REQ-011
+ * @Route /login
+ * @Page LoginPage
+ */
 import { Eye, EyeOff } from "lucide-react"
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"

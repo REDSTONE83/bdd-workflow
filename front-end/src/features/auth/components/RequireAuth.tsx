@@ -1,3 +1,6 @@
+/**
+ * @Requirement REQ-011
+ */
 import type { ReactNode } from "react"
 import { Navigate, useLocation } from "react-router-dom"
 

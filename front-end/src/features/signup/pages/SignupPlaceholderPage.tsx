@@ -1,6 +1,11 @@
+/**
+ * @Requirement REQ-011
+ * @Route /signup
+ * @Page SignupPlaceholderPage
+ *
+ * /signup placeholder. 실제 가입 화면 본문은 REQ-001 FE 후속 카드가 채운다.
+ */
 import { Link } from "react-router-dom"
-
-// REQ-011: /signup placeholder. 실제 가입 화면 본문은 REQ-001 FE 후속 카드가 채운다.
 export function SignupPlaceholderPage() {
   return (
     <main className="flex min-h-svh items-center justify-center bg-background px-4 py-10">

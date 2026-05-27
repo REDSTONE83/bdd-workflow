@@ -46,6 +46,7 @@ const outFile = cli.outFile
 const outDir = path.dirname(outFile)
 
 const REQUIREMENT_PATTERN = /^REQ-\d{3,}$/
+const HTTP_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"])
 const SKIP_DIRS = new Set([
   ".cache",
@@ -197,6 +198,33 @@ function extractPageFromObject(objectLiteral) {
   return page ? stringValue(page) : null
 }
 
+function parseUsesApiLine(line, lineNumber) {
+  const raw = line.match(/@UsesApi\b(.*)$/)?.[1]?.trim() ?? ""
+  const parts = raw.split(/\s+/).filter(Boolean)
+  const method = parts[0]?.toUpperCase() ?? null
+  const apiPath = parts[1] ?? null
+  const trigger = parts.slice(2).join(" ") || null
+
+  if (!method || !HTTP_METHODS.has(method) || !apiPath || !apiPath.startsWith("/") || apiPath.includes("?")) {
+    return {
+      invalid: {
+        line: lineNumber,
+        value: raw,
+        message: "@UsesApi must use: @UsesApi METHOD /openapi/path [trigger]. METHOD is GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS and path must not include a query string.",
+      },
+    }
+  }
+
+  return {
+    usage: {
+      method,
+      path: apiPath,
+      trigger,
+      line: lineNumber,
+    },
+  }
+}
+
 function objectText(node, sourceFile) {
   return node.getText(sourceFile)
 }
@@ -260,7 +288,8 @@ function defaultExportObject(sourceFile) {
 }
 
 function leadingMetadata(sourceText) {
-  const head = sourceText.split(/\r?\n/).slice(0, 60).join("\n")
+  const headLines = sourceText.split(/\r?\n/).slice(0, 60)
+  const head = headLines.join("\n")
   const requirements = unique(
     [...head.matchAll(/@Requirement\s+((?:REQ-\d{3,}\s*,?\s*)+)/g)].flatMap((match) =>
       match[1].split(/[,\s]+/).filter((value) => REQUIREMENT_PATTERN.test(value)),
@@ -268,37 +297,35 @@ function leadingMetadata(sourceText) {
   )
   const route = head.match(/@Route\s+(\S+)/)?.[1] ?? null
   const page = head.match(/@Page\s+(.+)$/m)?.[1]?.trim() ?? null
-  return { requirements, route, page }
-}
-
-function fileHarnessMetadata(sourceFile, sourceText) {
-  const commentMetadata = leadingMetadata(sourceText)
-  let requirements = [...commentMetadata.requirements]
-  let route = commentMetadata.route
-  let page = commentMetadata.page
-
-  for (const declaration of exportedVariableDeclarations(sourceFile)) {
-    const name = declaration.name.text
-    const initializer = declaration.initializer
-    if (!initializer) {
+  const usesApis = []
+  const invalidUsesApis = []
+  for (let index = 0; index < headLines.length; index += 1) {
+    const line = headLines[index]
+    if (!/@UsesApi\b/.test(line)) {
       continue
     }
-
-    if (["harness", "bddHarness", "requirementMeta", "requirementMetadata"].includes(name) && ts.isObjectLiteralExpression(initializer)) {
-      requirements.push(...extractRequirementsFromObject(initializer))
-      route ||= extractRouteFromObject(initializer)
-      page ||= extractPageFromObject(initializer)
+    const parsed = parseUsesApiLine(line, index + 1)
+    if (parsed.usage) {
+      usesApis.push(parsed.usage)
     }
-
-    if (["requirements", "requirementIds"].includes(name)) {
-      requirements.push(...requirementValues(initializer))
+    if (parsed.invalid) {
+      invalidUsesApis.push(parsed.invalid)
     }
   }
+  return { requirements, route, page, usesApis, invalidUsesApis }
+}
 
+function fileHarnessMetadata(sourceText) {
+  // FE 표준: 컴포넌트/페이지 파일은 파일 상단 JSDoc 의 @Requirement / @Route / @Page 만 사용한다.
+  // 별도 `export const harness = {...}` 객체는 React Fast Refresh 와 충돌하므로 금지.
+  // Storybook story 의 객체 메타데이터는 storyRequirements() 가 별도로 처리한다.
+  const { requirements, route, page, usesApis, invalidUsesApis } = leadingMetadata(sourceText)
   return {
     requirements: unique(requirements),
     route,
     page,
+    usesApis,
+    invalidUsesApis,
   }
 }
 
@@ -360,13 +387,15 @@ function collectRoutes(sourceFile, filePath, metadata) {
     if (ts.isObjectLiteralExpression(node)) {
       const routePath = extractRouteFromObject(node)
       const routeRequirements = extractRequirementsFromObject(node)
-      if (routePath && routeRequirements.length > 0) {
-        const component = objectProperty(node, ["component", "element"])
+      // 진짜 라우트 정의 객체(createBrowserRouter 등)는 element/component 키를 가진다.
+      // 컴포넌트 메타데이터 객체가 잘못 라우트로 등록되는 것을 막기 위한 가드.
+      const component = objectProperty(node, ["component", "element"])
+      if (routePath && routeRequirements.length > 0 && component) {
         routes.push({
           source: "front-end",
           requirements: routeRequirements,
           path: routePath,
-          component: component ? objectText(component, sourceFile) : null,
+          component: objectText(component, sourceFile),
           file: fileRel,
           line: lineOf(sourceFile, node),
         })
@@ -802,7 +831,7 @@ function main() {
   for (const filePath of walk(srcRoot)) {
     const sourceText = fs.readFileSync(filePath, "utf8")
     const sourceFile = parseSourceFile(filePath)
-    const metadata = fileHarnessMetadata(sourceFile, sourceText)
+    const metadata = fileHarnessMetadata(sourceText)
     pages.push(...collectPages(sourceFile, sourceText, filePath, metadata))
     routes.push(...collectRoutes(sourceFile, filePath, metadata))
     stories.push(...collectStories(sourceFile, filePath, metadata))
