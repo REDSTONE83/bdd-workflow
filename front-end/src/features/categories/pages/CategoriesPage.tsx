@@ -1,17 +1,17 @@
 /**
  * @Requirement REQ-014
- * @Route /categories
  * @Page CategoriesPage
  *
- * 카테고리 관리 화면(Skeleton 인터랙션 mockup). 보호 앱 셸 안에서 카테고리 목록을 보여주고,
+ * 카테고리 관리 화면 표현(presentational) 컴포넌트. 보호 앱 셸 안에서 카테고리 목록을 보여주고,
  * 생성/수정 모달과 삭제 확인 모달로 CRUD 흐름을 구성한다. 목록 데이터와 외부 API 호출,
- * 가상 스크롤 로드는 모두 콜백 prop 으로 받는다. 구현 단계에서 이 page 를 TanStack Query
- * (useInfiniteQuery + mutation) 와 REQ-003 카테고리 API 에 연결하고 routes.tsx 에 swap 한다.
+ * 가상 스크롤 로드는 모두 콜백 prop 으로 주입받는다. 실제 TanStack Query/REQ-003 API 결합은
+ * CategoriesPageContainer 가 담당하고, Storybook 은 in-memory mock 으로 상태를 강제한다.
  */
-import { Plus } from "lucide-react"
+import { AlertCircle, Plus } from "lucide-react"
 import { useState } from "react"
 
 import { ProtectedLayout } from "@/components/ProtectedLayout"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 
 import { CategoryDeleteDialog } from "../components/CategoryDeleteDialog"
@@ -21,6 +21,8 @@ import type { CategoryInput, CategoryView } from "../types"
 
 type CategoriesPageProps = {
   categories: CategoryView[]
+  isLoading?: boolean
+  isError?: boolean
   hasMore?: boolean
   isLoadingMore?: boolean
   onLoadMore?: () => void
@@ -36,6 +38,8 @@ type FormState =
 
 export function CategoriesPage({
   categories,
+  isLoading,
+  isError,
   hasMore,
   isLoadingMore,
   onLoadMore,
@@ -69,14 +73,24 @@ export function CategoriesPage({
           </Button>
         </header>
 
-        <CategoryList
-          categories={categories}
-          hasMore={hasMore}
-          isLoadingMore={isLoadingMore}
-          onLoadMore={onLoadMore}
-          onEdit={(category) => setForm({ mode: "edit", category })}
-          onDelete={(category) => setDeleting(category)}
-        />
+        {isError ? (
+          <Alert variant="destructive">
+            <AlertCircle aria-hidden="true" />
+            <AlertDescription>
+              카테고리 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <CategoryList
+            categories={categories}
+            isLoading={isLoading}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={onLoadMore}
+            onEdit={(category) => setForm({ mode: "edit", category })}
+            onDelete={(category) => setDeleting(category)}
+          />
+        )}
       </div>
 
       <CategoryFormDialog

@@ -49,6 +49,8 @@ public ResponseEntity<CreateTodoResponse> create(
 - 인증이 검증 대상이 아닌 Acceptance Test는 `ApiRequestSupport.bearer(userId)`로 인증 토큰을 부여한다. 테스트마다 `Authorization: Bearer ...` 문자열과 `TestJwt.signFor(...)`를 직접 조합하지 않는다.
 - JWT 검증, Cookie/Bearer 우선순위, 만료/서명/issuer/audience 오류처럼 인증 메커니즘 자체가 AC인 테스트에서는 `TestJwt`와 헤더/Cookie를 직접 다룰 수 있다.
 - 고정 UUID 리터럴을 테스트에 박지 않는다 ([`id-policy.md`](./id-policy.md)). 시드/픽스처에서 받은 ID를 그대로 사용한다.
+- 보호 route redirect, allowlist, fallback 같은 보안 분기는 최소 2개의 서로 다른 신뢰 값을 검증한다. 신뢰 목록이 2개 이상인데 테스트가 기본 진입점 하나만 통과시키면 "입력을 존중함"과 "항상 기본값으로 보냄"을 구분하지 못한다.
+- 로그인 redirect 성공 분기는 기본 진입점이 아닌 보호 route를 포함한다. 거절 분기는 외부 URL, protocol-relative URL, 알려지지 않은 내부 경로를 포함한다.
 
 ## 금지 사항
 

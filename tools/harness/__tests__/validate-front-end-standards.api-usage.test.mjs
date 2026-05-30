@@ -35,7 +35,60 @@ function runValidator({ apiUsages = [], apiCalls = [], issues = [] }) {
     }, null, 2));
     fs.writeFileSync(openApiIndex, JSON.stringify({
         sha256: 'fixture-hash',
-        entries: [apiEntry('GET', '/known'), apiEntry('POST', '/actual')]
+        entries: [
+            apiEntry('GET', '/known'),
+            apiEntry('POST', '/actual'),
+            apiEntry('GET', '/paged'),
+            apiEntry('PATCH', '/patched/{id}')
+        ],
+        rawOpenApi: {
+            paths: {
+                '/known': { get: {} },
+                '/actual': { post: {} },
+                '/paged': {
+                    get: {
+                        parameters: [{
+                            name: 'pageable',
+                            in: 'query',
+                            required: true,
+                            schema: { $ref: '#/components/schemas/Pageable' }
+                        }]
+                    }
+                },
+                '/patched/{id}': {
+                    patch: {
+                        requestBody: {
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/UpdateThingRequest' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            components: {
+                schemas: {
+                    Pageable: {
+                        type: 'object',
+                        properties: {
+                            page: { type: 'integer', format: 'int32' },
+                            size: { type: 'integer', format: 'int32' }
+                        }
+                    },
+                    JsonNullableString: {
+                        type: 'object',
+                        properties: { present: { type: 'boolean' } }
+                    },
+                    UpdateThingRequest: {
+                        type: 'object',
+                        properties: {
+                            name: { $ref: '#/components/schemas/JsonNullableString' }
+                        }
+                    }
+                }
+            }
+        }
     }, null, 2));
     fs.writeFileSync(generatedMeta, 'fixture-hash');
 
@@ -123,5 +176,100 @@ describe('validate-front-end-standards — @UsesApi contract', () => {
         });
 
         assert.deepEqual(ruleIds(payload), ['FE-API-CALL-DYNAMIC']);
+    });
+
+    it('passes when Pageable and JsonNullable calls use canonical wire helpers', () => {
+        const payload = runValidator({
+            apiUsages: [
+                {
+                    requirements: ['REQ-001'],
+                    method: 'GET',
+                    path: '/paged',
+                    file: 'front-end/src/Page.tsx',
+                    line: 3
+                },
+                {
+                    requirements: ['REQ-001'],
+                    method: 'PATCH',
+                    path: '/patched/{id}',
+                    file: 'front-end/src/Page.tsx',
+                    line: 4
+                }
+            ],
+            apiCalls: [
+                {
+                    requirements: ['REQ-001'],
+                    method: 'GET',
+                    path: '/paged',
+                    file: 'front-end/src/api/things.ts',
+                    line: 10,
+                    requestShape: {
+                        usesPageableQuery: true,
+                        usesPageableQueryString: true
+                    }
+                },
+                {
+                    requirements: ['REQ-001'],
+                    method: 'PATCH',
+                    path: '/patched/{id}',
+                    file: 'front-end/src/api/things.ts',
+                    line: 20,
+                    requestShape: {
+                        usesNullablePatchBody: true
+                    }
+                }
+            ]
+        });
+
+        assert.deepEqual(ruleIds(payload), []);
+    });
+
+    it('reports Pageable and JsonNullable calls that skip canonical wire helpers', () => {
+        const payload = runValidator({
+            apiUsages: [
+                {
+                    requirements: ['REQ-001'],
+                    method: 'GET',
+                    path: '/paged',
+                    file: 'front-end/src/Page.tsx',
+                    line: 3
+                },
+                {
+                    requirements: ['REQ-001'],
+                    method: 'PATCH',
+                    path: '/patched/{id}',
+                    file: 'front-end/src/Page.tsx',
+                    line: 4
+                }
+            ],
+            apiCalls: [
+                {
+                    requirements: ['REQ-001'],
+                    method: 'GET',
+                    path: '/paged',
+                    file: 'front-end/src/api/things.ts',
+                    line: 10,
+                    requestShape: {
+                        usesPageableQuery: false,
+                        usesPageableQueryString: false
+                    }
+                },
+                {
+                    requirements: ['REQ-001'],
+                    method: 'PATCH',
+                    path: '/patched/{id}',
+                    file: 'front-end/src/api/things.ts',
+                    line: 20,
+                    requestShape: {
+                        usesNullablePatchBody: false
+                    }
+                }
+            ]
+        });
+
+        assert.deepEqual(ruleIds(payload), [
+            'FE-API-PAGEABLE-WIRE-SHAPE',
+            'FE-API-PATCH-WIRE-SHAPE'
+        ]);
     });
 });

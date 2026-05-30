@@ -141,6 +141,14 @@ build/harness
 
 `trace-requirements.mjs`는 기존 CLI 호환 wrapper로 남아 `evaluate-trace-state.mjs` → `render-trace-report.mjs` → `gate.mjs`를 직렬 spawn한다. 통합 게이트 단일 판정기는 `gate.mjs`(REQ-010)이고 8개 카테고리(`TRACE`/`CARD`/`REF`/`TRC`/`BE`/`FE`/`SCN`/`TRM`)로 분류된 실패 사유를 출력한다. 자세한 입출력 계약은 [`data-contracts.md`](./data-contracts.md#게이트-layer-4)를 본다.
 
+## 리포트 신선도
+
+하네스 인덱스, finding, trace report는 사람이 직접 판단 근거로 읽는 산출물이다. Gradle이 이전 실행 결과를 `UP-TO-DATE`로 재사용하면 최근 코드/문서 상태와 다른 리포트가 출력될 수 있으므로, 하네스 산출물 생성 태스크는 항상 재실행한다.
+
+- `generateOpenApiIndex`, `generateHarnessSourceIndex`, Node 기반 `Exec` 하네스 태스크는 `outputs.upToDateWhen { false }`로 둔다.
+- per-card trace/gate(`traceRequirementCard`, `validateRequirementCard`, `validateRequirementCardBlue`)도 같은 정책을 따른다.
+- 성능 최적화가 필요하면 입력/출력을 정확히 선언한 뒤 stale report가 나오지 않는 테스트를 먼저 추가한다.
+
 ## 상태 판정
 
 `RED`는 개발 중 또는 검증 실패 상태다.

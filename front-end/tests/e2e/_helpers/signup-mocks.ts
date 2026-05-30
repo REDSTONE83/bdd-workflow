@@ -1,4 +1,6 @@
-import type { Page, Route } from "@playwright/test"
+import type { Page } from "@playwright/test"
+
+import { routeApi } from "./apiRoute"
 
 // REQ-013: 회원 가입 API(/users/signup, REQ-001 계약) 를 옵션 기반으로 mock 한다.
 // 201 성공 / 409 중복 이메일 / 500 일반 오류를 시연한다.
@@ -14,7 +16,7 @@ export async function installSignupRoute(
   options: InstallSignupRouteOptions = {},
 ): Promise<void> {
   const status = options.status ?? 201
-  await page.route("**/users/signup", async (route: Route) => {
+  await routeApi(page, "**/users/signup", async (route) => {
     options.onRequest?.()
     if (status === 201) {
       await route.fulfill({

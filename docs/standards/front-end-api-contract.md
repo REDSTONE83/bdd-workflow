@@ -57,6 +57,45 @@ src/api/todo.ts
 - 빈 값, 날짜, 페이지네이션 기본값은 백엔드 계약과 충돌하지 않게 한 곳에서 처리한다.
 - AuthProvider / 도메인 hook / page 는 이 모듈만 호출하고 `apiClient` 를 직접 사용하지 않는다. `@UsesApi` 정적 추적은 호출 측 (Provider/Page) 의 JSDoc 에 그대로 둔다.
 
+### 생성 타입과 wire 포맷 보정
+
+OpenAPI 생성 타입은 백엔드 wire 포맷을 항상 정확히 표현하지 못할 수 있다. 생성기는 다음 두 경우를 FE wire 포맷으로 overlay한 뒤 타입을 만든다. 도메인 API 모듈은 생성 타입만 직접 조립하지 말고 이 표준의 helper를 함께 사용한다.
+
+- Spring `Pageable`: 생성 타입은 query를 `{ pageable: { page, size } }`처럼 표현할 수 있지만, 실제 Spring MVC 바인딩 wire 포맷은 flat `?page=0&size=20`이다.
+- `JsonNullable<T>` PATCH DTO: 생성 타입은 `{ present?: boolean }` 같은 내부 표현으로 나올 수 있지만, 실제 JSON body는 raw 값/null/필드 생략이다.
+
+표준 helper:
+
+```ts
+import {
+  nullablePatchBody,
+  pageableQuery,
+  pageableQueryString,
+} from "@/api/wire"
+
+await apiClient.GET("/categories", {
+  params: { query: pageableQuery({ page, size }) },
+  querySerializer: () => pageableQueryString({ page, size }),
+})
+
+await apiClient.PATCH("/categories/{categoryId}", {
+  params: { path: { categoryId } },
+  body: nullablePatchBody<UpdateCategoryRequest>({
+    name,
+    color,       // null이면 비우기
+    description, // undefined이면 유지
+  }),
+})
+```
+
+PATCH 부분 수정 의미론:
+
+- `field: value`: 값으로 설정한다.
+- `field: null`: null 허용 필드를 비운다.
+- 필드 생략: 기존 값을 유지한다.
+
+생성기 overlay는 `front-end/tools/generate-api-client.mjs`에 둔다. 단, null 불허 필드를 `null` 허용으로 넓히는 위험이 있으므로 `src/api/*.test.ts`의 request-shape 테스트와 `FE-API-*-WIRE-SHAPE` 정적 검사를 함께 유지한다.
+
 ### 화면 API 사용 계약
 
 화면/route/provider/header처럼 사용자 흐름에서 API 사용을 기대하는 파일은 파일 상단 JSDoc 에 `@UsesApi`를 선언한다.
@@ -124,6 +163,8 @@ ApiError(code, message, field)
 - API 호출은 MSW 또는 주입 가능한 fake client로 대체한다.
 - 오류 응답, 로딩, 빈 목록, 성공 상태를 빠르게 검증한다.
 - `@Covers` 없는 테스트는 보조 테스트로 보고 AC 커버리지에는 포함하지 않는다.
+- `src/api/*.test.ts`는 API 요청 형태 계약을 검증한다. 페이징 목록은 flat `page`/`size`, PATCH는 raw 값/null/필드 생략 body를 MSW request 관측으로 단언한다.
+- `validateHarness`는 FE API 호출이 Spring `Pageable` 또는 `JsonNullable<T>` PATCH 계약을 소비할 때 표준 helper를 경유하는지도 검사한다.
 
 ### BDD / E2E Test
 
@@ -157,6 +198,8 @@ ApiError(code, message, field)
   - `FE-API-CLIENT-NO-METADATA`: generated client의 OpenAPI SHA-256 메타파일이 없음.
   - `FE-API-CLIENT-STALE`: generated client 메타파일이 현재 OpenAPI 계약 SHA-256과 다름.
   - `FE-API-DIRECT-FETCH`: `src/api/**` 밖 애플리케이션 소스가 직접 `fetch`를 호출함.
+  - `FE-API-PAGEABLE-WIRE-SHAPE`: Spring `Pageable` 조회 호출이 `pageableQuery`/`pageableQueryString` helper를 경유하지 않음.
+  - `FE-API-PATCH-WIRE-SHAPE`: `JsonNullable<T>` PATCH 호출이 `nullablePatchBody` helper를 경유하지 않음.
 
 ## 수동 리뷰 항목
 

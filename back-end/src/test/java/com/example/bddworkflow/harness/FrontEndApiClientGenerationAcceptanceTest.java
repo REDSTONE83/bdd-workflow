@@ -45,7 +45,16 @@ class FrontEndApiClientGenerationAcceptanceTest {
         assertThat(schema).exists();
         assertThat(client).exists();
         assertThat(index).exists();
-        assertThat(Files.readString(schema)).contains("export interface paths");
+        String schemaContent = Files.readString(schema);
+        assertThat(schemaContent).contains("export interface paths");
+        assertThat(schemaContent)
+                .as("JsonNullable wire type overlay")
+                .contains("JsonNullableString: string | null")
+                .doesNotContain("present?: boolean");
+        assertThat(schemaContent)
+                .as("Spring Pageable query overlay")
+                .contains("page?: number", "size?: number")
+                .doesNotContain("pageable: components[\"schemas\"][\"Pageable\"]");
         assertThat(Files.readString(client)).contains("createClient<paths>");
         assertThat(Files.readString(index)).contains("apiClient");
     }

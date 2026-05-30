@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test"
 
+import { routeApi } from "./_helpers/apiRoute"
 import { DEFAULT_USER, installAuthRoutes } from "./_helpers/auth-mocks"
 
 // REQ-011 FE: 보호 화면 스켈레톤, 공통 헤더, 사용자 메뉴, 로그아웃 성공/실패, placeholder.
@@ -18,7 +19,7 @@ test.describe("보호 화면 / 헤더 / 로그아웃 / placeholder", () => {
 
     // /auth/me 응답을 지연시켜 checking 단계를 길게 유지.
     let resolveMe = () => {}
-    await page.route("**/auth/me", async (route) => {
+    await routeApi(page, "**/auth/me", async (route) => {
       await new Promise<void>((r) => {
         resolveMe = r
       })
@@ -28,10 +29,10 @@ test.describe("보호 화면 / 헤더 / 로그아웃 / placeholder", () => {
         body: JSON.stringify(DEFAULT_USER),
       })
     })
-    await page.route("**/auth/logout", async (route) => {
+    await routeApi(page, "**/auth/logout", async (route) => {
       await route.fulfill({ status: 204, body: "" })
     })
-    await page.route("**/auth/login", async (route) => {
+    await routeApi(page, "**/auth/login", async (route) => {
       await route.fulfill({ status: 204, body: "" })
     })
 

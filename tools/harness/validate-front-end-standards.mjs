@@ -22,6 +22,8 @@
 //   FE-API-CLIENT-NO-METADATA FE generated client의 OpenAPI SHA-256 메타파일 부재
 //   FE-API-CLIENT-STALE      FE generated client의 OpenAPI SHA-256 메타파일이 현재 계약과 불일치
 //   FE-API-DIRECT-FETCH      FE src/api/** 밖 애플리케이션 소스의 직접 fetch 호출
+//   FE-API-PAGEABLE-WIRE-SHAPE Spring Pageable 호출이 canonical flat query helper를 거치지 않음
+//   FE-API-PATCH-WIRE-SHAPE JsonNullable PATCH 호출이 canonical nullable patch helper를 거치지 않음
 //   FE-INDEX-UNKNOWN         source index가 보고한 분류 불가 issue (안전망)
 //
 // 정책:
@@ -68,6 +70,8 @@ const FE_API_DECLARED_NOT_CALLED_SEVERITY = 'error';
 const FE_API_CALL_NOT_DECLARED_SEVERITY = 'error';
 const FE_API_CLIENT_NO_METADATA_SEVERITY = 'error';
 const FE_API_CLIENT_STALE_SEVERITY = 'error';
+const FE_API_PAGEABLE_WIRE_SHAPE_SEVERITY = 'error';
+const FE_API_PATCH_WIRE_SHAPE_SEVERITY = 'error';
 // FE generated client가 base OpenAPI hash를 기록해 두는 파일 경로(표시용).
 const FE_GENERATED_HASH_RELATIVE = 'front-end/src/api/generated/.openapi-source.sha256';
 
@@ -407,6 +411,119 @@ function findingsForCallsNotDeclared(apiCalls, apiUsages) {
     return findings;
 }
 
+function rawOperation(contract, entry) {
+    const rawOpenApi = contract.rawOpenApi;
+    if (!rawOpenApi?.paths) return null;
+    const pathItem = rawOpenApi.paths[entry.path];
+    if (!pathItem) return null;
+    return pathItem[(entry.method ?? '').toLowerCase()] ?? null;
+}
+
+function operationUsesSpringPageable(contract, call) {
+    const operation = rawOperation(contract, call);
+    return (operation?.parameters ?? []).some((parameter) =>
+        parameter?.in === 'query' &&
+        parameter?.name === 'pageable' &&
+        parameter?.schema?.$ref === '#/components/schemas/Pageable'
+    );
+}
+
+function refName(ref) {
+    const prefix = '#/components/schemas/';
+    return typeof ref === 'string' && ref.startsWith(prefix) ? ref.slice(prefix.length) : null;
+}
+
+function resolveSchemaRef(contract, schema) {
+    const name = refName(schema?.$ref);
+    if (!name) return null;
+    return contract.rawOpenApi?.components?.schemas?.[name] ?? null;
+}
+
+function schemaContainsJsonNullable(contract, schema, seen = new Set()) {
+    if (!schema || typeof schema !== 'object') return false;
+    const name = refName(schema.$ref);
+    if (name) {
+        if (name.startsWith('JsonNullable')) return true;
+        if (seen.has(name)) return false;
+        seen.add(name);
+        return schemaContainsJsonNullable(contract, resolveSchemaRef(contract, schema), seen);
+    }
+    if (Array.isArray(schema.oneOf) && schema.oneOf.some((child) => schemaContainsJsonNullable(contract, child, seen))) return true;
+    if (Array.isArray(schema.anyOf) && schema.anyOf.some((child) => schemaContainsJsonNullable(contract, child, seen))) return true;
+    if (Array.isArray(schema.allOf) && schema.allOf.some((child) => schemaContainsJsonNullable(contract, child, seen))) return true;
+    for (const child of Object.values(schema.properties ?? {})) {
+        if (schemaContainsJsonNullable(contract, child, seen)) return true;
+    }
+    if (schema.items && schemaContainsJsonNullable(contract, schema.items, seen)) return true;
+    return false;
+}
+
+function jsonRequestBodySchema(operation) {
+    return operation?.requestBody?.content?.['application/json']?.schema ?? null;
+}
+
+function operationUsesJsonNullablePatchBody(contract, call) {
+    if ((call.method ?? '').toUpperCase() !== 'PATCH') return false;
+    const operation = rawOperation(contract, call);
+    return schemaContainsJsonNullable(contract, jsonRequestBodySchema(operation));
+}
+
+function findingsForApiWireShape(apiCalls, contract) {
+    const findings = [];
+    for (const call of apiCalls ?? []) {
+        const key = operationKey(call);
+        if (operationUsesSpringPageable(contract, call)) {
+            const requestShape = call.requestShape ?? {};
+            if (!requestShape.usesPageableQuery || !requestShape.usesPageableQueryString) {
+                findings.push({
+                    ruleId: 'FE-API-PAGEABLE-WIRE-SHAPE',
+                    severity: FE_API_PAGEABLE_WIRE_SHAPE_SEVERITY,
+                    strictSeverity: FE_API_PAGEABLE_WIRE_SHAPE_SEVERITY,
+                    kind: 'static',
+                    message: `FE API 호출 ${key} 는 Spring Pageable wire 포맷을 pageableQuery/pageableQueryString helper로 직렬화해야 함`,
+                    requirements: call.requirements ?? [],
+                    location: {
+                        file: call.file ?? '',
+                        line: call.line ?? 0,
+                        identity: key
+                    },
+                    evidence: {
+                        actual: { method: call.method, path: call.path },
+                        requestShape,
+                        requiredHelpers: ['pageableQuery', 'pageableQueryString']
+                    },
+                    remediation: REMEDIATION_API
+                });
+            }
+        }
+        if (operationUsesJsonNullablePatchBody(contract, call)) {
+            const requestShape = call.requestShape ?? {};
+            if (!requestShape.usesNullablePatchBody) {
+                findings.push({
+                    ruleId: 'FE-API-PATCH-WIRE-SHAPE',
+                    severity: FE_API_PATCH_WIRE_SHAPE_SEVERITY,
+                    strictSeverity: FE_API_PATCH_WIRE_SHAPE_SEVERITY,
+                    kind: 'static',
+                    message: `FE API 호출 ${key} 는 JsonNullable PATCH wire 포맷을 nullablePatchBody helper로 만들어야 함`,
+                    requirements: call.requirements ?? [],
+                    location: {
+                        file: call.file ?? '',
+                        line: call.line ?? 0,
+                        identity: key
+                    },
+                    evidence: {
+                        actual: { method: call.method, path: call.path },
+                        requestShape,
+                        requiredHelpers: ['nullablePatchBody']
+                    },
+                    remediation: REMEDIATION_API
+                });
+            }
+        }
+    }
+    return findings;
+}
+
 function findingForClientStale(contract, generatedMetaPath) {
     const recordedHash = readGeneratedHashMetaSha(generatedMetaPath);
     if (recordedHash == null) {
@@ -437,6 +554,7 @@ function feApiFindings(frontEndIndex, cfg) {
     findings.push(...findingsForUnknownDeclaredApiUsages(frontEndIndex.apiUsages ?? [], contract));
     findings.push(...findingsForDeclaredButNotCalled(frontEndIndex.apiUsages ?? [], frontEndIndex.apiCalls ?? []));
     findings.push(...findingsForCallsNotDeclared(frontEndIndex.apiCalls ?? [], frontEndIndex.apiUsages ?? []));
+    findings.push(...findingsForApiWireShape(frontEndIndex.apiCalls ?? [], contract));
     const staleFinding = findingForClientStale(contract, cfg.generatedMeta);
     if (staleFinding) findings.push(staleFinding);
     return findings;

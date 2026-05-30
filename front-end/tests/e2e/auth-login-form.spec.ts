@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test"
 
+import { routeApi } from "./_helpers/apiRoute"
 import { DEFAULT_USER, installAuthRoutes } from "./_helpers/auth-mocks"
 
 // REQ-011 FE: 로그인 화면 폼의 구성/포커스/마스킹/토글/검증/Enter/대기/실패 처리.
@@ -171,14 +172,14 @@ test.describe("로그인 화면 폼", () => {
 
     let resolveLogin = () => {}
     let loginCalls = 0
-    await page.route("**/auth/me", async (route) => {
+    await routeApi(page, "**/auth/me", async (route) => {
       await route.fulfill({
         status: 401,
         contentType: "application/json",
         body: JSON.stringify({ code: "UNAUTHORIZED" }),
       })
     })
-    await page.route("**/auth/login", async (route) => {
+    await routeApi(page, "**/auth/login", async (route) => {
       loginCalls += 1
       await new Promise<void>((resolve) => {
         resolveLogin = resolve

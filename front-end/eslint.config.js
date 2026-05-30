@@ -4,6 +4,8 @@ import reactHooks from "eslint-plugin-react-hooks"
 import reactRefresh from "eslint-plugin-react-refresh"
 import tseslint from "typescript-eslint"
 
+import noRawPageRoute from "./tools/eslint-rules/no-raw-page-route.js"
+
 export default tseslint.config(
   {
     ignores: [
@@ -25,6 +27,11 @@ export default tseslint.config(
     plugins: {
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
+      "bdd-workflow": {
+        rules: {
+          "no-raw-page-route": noRawPageRoute,
+        },
+      },
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
@@ -34,6 +41,12 @@ export default tseslint.config(
           allowConstantExport: true,
         },
       ],
+    },
+  },
+  {
+    files: ["tests/e2e/**/*.{ts,tsx}"],
+    rules: {
+      "bdd-workflow/no-raw-page-route": "error",
     },
   },
   {

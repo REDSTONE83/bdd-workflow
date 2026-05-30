@@ -3,7 +3,7 @@
 요건 ID: REQ-014
 제목: 할 일 카테고리 관리 화면
 우선순위: 중간
-상태: 초안
+상태: 승인
 구현 대상: front-end
 
 ## 사용자/목적
@@ -165,10 +165,16 @@
 
 ### 테스트 리뷰
 
-- 리뷰일: (대기)
+- 리뷰일: 2026-05-30
   리뷰자: Product Owner, Tech Lead, QA
-  확인: (구현 단계에서 작성)
-  결과: 미완료
+  확인: 25개 수용 기준을 모두 `@Covers` FE BDD 테스트(Playwright `front-end/tests/e2e/categories.spec.ts`, 21개 테스트)로 검증했고 전부 PASS, 누락·유령 Covers 0(`traceRequirementCard -Preq=REQ-014` 기준 모든 AC COVERED, 상태 GREEN).
+    - API 결합: `src/api/categories.ts`가 REQ-003 카테고리 계약(목록 페이징/생성/수정/삭제)을 호출하고 409를 중복 이름 오류로 매핑한다. 페이징은 flat `page/size` query 로 직렬화한다.
+    - 서버 상태: `src/app/queryClient.ts`(factory) + `features/categories/queryKeys.ts` + `hooks/useCategories.ts`의 `useInfiniteQuery`(묶음 크기 20 무한 로드) 와 생성/수정/삭제 mutation 의 `lists()` invalidation. QueryClientProvider 는 `AppRouter` 에 1회.
+    - 가상 스크롤: `CategoryList`가 `@tanstack/react-virtual`로 보이는 항목만 렌더링하고 스크롤 끝 근접 시 다음 묶음을 이어 받는다.
+    - 결선: 표현 컴포넌트 `CategoriesPage` + 컨테이너 `CategoriesPageContainer`(`@Route /categories`, `@UsesApi` GET/POST/PATCH/DELETE), `features/categories/routes.tsx`의 보호 라우트를 `AppRouter`에 swap.
+    - REQ-011 보완: `RedirectIfAuthenticated`가 신뢰 `loginRedirect`(예: `/categories` 딥링크)를 존중하도록 수정(로그인 후 원래 보호 화면 복귀), `TRUSTED_LOGIN_REDIRECTS`에 `/categories` 추가, `/todos` placeholder를 공통 `ProtectedLayout`로 이관. 기존 REQ-011 redirect/보호 화면 E2E 무회귀 확인.
+  검증: `npm run typecheck`/`lint`/`build`/`test`(12) 통과, `npm run e2e` 55/55 PASS(신규 21 + 기존 34, 무회귀), `npm run build-storybook` 성공, `npm run source-index` 0 issue, `./gradlew validateHarness` BUILD SUCCESSFUL(gate pass, BE/FE/SCN/CARD/REF/TRC/TRM 전부 0). REQ-014 상태 GREEN → 카드 승인으로 BLUE.
+  결과: 승인
 
 ## 열린 질문
 
