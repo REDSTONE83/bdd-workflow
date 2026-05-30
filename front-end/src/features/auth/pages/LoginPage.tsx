@@ -4,11 +4,11 @@
  * @Page LoginPage
  * @UsesApi POST /auth/login submit
  */
-import { Eye, EyeOff } from "lucide-react"
+import { AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -41,11 +41,22 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
+  const [signupCompleted, setSignupCompleted] = useState(false)
 
   // (FE) 로그인 화면을 열면 이메일 입력에 자동으로 입력 포커스가 간다
   useEffect(() => {
     emailRef.current?.focus()
   }, [])
+
+  // (REQ-013) 회원 가입 성공 후 /login?signupCompleted=1 로 이동해 오면 가입 완료 안내를
+  // 표시하고, 새로고침 시 반복 노출되지 않도록 쿼리를 history replace 로 정리한다.
+  useEffect(() => {
+    if (searchParams.get("signupCompleted") === "1") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSignupCompleted(true)
+      navigate("/login", { replace: true })
+    }
+  }, [searchParams, navigate])
 
   const validate = (): FieldErrors => {
     const errors: FieldErrors = {}
@@ -94,9 +105,29 @@ export function LoginPage() {
         </CardHeader>
         <CardContent>
           <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
+            {signupCompleted && (
+              <Alert>
+                <CheckCircle2 aria-hidden="true" />
+                <AlertTitle>회원 가입이 완료되었습니다</AlertTitle>
+                <AlertDescription>
+                  <p>이제 이메일과 비밀번호로 로그인해 주세요.</p>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {formError && (
               <Alert variant="destructive">
-                <AlertDescription>{formError}</AlertDescription>
+                <AlertCircle aria-hidden="true" />
+                <AlertTitle>로그인 정보를 확인해 주세요</AlertTitle>
+                <AlertDescription>
+                  <p>
+                    {formError} 다시 입력하거나 계정이 없으면{" "}
+                    <Link to="/signup" className="underline underline-offset-4">
+                      가입 화면으로 이동
+                    </Link>
+                    해 주세요.
+                  </p>
+                </AlertDescription>
               </Alert>
             )}
 

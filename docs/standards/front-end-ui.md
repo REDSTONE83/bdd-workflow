@@ -87,6 +87,34 @@ not found
 - destructive action은 취소 가능한 확인 절차를 둔다.
 - toast는 일시 알림에 쓰고, 사용자가 수정해야 하는 오류는 화면 안에 남긴다.
 
+### Form-level 서버 오류 Alert
+
+특정 입력에 귀속되지 않는 form-level 서버 오류(중복 자원 거절, 인증 실패, 일시 실패 등)는 다음 구조로 표시한다. 화면 간 시각 위계와 사용자 행동 안내를 일정하게 유지하기 위한 표준이다.
+
+- 컨테이너: `<Alert variant="destructive">` (회복 가능한 일시 오류여도 사용자가 인지하고 행동을 정해야 하므로 destructive variant 를 사용한다).
+- 아이콘: `lucide-react` 의 `AlertCircle` 을 기본으로 사용한다. 아이콘은 `aria-hidden="true"` 로 두고 의미는 `AlertTitle` 이 전달한다.
+- 제목: `<AlertTitle>` 한 줄로 상태를 요약한다. 표준 용어 사전(`docs/terminology/`)에 등록된 표현과 같은 단어를 쓴다 (예: `account.duplicateEmail` → "이미 등록된 이메일입니다").
+- 본문: `<AlertDescription>` 한 줄로 사용자가 다음에 취할 행동을 제시한다. 다른 화면으로 이동해야 해결되는 오류면 본문 안에 `<Link>` 또는 `<Button>` 으로 진입점을 둔다. 링크는 본문 텍스트의 일부로 자연스럽게 녹인다.
+- 본문이 텍스트 + inline 링크처럼 여러 노드로 이루어지면 전체를 하나의 `<p>` 로 감싼다. `AlertDescription` 컨테이너는 `grid` 라서 직접 자식으로 들어간 텍스트 노드와 `<Link>` 가 각각 별도 grid item 이 되어 줄바꿈이 강제된다. `<p>` 하나로 감싸면 단일 grid item 안에서 링크가 inline 으로 흐른다.
+- `<AlertDescription>` 한 줄만 두는 minimal 사용은 form-level 오류에서 금지한다. 입력별 검증 안내(`fieldErrors`)는 Alert 가 아니라 해당 입력 아래의 `<p>` 로 표시한다.
+- 본문이 사용자에게 어느 필드가 잘못됐는지 노출해서는 안 되는 카드(예: 로그인 인증 실패)는 본문 텍스트도 그 정책을 따른다 (해당 카드 AC 우선).
+
+예 (가입 화면 중복 이메일):
+
+```tsx
+<Alert variant="destructive">
+  <AlertCircle aria-hidden="true" />
+  <AlertTitle>이미 등록된 이메일입니다</AlertTitle>
+  <AlertDescription>
+    이 이메일은 이미 사용 중입니다. 본인 계정이면{" "}
+    <Link to="/login" className="underline underline-offset-4">
+      로그인 화면으로 이동
+    </Link>
+    하거나 다른 이메일을 사용해 주세요.
+  </AlertDescription>
+</Alert>
+```
+
 ## 폼 입력 UX
 
 화면 간 입력 경험을 일관되게 두기 위해 다음 규칙을 공통으로 적용한다. 비인증 단일 카드 폼(로그인, 회원 가입 등)과 보호 화면의 form은 같은 의미가 적용되는 한 본 절을 그대로 따른다. 본 절은 카드별 AC로 반복하지 않으며, 표준에서 벗어나는 동작이 필요하면 카드 `의사결정 로그`에 결정과 이유를 남기고 해당 카드 AC로 명시한다.
@@ -137,6 +165,32 @@ not found
 ## Storybook
 
 공통 컴포넌트는 Storybook story를 둔다. route/page를 추가하거나 변경하면 실제 page 컴포넌트를 `MemoryRouter`와 필요한 mock provider로 감싼 route 기준 page mock story를 둔다. Story는 두 분류로 나눈다.
+
+### Router/provider 데코레이터는 하나만 둔다
+
+route/page mock story는 `MemoryRouter`와 mock provider로 감싸되, **Router 래퍼는 한 스토리의 렌더 트리에 정확히 하나만** 둔다. Storybook 데코레이터는 덮어쓰기가 아니라 합성(중첩)된다. 적용 순서는 바깥에서 안쪽으로 `global → meta(component) → story`이고, 스토리 레벨 데코레이터가 meta 데코레이터 **안쪽**에 들어간다. 따라서 meta 데코레이터에서 이미 `<MemoryRouter>`로 감쌌다면, 특정 스토리에서 진입 경로만 바꾸려고 스토리 레벨에 두 번째 `<MemoryRouter>` 데코레이터를 추가하면 Router가 중첩되어 react-router가 `You cannot render a <Router> inside another <Router>` 오류를 던진다.
+
+스토리마다 다른 라우팅 진입 상태(`initialEntries`)가 필요하면, 두 번째 Router를 추가하지 말고 meta 데코레이터 하나가 `parameters`에서 진입 경로를 읽게 한다.
+
+```tsx
+// meta: Router 는 한 번만. 진입 경로는 parameters 로 주입한다.
+decorators: [
+  (Story, { parameters }) => (
+    <MemoryRouter initialEntries={parameters.initialEntries ?? ["/login"]}>
+      <AuthContext.Provider value={unauthenticatedAuth}>
+        <Story />
+      </AuthContext.Provider>
+    </MemoryRouter>
+  ),
+]
+
+// story: 데코레이터를 더하지 말고 parameters 만 바꾼다.
+export const SignupCompletedNotice: Story = {
+  parameters: { initialEntries: ["/login?signupCompleted=1"] },
+}
+```
+
+같은 원칙이 단일 인스턴스여야 하는 다른 provider(전역 store, theme provider 등)에도 적용된다. 컨텍스트 "값"만 바꾸려면 provider를 중첩하지 말고 meta 데코레이터가 `parameters`로 값을 받아 한 번만 렌더한다.
 
 ### 필수 상태 (없으면 FE-STORY-MISSING-STATE)
 

@@ -268,17 +268,22 @@ Skeleton 승인을 요청하기 전에 다음을 한 줄씩 확인한다.
 - Service 공개 메서드가 Skeleton 단계에서도 `transaction.md`의 메서드 레벨 `@Transactional` 정책을 따르는가?
 - Service 내부 코멘트에 정상 흐름, 예외 흐름, 상태 변화, 알림/부수효과, 트랜잭션 경계 설계가 요약되어 있는가
 - 설정 Skeleton이 있다면 프로젝트 소유 `app.*` 키가 typed `@ConfigurationProperties`에 바인딩되고, profile override 정책이 명확한가?
-- FE 대상 요건이면 화면 이름, route 초안, 접근 권한, 주요 표시 정보, loading/empty/error 상태가 요약되어 있는가
+- FE 대상 요건이면 화면 이름, route 초안, 접근 권한, 주요 표시 정보, 사용자가 관찰할 상태(initial / fieldErrors / submitting / serverRejection / success 등)가 요약되어 있는가
 - FE 대상 요건이면 화면 레이아웃 단위(보호 화면 / 비인증 단일 카드 등)와 카드 구성(제목·입력·버튼·링크·안내 영역)이 `범위`에 narrative로, `수용 기준`에 검증 가능한 한 줄로 모두 반영되어 있는가
-- FE 대상 요건이면 Storybook으로 고정할 컴포넌트 상태와 Playwright로 검증할 사용자 흐름이 구분되어 있는가
-- FE route/page를 새로 만들거나 바꾸는 요건이면 승인 후 구현 단계에서 작성할 route 기준 page mock story 대상이 명시되어 있는가
-- FE 공통 UI primitive나 주요 화면 조각을 새로 만들거나 바꾸는 요건이면 승인 후 구현 단계에서 작성할 Storybook story 대상이 명시되어 있는가
+- FE 대상 요건이면 새 화면 컴포넌트가 routes.tsx swap 없이 별도 파일로 작성되어 있고 인터랙션 mockup(폼 입력 반응, 클라이언트 검증 안내, 상태 전환)이 실제로 동작하는가
+- FE 대상 요건이면 외부 API 호출과 navigate 이동이 컴포넌트 props/콜백으로 mock되어 있고, 화면이 직접 `apiClient.*`을 호출하지 않는가 (실제 결합은 구현 단계)
+- FE 대상 요건이면 route 기준 page mock story 1개와 사용자가 관찰할 주요 상태별 story 묶음(initial / fieldErrors / submitting / serverRejection / success 등)이 작성되어 있고, `parameters.harness.requirements`로 본 카드에 연결되어 있는가
+- FE 대상 요건이면 Storybook으로 검토할 상태와 구현 단계의 Playwright FE BDD 테스트가 검증할 사용자 흐름이 구분되어 있는가
+- FE 대상 요건이면 다른 카드(예: REQ-011)의 placeholder 정리, routes.tsx swap, `@Covers` FE BDD 테스트, visual snapshot baseline이 구현 단계 작업 목록으로 분리되어 있는가
+- FE 공통 UI primitive나 주요 화면 조각을 새로 만들거나 바꾸는 요건이면 본 카드 Skeleton에서 함께 작성한 Storybook story 위치가 명시되어 있는가
 - `@Covers`가 붙은 JUnit Acceptance Test나 FE BDD `Covers` 메타데이터가 아직 저장소의 추적 대상 경로에 생성되지 않았는가?
 - Skeleton 코드에 실제 업무 로직이나 임시 성공 응답이 들어가지 않았는가
 
 ### Skeleton 단계 산출물 범위
 
 Skeleton 승인 전까지는 "인터페이스와 계약"까지만 만든다.
+
+백엔드는 인터페이스와 계약까지만 만든다. 프런트엔드 화면은 사용자가 Storybook에서 사용자 흐름을 검토할 수 있도록 인터랙션 mockup 수준까지 작성한다. 단, 외부 API client 결합과 routes.tsx swap, 다른 카드 placeholder 정리는 구현 단계로 분리해 Skeleton 검토가 placeholder 변동에 흔들리지 않도록 한다.
 
 허용:
 
@@ -289,9 +294,9 @@ Skeleton 승인 전까지는 "인터페이스와 계약"까지만 만든다.
 - Service 인터페이스 또는 클래스의 공개 메서드 시그니처
 - Service/Controller 내부 코멘트: 정상 흐름, 예외 흐름, 상태 변화, 부수효과, 호출해야 할 협력 객체를 구현 없이 설계
 - `previewSchema` 산출물
-- 화면/라우팅 Skeleton: 화면 이름, 업무 진입점, 예상 route 초안, 접근 권한, 주요 표시 정보. 카드의 `BDD 테스트 리뷰 > 요건 Skeleton 승인 이력`에 한두 줄로 남긴다.
-- FE route placeholder 또는 타입/인터페이스 초안. 실제 화면 구현 없이 컴파일을 위해 필요한 최소 수준만 허용한다.
-- route 기준 page mock story와 Storybook 상태 목록 초안. 실제 Story 구현은 승인 후 작성한다.
+- 화면/라우팅 Skeleton: 화면 이름, 업무 진입점, 예상 route 초안, 접근 권한, 주요 표시 정보, 사용자가 관찰할 상태(initial / fieldErrors / submitting / serverRejection / success 등). 카드의 `BDD 테스트 리뷰 > 요건 Skeleton 승인 이력`에 작성 위치와 함께 남긴다.
+- FE 화면 인터랙션 mockup: 새 화면 컴포넌트를 별도 파일로 작성한다. 실제 DOM과 Tailwind 스타일을 사용해 화면이 실제처럼 보이게 하고, 폼 입력 반응, 클라이언트 측 검증 안내, submitting/error/success 등 사용자가 관찰할 상태 전환이 실제로 동작하게 한다. 외부 API 호출과 라우팅 이동은 컴포넌트의 props/콜백(또는 React Router 의존성 주입)으로 받아 Storybook control이 결과를 강제할 수 있게 한다.
+- Storybook story: 화면이 있는 카드는 route 기준 page mock story 1개와 사용자가 관찰할 상태별 story 묶음(initial / fieldErrors / submitting / serverRejection / success 등)을 작성한다. story 파일에 `parameters.harness.requirements`로 본 카드를 연결한다.
 
 금지:
 
@@ -301,10 +306,11 @@ Skeleton 승인 전까지는 "인터페이스와 계약"까지만 만든다.
 - Entity나 DTO에 임시 필드를 넣어 이후 결정을 미루는 것
 - Controller의 실제 성공 응답 구현
 - Repository 쿼리 메서드 선언 (`findBy...` 등 메서드 시그니처는 본문이 없어도 Spring Data가 조회 계약을 만든다. 단, Entity 연결 확인용 빈 `JpaRepository` extends 선언은 필요 시 허용한다)
-- 실제 FE 컴포넌트 구현, CSS selector, 버튼/DOM 구조 상세
-- `Covers`가 붙은 FE BDD 테스트
+- FE 화면에서 외부 API client 직접 호출 (`apiClient.GET/POST` 등). API 호출은 props/콜백으로 mock하고, 실제 결합은 구현 단계에서 한다.
+- routes.tsx 의 새 화면 swap. 새 화면은 별도 파일로 두고, 기존 placeholder route는 그대로 유지한다.
+- 다른 카드의 placeholder 수용 기준/시나리오/FE BDD 테스트/page mock story 정리. 다른 카드(예: REQ-011)의 placeholder 정리도 구현 단계에서 함께 처리한다.
+- `Covers`가 붙은 FE BDD 테스트 (Playwright)
 - visual snapshot baseline
-- Storybook story 실제 구현
 - 라우팅이 AC가 아닌데 시나리오에 구체 URL을 고정하는 것
 
 컴파일이 필요한 경우 다음 정도로 둔다.
@@ -312,7 +318,7 @@ Skeleton 승인 전까지는 "인터페이스와 계약"까지만 만든다.
 - Controller: `@RequestMapping`/`@Operation`/시그니처는 작성하되 본문은 `throw new UnsupportedOperationException(...)` 또는 미구현 상태로 둔다.
 - Service: 인터페이스나 클래스 시그니처만 작성한다. 클래스 본문이 필요하면 내부 코멘트로 흐름을 적고 `throw new UnsupportedOperationException(...)`으로 닫는다. 이때 공개 서비스 메서드는 Skeleton 단계라도 `@Transactional` 또는 `@Transactional(readOnly = true)`를 메서드 레벨에 명시한다.
 - Entity: `previewSchema`를 돌리기 위해 필요한 만큼 완전한 형태로 작성한다.
-- FE: route path 상수나 page placeholder가 필요하면 명확한 미구현 상태로 둔다. 실제 업무 UI와 API client 연결은 승인 후 작성한다.
+- FE: 새 화면 컴포넌트는 별도 파일로 두고 인터랙션 mockup까지 작성한다. 외부 API 호출과 navigate 이동은 props/콜백으로 받아 호출 자체는 구현 단계에서 결합한다. routes.tsx swap, 다른 카드 placeholder 정리, `@Covers` FE BDD 테스트, visual snapshot baseline은 구현 단계로 미룬다.
 
 ### 승인 게이트
 
@@ -340,9 +346,12 @@ cd front-end
 npm run typecheck
 npm run lint
 npm run source-index
+npm run build-storybook    # 인터랙션 mockup 컴포넌트와 page mock / 상태별 story가 정상 빌드되는지 확인
 ```
 
-승인 후 BDD 테스트와 구현이 들어가면 평상시처럼 `validateHarness`로 RED를 해소한다.
+리뷰어가 Storybook에서 사용자 흐름을 직접 확인하려면 `npm run storybook` 으로 띄우고 본 카드의 `parameters.harness.requirements` 가 본 요건 ID로 연결된 story 묶음(page mock + 상태별)을 본다.
+
+승인 후 BDD 테스트와 구현이 들어가면 평상시처럼 `validateHarness`로 RED를 해소한다. Skeleton 단계의 RED는 여전히 정상이며, `@Covers` FE BDD 테스트, visual snapshot baseline, routes.tsx swap, 다른 카드 placeholder 정리는 모두 구현 단계에서 진행한다.
 
 ## BDD 테스트 코드 작성
 
