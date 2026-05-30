@@ -65,8 +65,8 @@
   API Skeleton: 엔드포인트, 요청/응답 DTO, 상태 코드, 오류 코드. 확인 완료 여부.
   DB Skeleton: 변경되는 Entity/컬럼/관계. `previewSchema` 확인 완료 여부.
   Service Skeleton: 공개 메서드와 내부 동작 코멘트. 업무 로직 미구현 확인 완료 여부.
-  화면/라우팅 Skeleton: 화면 이름, 업무 진입점, 예상 route 초안, 접근 권한, 주요 표시 정보, loading/empty/error 상태, Storybook으로 고정할 상태. CSS selector·컴포넌트 구조는 포함하지 않는다.
-  검증: `compileJava`, `generateHarnessSourceIndex`, `generateFrontEndSourceIndex`, `previewSchema`(필요 시), `traceRequirementCard -Preq=REQ-000`, FE 대상이면 `npm run typecheck`, `npm run lint`, `npm run source-index` 결과.
+  화면/라우팅 Skeleton: 별도 파일로 작성한 인터랙션 mockup 컴포넌트 위치, 화면 이름, 업무 진입점, 예상 route 초안, 접근 권한, 주요 표시 정보, 사용자가 관찰할 상태(initial / fieldErrors / submitting / serverRejection / success 등), 작성한 route 기준 page mock story와 상태별 story 위치. routes.tsx swap, 외부 API client 결합, 다른 카드 placeholder 정리, `@Covers` FE BDD 테스트, visual snapshot baseline은 Skeleton에서 작성하지 않고 구현 단계 작업 목록으로 분리한다.
+  검증: `compileJava`, `generateHarnessSourceIndex`, `generateFrontEndSourceIndex`, `previewSchema`(필요 시), `traceRequirementCard -Preq=REQ-000`, FE 대상이면 `npm run typecheck`, `npm run lint`, `npm run source-index`, `npm run build-storybook` 결과.
   승인자: Product Owner, Tech Lead
   Skeleton 결과: 승인 또는 수정 요청
 

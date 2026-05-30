@@ -36,7 +36,7 @@
 - 모든 보호 화면은 공통 상단 헤더를 가진다. 헤더 우측에는 현재 사용자의 이메일이 표시되고, 이를 선택하면 사용자 메뉴(dropdown)가 펼쳐지며, 그 안에 로그아웃 항목이 있다.
 - 로그아웃 항목 선택 시 별도의 확인 다이얼로그 없이 즉시 `POST /auth/logout`을 호출한다. 성공 응답을 받았을 때에만 캐시된 사용자 정보를 비우고 `/login`으로 이동시킨다.
 - `POST /auth/logout` 호출이 실패하면 사용자는 현재 화면에 그대로 머무르고, 화면 상단에 dismiss 가능한 알림(`role="alert"`) 한 줄로 재시도를 안내한다. 알림은 헤더 바로 아래에 표시되며, 사용자가 닫거나 다음 성공 응답을 받으면 사라진다.
-- 본 카드는 다른 요건 카드가 본문을 채울 때까지 `/signup`과 `/todos` 두 보호/공개 route의 placeholder 화면을 함께 둔다. `/signup`은 가입 화면이 아직 준비 중이라는 안내만 표시하고, `/todos`는 인증된 사용자의 이메일과 빈 본문 영역만 표시한다. REQ-001 FE 후속과 REQ-002 FE 후속이 각 화면의 실제 본문을 채우는 책임을 가진다.
+- 본 카드는 다른 요건 카드가 본문을 채울 때까지 `/todos` 보호 route의 placeholder 화면을 둔다. `/todos`는 인증된 사용자의 이메일과 빈 본문 영역만 표시하고, REQ-002 FE 후속이 실제 본문을 채운다. `/signup` route는 본 카드가 가입 진입 링크용으로 처음 placeholder를 두었으나, REQ-013(이메일 회원 가입 화면)이 실제 화면으로 구현하면서 placeholder 책임을 이관했다. 로그인 카드의 `/signup` 진입 링크는 그대로 유지되며 이제 실제 회원 가입 화면으로 이동한다.
 - `/` 경로는 REQ-005가 정의한 공개 앱 셸 화면을 그대로 유지하며, 본 카드의 보호 라우팅 대상이 아니다. 인증 여부와 무관하게 같은 화면이 표시된다. 본 카드는 `/` 자체의 표시 동작과 REQ-005의 BLUE 회복 상태를 변경하지 않는다.
 
 ## 표준 용어
@@ -60,7 +60,7 @@
 - 사용자 정보 수정, 탈퇴, 비활성화
 - REQ-004의 Bearer 헤더 검증 동작 자체 변경(본 카드는 인증 채널에 Cookie를 추가할 뿐, 기존 Bearer 검증 규칙을 변경하지 않는다)
 - 로그아웃 확인 다이얼로그
-- 가입 화면(`/signup`) 본문 구현 (본 카드는 안내 placeholder만 둔다; REQ-001 FE 후속 카드가 채운다)
+- 가입 화면(`/signup`) 본문 구현 (REQ-013 이메일 회원 가입 화면이 구현한다; 본 카드는 가입 진입 링크만 유지한다)
 - 할 일 목록 화면(`/todos`) 본문 구현 (본 카드는 인증 확인용 placeholder만 둔다; REQ-002 FE 후속 카드가 채운다)
 
 ## 수용 기준
@@ -111,7 +111,6 @@
 - (FE) 보호 화면 상단 헤더의 사용자 이메일을 선택하면 사용자 메뉴가 펼쳐지고, 그 안에 로그아웃 항목이 있다
 - (FS) 사용자 메뉴에서 로그아웃 항목을 선택해 로그아웃 호출이 성공하면 화면에서 사용자 정보가 사라지고 로그인 화면으로 이동한다
 - (FE) 사용자 메뉴에서 로그아웃 항목을 선택해 로그아웃 호출이 실패하면 현재 화면에 그대로 머무르고 상단에 재시도를 안내하는 오류 표시가 노출된다
-- (FE) `/signup` 경로에 접근하면 가입 화면이 아직 준비 중이라는 안내가 표시된다
 - (FE) 인증된 사용자가 `/todos` 경로에 접근하면 자신의 이메일이 표시되는 빈 보호 화면이 보인다
 
 ## 의사결정 로그
@@ -278,9 +277,21 @@
   결정자: Product Owner, Tech Lead
   영향: FE 로그인 콜백은 `loginRedirect` 값을 신뢰 경로 목록과 비교하는 헬퍼(`resolveLoginRedirect`)를 거치고, 매칭되지 않으면 `/todos`로 이동한다. 신뢰 경로 목록은 본 카드에서는 `/todos`만 포함하며, 후속 보호 화면을 추가하는 카드에서 함께 갱신한다.
 
+- 결정일: 2026-05-30
+  결정: 로그인 인증 실패 안내를 `docs/standards/front-end-ui.md` 의 "Form-level 서버 오류 Alert" 표준에 맞춰 `AlertCircle` 아이콘 + `AlertTitle "로그인 정보를 확인해 주세요"` + `AlertDescription` 구조로 갱신하고, 본문에 `/signup` 화면 진입 링크를 둔다.
+  이유: 기존 단일 `AlertDescription` 평서문은 시각 위계가 약하고 다음 행동 안내가 없다. REQ-013 회귀 적용과 함께 새 표준이 도입돼 모든 form-level 서버 오류 Alert 구조를 통일한다. 인증 실패 본문은 어느 쪽 자격 증명이 잘못됐는지 노출하지 않는다는 본 카드 결정 #5 (user enumeration 보호)를 그대로 따른다.
+  결정자: Tech Lead
+  영향: `LoginPage.tsx` formError Alert 가 새 구조로 변경된다. AC "폼 상단에 어느 쪽이 잘못됐는지 구분하지 않는 공통 안내가 보이고, 입력했던 이메일은 그대로 유지되며 비밀번호 입력은 비워진다" 의도는 그대로 유지(`AlertTitle` + `AlertDescription` 본문이 모두 양쪽 자격 증명 가능성을 동등하게 다룸). 기존 Playwright spec (`auth-login-form.spec.ts`) 의 `getByText("이메일 또는 비밀번호가 올바르지 않습니다.")` 검증은 본문 substring 매치로 계속 PASS 하며, 새 `AlertTitle`/`/signup` 링크에 대한 명시 검증 추가는 본 카드의 후속 작업(REQ-001 FE 후속 카드와 함께 정리)으로 둔다.
+
+- 결정일: 2026-05-30
+  결정: `/signup` placeholder 책임을 REQ-013(이메일 회원 가입 화면)으로 이관한다. 본 카드의 `/signup` placeholder 수용 기준("`/signup` 경로에 접근하면 가입 화면이 아직 준비 중이라는 안내가 표시된다"), 해당 시나리오, Playwright placeholder 테스트, `SignupPlaceholderPage`/그 story 를 제거한다. 함께, REQ-013 가입 성공 흐름을 위해 `LoginPage` 에 `signupCompleted` 쿼리 감지 진입점을 추가한다.
+  이유: REQ-013 이 `/signup` 을 실제 회원 가입 화면으로 구현하면서, placeholder 기대가 그대로 남으면 새 화면 테스트와 REQ-011 placeholder 테스트가 같은 route 에 대해 상충한다. REQ-013 의사결정 로그(2026-05-27 "REQ-011 placeholder 기대 이관")가 이 정리를 본 카드 구현 단계 또는 REQ-013 구현 단계에서 수행하도록 예고했고, REQ-013 구현 단계에서 함께 정리한다.
+  결정자: Tech Lead
+  영향: 본 카드의 (FE) 수용 기준이 23개 → 22개로 줄어 BE 20 + FE 22 + FS 3 = 45개가 된다(시나리오 37개). 로그인 카드의 `/signup` 진입 링크는 그대로 유지되며 이제 실제 회원 가입 화면으로 이동한다. `LoginPage` 의 `signupCompleted` 안내 표시는 본 카드 파일에 구현되지만, 그 동작("`/login`으로 이동하면 가입이 완료되었다는 안내가 보인다")은 REQ-013 의 수용 기준이며 REQ-013 의 성공 흐름 Playwright 테스트가 커버한다. 본 카드는 새 AC 를 추가하지 않는다. 이관 후에도 본 카드의 나머지 45개 AC 는 모두 커버되어 BLUE 를 유지한다.
+
 ## BDD 테스트 리뷰
 
-시나리오 문서: [`docs/scenarios/REQ-011-login-logout.feature`](../scenarios/REQ-011-login-logout.feature) (38개 Scenario로 BE 20 + FE 23 + FS 3 = 46개 AC 모두 `Covers:` 매핑).
+시나리오 문서: [`docs/scenarios/REQ-011-login-logout.feature`](../scenarios/REQ-011-login-logout.feature) (37개 Scenario로 BE 20 + FE 22 + FS 3 = 45개 AC 모두 `Covers:` 매핑). `/signup` placeholder AC/시나리오/테스트는 2026-05-30 결정으로 REQ-013 에 이관해 제거했다.
 
 ### 요건 Skeleton 승인 이력
 

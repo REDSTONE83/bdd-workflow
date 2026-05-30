@@ -118,20 +118,4 @@ test.describe("보호 화면 / 헤더 / 로그아웃 / placeholder", () => {
     await expect(page).toHaveURL(/\/todos$/)
     await expect(page.getByText(/다시 시도/)).toBeVisible()
   })
-
-  test("/signup 경로는 가입 화면이 아직 준비 중이라는 안내 placeholder 를 표시한다", async ({
-    page,
-  }, testInfo) => {
-    testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-011" },
-      {
-        type: "Covers",
-        description: "`/signup` 경로에 접근하면 가입 화면이 아직 준비 중이라는 안내가 표시된다",
-      },
-    )
-
-    await installAuthRoutes(page, { authenticated: null })
-    await page.goto("/signup")
-    await expect(page.getByRole("heading", { name: /가입 화면 준비 중/ })).toBeVisible()
-  })
 })

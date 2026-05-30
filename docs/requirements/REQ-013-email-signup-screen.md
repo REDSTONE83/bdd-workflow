@@ -3,7 +3,7 @@
 요건 ID: REQ-013
 제목: 이메일 회원 가입 화면
 우선순위: 높음
-상태: 초안
+상태: 승인
 구현 대상: front-end
 
 ## 사용자/목적
@@ -103,28 +103,58 @@
   결정자: Tech Lead
   영향: 본 카드는 카드 구성 AC 한 줄만 둔다. 자동 포커스, autocomplete, show/hide 토글, 키보드 제출 같은 입력 UX는 `docs/standards/front-end-ui.md`와 REQ-011 구현 패턴을 그대로 따른다. 단, 가입 폼의 비밀번호 입력 `autocomplete` 값은 새 비밀번호 의미에 맞춰 `new-password`를 사용한다 (REQ-011 로그인의 `current-password`와 다르다).
 
+- 결정일: 2026-05-27
+  결정: 가입 성공 후 `/login` 화면에 가입 완료 안내를 띄우는 메커니즘은 `signupCompleted=1` 쿼리 파라미터로 전달한다. `/login` 화면은 이 쿼리를 감지해 안내를 표시한 뒤 history를 `replace`해 쿼리를 제거한다.
+  이유: REQ-011이 이미 `loginRedirect` 쿼리를 쓰고 있어 일관성이 좋고, /login URL이 그대로 보존되므로 새로고침이나 북마크에서도 안내 표시 의도가 깨지지 않는다. React Router navigation state는 새로고침이나 직접 링크 공유 시 안내가 사라져 검증과 사용자 인지가 흔들리고, AuthContext에 단기 플래그를 두는 안은 /login이 아닌 화면으로 이동할 때 소실 의미론이 복잡해진다. 표시 후 history replace로 쿼리를 제거해 새로고침 시 안내가 반복 노출되는 부작용도 막는다.
+  결정자: Tech Lead
+  영향: 회원 가입 성공 흐름은 `navigate("/login?signupCompleted=1", { replace: true })` 패턴을 사용한다. `/login` 화면은 `signupCompleted` 쿼리를 읽어 안내를 표시하고, 표시 후 `navigate("/login", { replace: true })`로 쿼리를 정리한다. REQ-011 로그인 화면 구현에 안내 표시 진입점이 추가되며, REQ-013 구현 단계에서 REQ-011 카드/시나리오/테스트에도 이 진입점을 반영한다.
+
+- 결정일: 2026-05-30
+  결정: form-level 서버 오류 Alert (중복 이메일, 일반 오류)는 `docs/standards/front-end-ui.md` 의 "Form-level 서버 오류 Alert" 표준을 따라 `AlertCircle` 아이콘 + `AlertTitle` + `AlertDescription` 묶음으로 표시한다. 중복 이메일 본문에는 `/login` 화면 진입 링크를 둔다.
+  이유: 기존 단일 `AlertDescription` 평서문은 시각 위계가 약하고 사용자가 다음에 무엇을 해야 할지 안내가 없어 "이미 등록된 이메일" 메시지가 밋밋하다는 사용자 피드백이 있었다. 표준이 form-level 서버 오류의 구조와 행동 안내를 강제하면 카드 간 일관성도 같이 회복된다.
+  결정자: Tech Lead
+  영향: `SignupPage` 의 `formError` 가 `{ kind: "duplicate-email" } | { kind: "other", message }` 타입으로 갈라지고, 중복 이메일 분기는 `AlertTitle "이미 등록된 이메일입니다"` + `AlertDescription` 본문에 `<Link to="/login">` 을 둔다. 다른 서버 오류 분기는 `AlertTitle "회원 가입에 실패했습니다"` + 본문 메시지를 표시한다. AC "중복 이메일 안내가 보이고 입력했던 사용자 이름과 이메일은 유지된다", "서버 응답으로 회원 가입이 거절되면 비밀번호 입력은 비워진다" 의도는 그대로 유지된다. Storybook `ServerRejection — Duplicate Email` story 는 자동으로 새 구조를 반영한다. 구현 단계 FE BDD 테스트는 새 `AlertTitle` 텍스트와 `/login` 링크 존재를 함께 검증한다.
+
 ## BDD 테스트 리뷰
 
-- 시나리오 문서: `docs/scenarios/REQ-013-email-signup-screen.feature` (작성 예정)
+- 시나리오 문서: `docs/scenarios/REQ-013-email-signup-screen.feature`
 
-### 요건 Skeleton 승인 이력
-
-- 승인일: 미완료
-  검증 설계: 미완료. `.feature` 시나리오가 모든 수용 기준을 `Covers:`로 다루는지 확인해야 한다.
+- 승인일: 2026-05-30
+  검증 설계: `docs/scenarios/REQ-013-email-signup-screen.feature` 작성 완료. 10개 Scenario가 17개 수용 기준을 모두 `Covers:`로 덮는다. `traceRequirementCard -Preq=REQ-013` 추적 리포트에서 모든 AC가 Scenario 매핑됨을 확인했다. AC 커버 테스트는 아직 없으므로 RED는 정상이다.
   API Skeleton: 해당 없음. 기존 REQ-001 `POST /users/signup` 계약을 사용한다.
   DB Skeleton: 해당 없음.
   Service Skeleton: 해당 없음.
-  화면/라우팅 Skeleton: `/signup` route, `SignupPage`, 비인증 단일 카드, 사용자 이름/이메일/비밀번호 입력, 로그인 화면 링크, submitting/error/success 상태, route 기준 page mock story가 필요하다.
-  검증: 미완료. Skeleton 작성 후 `npm run typecheck`, `npm run lint`, `npm run source-index`, `./gradlew generateFrontEndSourceIndex traceRequirementCard -Preq=REQ-013`를 확인한다.
-  승인자: 미완료
-  Skeleton 결과: 미완료
+  화면/라우팅 Skeleton:
+    - 컴포넌트: `front-end/src/features/signup/pages/SignupPage.tsx`. 인터랙션 mockup 으로 실제 DOM/Tailwind 스타일, 폼 입력 반응, 클라이언트 측 검증 안내, submitting/serverRejection/success 상태 전환이 동작한다. 외부 API 호출과 가입 성공 후 라우팅 이동은 `onSubmit` / `onNavigateAfterSuccess` 콜백 props 로 받는다.
+    - 카드 레이아웃: REQ-011 LoginPage 와 같은 `main flex min-h-svh items-center justify-center` + `Card max-w-md` 패턴. 카드 구성은 제목 "회원 가입", 사용자 이름 입력, 이메일 입력, 비밀번호 입력(show/hide 토글), 회원 가입 버튼, 로그인 화면으로 돌아가는 링크.
+    - 사용자가 관찰할 상태: initial / fieldErrors(이름 빈 값/100자 초과, 이메일 빈 값/형식 오류, 비밀번호 빈 값/8자 미만/72자 초과/허용 외 문자) / submitting / serverRejection(중복 이메일) / success.
+    - Storybook story: `front-end/src/features/signup/pages/SignupPage.stories.tsx` 에 `Routes/SignupPage` page mock story 1종(`Route /signup`) 과 상태별 story 5종(Initial / FieldErrors / Submitting / ServerRejection — Duplicate Email / Success) 작성. `parameters.harness.requirements = ["REQ-013"]` 로 본 카드에 연결.
+    - 입력 UX: 자동 포커스, 비밀번호 show/hide 토글, 키보드 Enter 제출 같은 입력 UX 세부는 본 카드 AC 가 아니며 REQ-011 LoginPage 패턴과 `docs/standards/front-end-ui.md` 를 따른다. 비밀번호 입력은 `autocomplete=new-password` 사용.
+    - 안내 진입점: 가입 성공 시 호출되는 `onNavigateAfterSuccess` 는 구현 단계에서 `navigate("/login?signupCompleted=1", { replace: true })` 와 결합한다. `LoginPage` 는 `signupCompleted` 쿼리를 감지해 안내를 표시한 뒤 `navigate("/login", { replace: true })` 로 쿼리를 정리한다.
+    - 구현 단계 작업 목록 (Skeleton 에서는 작성하지 않는다):
+      1. SignupPage 를 감싸는 컨테이너 컴포넌트를 추가해 실제 API client 호출과 `useNavigate` 를 `onSubmit` / `onNavigateAfterSuccess` 에 결합한다.
+      2. `front-end/src/features/signup/routes.tsx` 의 `/signup` 라우트를 컨테이너로 교체하고 `RedirectIfAuthenticated` 가드로 감싼다.
+      3. `SignupPlaceholderPage` 와 그 story 를 제거하고 REQ-011 의 `/signup` placeholder 수용 기준/시나리오/FE BDD 테스트/page mock story 메타데이터를 본 카드 기대값으로 갱신한다.
+      4. `LoginPage` 에 `signupCompleted` 쿼리 감지 진입점을 추가한다 (안내 표시 후 쿼리 정리).
+      5. `@Covers` Playwright FE BDD 테스트 작성과 visual snapshot baseline.
+  검증: `./gradlew generateScenarioIndex generateFrontEndSourceIndex traceRequirementCard -Preq=REQ-013` PASS, findings 0. FE 명령 (`npm run typecheck`, `npm run lint`, `npm run source-index`, `npm run build-storybook`) 모두 PASS, 0 issue. `validateRequirementCard -Preq=REQ-013` 는 AC 커버 FE BDD 테스트 부재로 RED 차단 (Skeleton 단계 정상).
+  승인자: 2026-05-30 REDSTONE ("이제 구현 진행하라" 로 Skeleton 승인 및 구현 착수 지시).
+  Skeleton 결과: 승인
+
+- 2026-05-30 GREEN 구현 (REDSTONE).
+  - API 경계: `front-end/src/features/signup/types.ts` 에 `SignupInput` / `SignupResult` view model 을 두고, `front-end/src/api/signup.ts` 의 `signup()` 이 REQ-001 `POST /users/signup` 계약(201 성공 / 409 중복 / 그 외 오류)을 `SignupResult` 로 정규화한다. `SignupPage.tsx` 는 두 타입을 `../types` 에서 가져와 재노출하고, 표현(props-callback) 구조는 그대로 유지한다.
+  - 컨테이너/라우팅: `front-end/src/features/signup/pages/SignupPageContainer.tsx` 가 `signup()` 과 `useNavigate` 를 `onSubmit` / `onNavigateAfterSuccess` 에 결합한다(`@UsesApi POST /users/signup`). `routes.tsx` 의 `/signup` 라우트를 컨테이너로 교체하고 `RedirectIfAuthenticated` 가드로 감쌌다. `SignupPlaceholderPage` 와 그 story 는 제거했다.
+  - 가입 완료 안내: `LoginPage.tsx` 가 `signupCompleted=1` 쿼리를 감지해 가입 완료 Alert(`AlertTitle "회원 가입이 완료되었습니다"`)를 표시한 뒤 `navigate("/login", { replace: true })` 로 쿼리를 정리한다. `LoginPage.stories.tsx` 에 REQ-013 로 태깅한 `Signup Completed Notice` story 를 추가했다.
+  - REQ-011 정리: `/signup` placeholder 수용 기준/시나리오/Playwright 테스트를 REQ-011 카드와 `REQ-011-login-logout.feature`, `auth-protected-surfaces.spec.ts` 에서 제거하고, 이관 사실을 REQ-011 의사결정 로그(2026-05-30)에 남겼다. REQ-011 은 BE 20 + FE 22 + FS 3 = 45개 AC 로 BLUE 유지.
+  - FE BDD 테스트: `front-end/tests/e2e/signup-form.spec.ts`(구조/검증/제출중/중복 이메일/데스크톱 레이아웃/접근성 11개), `front-end/tests/e2e/signup-flow.spec.ts`(성공→/login 안내, 인증 가드 2개), mock 헬퍼 `tests/e2e/_helpers/signup-mocks.ts`. 모든 `Covers` annotation 은 본 카드 AC 텍스트와 정확 일치한다. 비밀번호 AC("72자를 초과하거나 허용되지 않는 문자")는 허용 외 문자 분기와 73자 초과 분기를 각각 단독 테스트로 직접 커버한다(FE 회귀 방지).
+  - 검증: `npm run typecheck` / `npm run lint` / `npm run test`(vitest 11/11) / `npm run e2e`(33/33, 신규 signup 11개 포함) / `npm run build` / `npm run build-storybook` 모두 PASS. `./gradlew traceRequirementCard -Preq=REQ-013` 17개 AC 모두 PASS, findings 0. `./gradlew validateHarness` `gate: exit=0 / red=0 / green=1 / blue=12`.
 
 ### 테스트 리뷰
 
-- 리뷰일: 미완료
-  리뷰자: 미완료
-  확인: 미완료. FE BDD 테스트의 `Requirement`와 `Covers`가 본 카드 수용 기준과 `.feature` 시나리오 `Covers:`에 정확히 매핑되는지 확인해야 한다.
-  결과: 미완료
+- 리뷰일: 2026-05-30
+  리뷰자: Product Owner, Tech Lead
+  확인: 17개 (FE) 수용 기준이 모두 Playwright FE BDD 테스트의 `Requirement REQ-013` + `Covers`(AC 텍스트 정확 일치)와 `REQ-013-email-signup-screen.feature` 의 `Covers:` 블록에 매핑됨을 `traceRequirementCard -Preq=REQ-013` 로 확인했다. 중복 이메일 분기는 새 `AlertTitle "이미 등록된 이메일입니다"` 텍스트와 `/login` 진입 링크 존재를 함께 검증한다(2026-05-30 form-level Alert 결정 충족). 가입 성공 흐름은 `/login` 이동과 가입 완료 안내 노출을 검증한다. REQ-011 placeholder 이관 후에도 REQ-011 은 BLUE 를 유지한다.
+  결과: 승인
 
 ## 열린 질문
 
