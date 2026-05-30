@@ -5,7 +5,7 @@
 // 입력: build/harness/indexes/scenarios.index.json
 // 출력: build/harness/findings/scenarios.findings.json
 //
-// 룰 ID (모두 severity=error):
+// 룰 ID (구조 위반, severity=error):
 //   SCN-DIALECT-FORBIDDEN        '# language:' dialect 지시자 사용 금지
 //   SCN-FEATURE-HEADER-MISSING   .feature 파일에 Feature 헤더가 없음
 //   SCN-REQ-TAG-MISSING          Feature에 @REQ-XXX 태그가 없음
@@ -13,6 +13,12 @@
 //   SCN-STRAY-LINE               Feature 헤더 전 알 수 없는 줄
 //   SCN-COVERS-OUTSIDE-SCENARIO  Covers: 가 Scenario 밖
 //   SCN-STEP-OUTSIDE-SCENARIO    step이 Scenario 밖
+//
+// 룰 ID (관찰 언어 권고, severity=warning, 게이트 비차단):
+//   SCN-STEP-IMPL-VOCAB          Given/When/Then step에 사용자가 관찰할 수 없는 전송/구현 어휘.
+//                                현재는 오탐을 막기 위해 "요청이 전송 / 전송되지 않" 같은
+//                                요청 전송 단정만 본다. 네트워크 미전송은 시나리오가 아니라
+//                                Playwright assertion에 둔다.
 //
 // 정책:
 //   각 finding의 `requirements`는 해당 feature의 @REQ-XXX 태그를 그대로 옮긴다.
@@ -53,6 +59,43 @@ const KNOWN_KINDS = new Set([
     'SCN-COVERS-OUTSIDE-SCENARIO',
     'SCN-STEP-OUTSIDE-SCENARIO'
 ]);
+
+// SCN-STEP-IMPL-VOCAB: step 본문의 전송/구현 어휘 탐지 (경고).
+// 오탐을 막기 위해 현재는 "요청 전송 단정"만 본다 — 사용자는 요청이 전송됐는지 자체를 관찰할 수 없다.
+// (`API 호출자`(행위자), `엔드포인트`(계약 카드), `응답을 반환`(서버 동작 When)처럼
+//  문맥에 따라 정당한 표현까지 잡지 않도록 패턴을 의도적으로 좁게 둔다.)
+const STEP_IMPL_VOCAB_PATTERNS = [
+    {
+        re: /요청[이을]\s*전송|전송되지\s*않|전송하지\s*않|네트워크\s*요청/,
+        hint: '요청 전송 여부는 사용자가 직접 관찰할 수 없다. "저장되지 않고 같은 화면에 머문다"처럼 관찰 가능한 결과로 바꾸고, 네트워크 미전송 단정은 Playwright assertion에 둔다.'
+    }
+];
+
+function stepImplVocabFindings(index) {
+    const out = [];
+    for (const feature of index.features ?? []) {
+        for (const scenario of feature.scenarios ?? []) {
+            for (const step of scenario.steps ?? []) {
+                const text = step.text ?? '';
+                const hit = STEP_IMPL_VOCAB_PATTERNS.find((p) => p.re.test(text));
+                if (!hit) continue;
+                const file = feature.file ?? '';
+                out.push({
+                    ruleId: 'SCN-STEP-IMPL-VOCAB',
+                    severity: 'warning',
+                    strictSeverity: 'warning',
+                    kind: 'static',
+                    message: `시나리오 step이 사용자 관찰 언어가 아님: "${step.keyword} ${text}" — ${hit.hint}`,
+                    requirements: feature.requirementIds ?? [],
+                    location: { file, line: step.line ?? 0, identity: `${file}:${step.line ?? 0}` },
+                    evidence: { keyword: step.keyword, text },
+                    remediation: REMEDIATION
+                });
+            }
+        }
+    }
+    return out;
+}
 
 function buildSummary(findings) {
     const summary = { error: 0, warning: 0, info: 0, byRuleId: {} };
@@ -137,6 +180,7 @@ function main(argv) {
     for (const feature of index.features ?? []) {
         for (const issue of feature.issues ?? []) findings.push(findingFromIssue(issue, feature));
     }
+    findings.push(...stepImplVocabFindings(index));
 
     const payload = writePayload(findings, cfg.out);
     const byRule = Object.entries(payload.summary.byRuleId).map(([k, v]) => `${k}=${v}`).join(', ') || 'none';

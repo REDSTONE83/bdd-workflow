@@ -39,6 +39,9 @@ const REQUIREMENT_FILENAME_PATTERN = /^(REQ-\d{3,})-[^/]+\.md$/;
 const TERM_KEY_PATTERN = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){1,2}$/;
 const REMEDIATION_CARD = 'docs/standards/requirement-card.md';
 const REMEDIATION_TERM = 'docs/standards/terminology.md';
+const scenariosDir = path.join(repoRoot, 'docs', 'scenarios');
+// 카드의 "시나리오 문서:" 줄이 아직 작성 예정으로 남아 있는지 판단하는 표기.
+const SCENARIO_STALE_MARKERS = /작성\s*예정|\(예정\)|미작성|\bTBD\b/;
 
 function relPath(absolute) {
     return path.relative(repoRoot, absolute);
@@ -88,6 +91,37 @@ function findingForCard(card, ruleId, message, evidence = {}, severity = 'error'
         evidence,
         remediation: REMEDIATION_CARD
     };
+}
+
+// CARD-SCENARIO-STALE (warning): .feature 시나리오 문서가 이미 존재하는데
+// 카드의 "시나리오 문서:" 줄이 여전히 "작성 예정" 등으로 남아 있으면 상태 표기가 낡은 것.
+function scenarioStaleFinding(card) {
+    if (!card.id) return null;
+    const cardFileRel = card.location?.file;
+    if (!cardFileRel) return null;
+    const cardAbs = path.isAbsolute(cardFileRel) ? cardFileRel : path.join(repoRoot, cardFileRel);
+    if (!fs.existsSync(cardAbs)) return null;
+
+    let featureExists = false;
+    try {
+        featureExists = fs.readdirSync(scenariosDir)
+            .some((name) => name.startsWith(`${card.id}-`) && name.endsWith('.feature'));
+    } catch {
+        featureExists = false;
+    }
+    if (!featureExists) return null;
+
+    const lines = fs.readFileSync(cardAbs, 'utf8').split(/\r?\n/);
+    for (let i = 0; i < lines.length; i += 1) {
+        if (/시나리오 문서:/.test(lines[i]) && SCENARIO_STALE_MARKERS.test(lines[i])) {
+            const finding = findingForCard(card, 'CARD-SCENARIO-STALE',
+                `시나리오 문서(.feature)가 이미 존재하는데 카드의 "시나리오 문서:" 줄이 작성 예정으로 남아 있음: "${lines[i].trim()}"`,
+                { line: lines[i].trim() }, 'warning');
+            finding.location = { ...(finding.location ?? {}), line: i + 1, identity: `${cardFileRel}:${i + 1}` };
+            return finding;
+        }
+    }
+    return null;
 }
 
 function validateCard(card, allCards, terminologyIndex) {
@@ -209,6 +243,9 @@ function validateCard(card, allCards, terminologyIndex) {
                 '상태=승인이지만 BDD 테스트 리뷰에 "결과: 승인" 줄이 없음'));
         }
     }
+
+    const staleFinding = scenarioStaleFinding(card);
+    if (staleFinding) findings.push(staleFinding);
 
     return findings;
 }

@@ -153,6 +153,18 @@ useMutation({
 - 페이지 크기, 정렬 기본값, 잘못된 query fallback/거절 정책은 요건 카드의 범위 또는 의사결정 로그에 둔다.
 - Query cache는 URL query 조합별 서버 결과 캐시일 뿐, URL state의 대체물이 아니다.
 
+## 무한 로드 / 가상 스크롤 목록
+
+목록 조회 API가 묶음(page) 단위 응답이고 화면이 명시적 페이지 이동 컨트롤(이전/다음, 페이지 번호) 대신 스크롤로 더 불러오는 UX를 쓰면, 서버 상태는 `useInfiniteQuery`로 둔다. 렌더링 쪽 규칙은 `front-end-ui.md`의 "목록 가상 스크롤"을 따른다.
+
+- `queryFn`은 `src/api/{domain}.ts`의 묶음 조회 함수를 호출하고, `getNextPageParam`은 응답의 묶음 메타(현재 묶음 번호, 전체 묶음 수)로 다음 묶음 파라미터를 계산한다. 마지막 묶음이면 `undefined`를 반환해 더 부르지 않는다.
+- query key는 일반 list와 같은 factory(`lists()`/`list(params)`)를 쓰되, 무한 목록은 `list(params)` 아래 하나의 캐시 엔트리로 둔다. 묶음 번호는 query key에 넣지 않는다. 같은 무한 쿼리가 여러 묶음을 누적한다.
+- 화면은 누적된 묶음을 평탄화한 항목 배열을 view model로 받는다. 컴포넌트가 묶음 경계를 직접 다루지 않는다.
+- 스크롤이 끝에 가까워지면 `fetchNextPage()`를 호출한다. 호출 트리거(센티넬 관찰, 스크롤 임계값 등)는 `front-end-ui.md` 가상 스크롤 표준을 따른다.
+- 다음 묶음 로딩 상태(`isFetchingNextPage`)와 더 받을 묶음 유무(`hasNextPage`)를 화면 상태로 노출해 로딩/끝 표시를 일관되게 한다.
+- 생성/수정/삭제 mutation 성공 후에는 일반 list와 동일하게 `lists()`를 무효화한다. 무한 쿼리도 같은 key 접두로 무효화되어 첫 묶음부터 다시 받는다.
+- 누적 전체 개수 숫자 표시는 화면 요건이 명시적으로 요구할 때만 둔다. 무한 로드 목록은 묶음 크기·다음 묶음·빈 묶음을 관찰 가능한 결과로 두는 것으로 충분하며, 전체 개수 표시를 기본으로 강제하지 않는다.
+
 ## Storybook / Test
 
 Storybook과 테스트는 cache 격리를 우선한다.
