@@ -681,6 +681,33 @@ function literalPathFromArg(arg) {
   return null
 }
 
+function expressionContainsCall(node, functionName) {
+  let found = false
+
+  function visit(current) {
+    if (found || !current) return
+    if (ts.isCallExpression(current)) {
+      const callee = unwrapExpression(current.expression)
+      if (ts.isIdentifier(callee) && callee.text === functionName) {
+        found = true
+        return
+      }
+    }
+    ts.forEachChild(current, visit)
+  }
+
+  visit(node)
+  return found
+}
+
+function requestShapeEvidence(optionsArg) {
+  return {
+    usesPageableQuery: expressionContainsCall(optionsArg, "pageableQuery"),
+    usesPageableQueryString: expressionContainsCall(optionsArg, "pageableQueryString"),
+    usesNullablePatchBody: expressionContainsCall(optionsArg, "nullablePatchBody"),
+  }
+}
+
 function methodFromApiClientPropertyAccess(node, filePath) {
   if (!ts.isPropertyAccessExpression(node)) return null
   const name = node.name?.text ?? ""
@@ -786,11 +813,12 @@ function collectFrontEndApiCalls(sourceFile, filePath, metadata, issues) {
             requirements: metadata.requirements,
             method,
             path: literalPath,
-            callee: callee.getText(sourceFile),
-            apiModule: inApiModule,
-            file: fileRel,
-            line: lineOf(sourceFile, node),
-          })
+              callee: callee.getText(sourceFile),
+              apiModule: inApiModule,
+              requestShape: requestShapeEvidence(node.arguments[1]),
+              file: fileRel,
+              line: lineOf(sourceFile, node),
+            })
         } else {
           pushDynamicApiCallIssue(issues, sourceFile, fileRel, node, callee, literalPath)
         }

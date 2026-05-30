@@ -1,4 +1,6 @@
-import type { Page, Route } from "@playwright/test"
+import type { Page } from "@playwright/test"
+
+import { routeApi } from "./apiRoute"
 
 export type FakeUser = { id: string; email: string }
 
@@ -15,7 +17,7 @@ export type InstallAuthRoutesOptions = {
 
 // /auth/me, /auth/login, /auth/logout 를 옵션 기반으로 한 번에 mock 한다.
 // 테스트 도중 상태를 바꾸고 싶으면 같은 페이지에서 installAuthRoutes 를 다시 호출하거나,
-// 호출 측에서 page.route 로 개별 라우트를 덮어쓴다.
+// 호출 측에서 routeApi 로 개별 라우트를 덮어쓴다.
 export async function installAuthRoutes(
   page: Page,
   options: InstallAuthRoutesOptions = {},
@@ -24,7 +26,7 @@ export async function installAuthRoutes(
   const loginStatus = options.loginStatus ?? 204
   const logoutStatus = options.logoutStatus ?? 204
 
-  await page.route("**/auth/me", async (route: Route) => {
+  await routeApi(page, "**/auth/me", async (route) => {
     if (currentUser) {
       await route.fulfill({
         status: 200,
@@ -46,7 +48,7 @@ export async function installAuthRoutes(
     }
   })
 
-  await page.route("**/auth/login", async (route: Route) => {
+  await routeApi(page, "**/auth/login", async (route) => {
     // 로그인 성공 시 BE 가 ACCESS_TOKEN Cookie 를 발급한다 (Mock 으로 동일 효과).
     if (loginStatus === 204 && currentUser == null) {
       currentUser = DEFAULT_USER
@@ -67,7 +69,7 @@ export async function installAuthRoutes(
     })
   })
 
-  await page.route("**/auth/logout", async (route: Route) => {
+  await routeApi(page, "**/auth/logout", async (route) => {
     if (logoutStatus === 204) {
       currentUser = null
     }

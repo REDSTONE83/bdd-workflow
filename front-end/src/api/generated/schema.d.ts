@@ -455,21 +455,14 @@ export interface components {
              */
             password: string;
         };
-        JsonNullableBoolean: {
-            present?: boolean;
-        };
-        JsonNullableLocalDate: {
-            present?: boolean;
-        };
-        JsonNullablePriority: {
-            present?: boolean;
-        };
-        JsonNullableString: {
-            present?: boolean;
-        };
-        JsonNullableUUID: {
-            present?: boolean;
-        };
+        JsonNullableBoolean: boolean | null;
+        /** Format: date */
+        JsonNullableLocalDate: string | null;
+        /** @enum {string|null} */
+        JsonNullablePriority: "HIGH" | "MEDIUM" | "LOW" | null;
+        JsonNullableString: string | null;
+        /** Format: uuid */
+        JsonNullableUUID: string | null;
         /**
          * @description 할 일 수정 요청 (부분 수정).
          *
@@ -486,9 +479,8 @@ export interface components {
             completed?: components["schemas"]["JsonNullableBoolean"];
             categoryId?: components["schemas"]["JsonNullableUUID"];
         };
-        JsonNullableInteger: {
-            present?: boolean;
-        };
+        /** Format: int32 */
+        JsonNullableInteger: number | null;
         /** @description 카테고리 수정 요청 (부분 수정). 누락된 필드는 변경되지 않으며, color/description은 명시적 null로 비울 수 있다. */
         UpdateCategoryRequest: {
             name?: components["schemas"]["JsonNullableString"];
@@ -629,8 +621,10 @@ export interface operations {
     };
     listTodos: {
         parameters: {
-            query: {
-                pageable: components["schemas"]["Pageable"];
+            query?: {
+                page?: number;
+                size?: number;
+                sort?: string[];
             };
             header?: never;
             path?: never;
@@ -702,8 +696,10 @@ export interface operations {
     };
     listCategories: {
         parameters: {
-            query: {
-                pageable: components["schemas"]["Pageable"];
+            query?: {
+                page?: number;
+                size?: number;
+                sort?: string[];
             };
             header?: never;
             path?: never;

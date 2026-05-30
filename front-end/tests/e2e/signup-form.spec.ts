@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright"
 import { expect, test } from "@playwright/test"
 
+import { routeApi } from "./_helpers/apiRoute"
 import { installAuthRoutes } from "./_helpers/auth-mocks"
 import { installSignupRoute } from "./_helpers/signup-mocks"
 
@@ -183,7 +184,7 @@ test.describe("회원 가입 화면 폼", () => {
 
     let resolveSignup = () => {}
     let signupCalls = 0
-    await page.route("**/users/signup", async (route) => {
+    await routeApi(page, "**/users/signup", async (route) => {
       signupCalls += 1
       await new Promise<void>((resolve) => {
         resolveSignup = resolve
