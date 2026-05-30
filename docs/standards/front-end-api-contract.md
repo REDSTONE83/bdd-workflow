@@ -109,6 +109,7 @@ ApiError(code, message, field)
 - `page`, `size`, `totalElements`, `totalPages`에 해당하는 정보를 사용자가 알 수 있어야 하는 경우, 카드 AC와 `.feature` 시나리오에 사용자 관찰 언어로 표현한다.
 - URL query state와 화면 state를 분리하지 않는다. 딥링크가 필요한 목록은 query string을 source of truth로 둔다.
 - 정렬/필터/페이지 크기 변경은 현재 요건 범위에 포함될 때만 고정한다.
+- TanStack Query를 도입한 화면도 URL query를 source of truth로 두고, Query cache는 정규화된 query 조합별 서버 결과 캐시로만 사용한다 ([`front-end-state.md`](./front-end-state.md)).
 
 ## 날짜 / 시간 / ID
 
