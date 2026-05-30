@@ -78,6 +78,10 @@ front-end/tools/**/*
 - [`id-policy.md`](docs/standards/id-policy.md): 시간 정렬 UUID 단일 식별자 정책
 - [`datetime.md`](docs/standards/datetime.md): Instant + UTC 저장, ISO-8601 직렬화
 
+협업:
+
+- [`git-workflow.md`](docs/standards/git-workflow.md): 브랜치 전략, 커밋 메시지, PR 본문 규약 (하네스 게이트 입력 아님, 수동 리뷰)
+
 ## 작성 절차
 
 요건 작성과 BDD 테스트 리뷰 절차는 [`docs/harness/requirement-authoring.md`](docs/harness/requirement-authoring.md)에 둔다. 핵심 순서만 옮기면 다음과 같다.
