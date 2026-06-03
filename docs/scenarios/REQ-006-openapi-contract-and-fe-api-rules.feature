@@ -1,5 +1,5 @@
 @REQ-006
-Feature: OpenAPI 계약 산출물과 FE API 검사 룰
+Feature: OpenAPI 기반 FE API 계약 검증
 
   Scenario: 백엔드 빌드가 OpenAPI 계약 산출물을 만든다
     Covers:

@@ -1,4 +1,4 @@
-// 카테고리 화면 view model 과 입력 모델. REQ-003 카테고리 API 계약을 따른다.
+// 카테고리 화면 view model 과 입력 모델. 카테고리 API 계약을 따른다.
 // 구현 단계에서 OpenAPI 생성 타입(@/api/generated)으로 매핑한다.
 
 export type CategoryView = {
@@ -14,7 +14,7 @@ export type CategoryInput = {
   description: string | null
 }
 
-// 서버가 중복 이름으로 생성/수정을 거절(REQ-003 의 409)했음을 모달에 알리는 신호.
+// 서버가 중복 이름으로 생성/수정을 거절했음을 모달에 알리는 신호.
 // 구현 단계에서 카테고리 API 클라이언트가 이 오류로 매핑한다.
 export class DuplicateCategoryNameError extends Error {
   constructor(message = "이미 사용 중인 이름입니다.") {
@@ -23,7 +23,7 @@ export class DuplicateCategoryNameError extends Error {
   }
 }
 
-// 입력 한계값과 형식. REQ-003 카테고리 검증 정책과 동일하게 둔다.
+// 입력 한계값과 형식. 카테고리 검증 정책과 동일하게 둔다.
 export const CATEGORY_NAME_MAX = 50
 export const CATEGORY_DESCRIPTION_MAX = 500
 export const CATEGORY_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/

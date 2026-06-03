@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test"
 
 import { routeApi } from "./apiRoute"
 
-// REQ-013: 회원 가입 API(/users/signup, REQ-001 계약) 를 옵션 기반으로 mock 한다.
+// REQ-001: 회원 가입 API(/users/signup, REQ-001 계약) 를 옵션 기반으로 mock 한다.
 // 201 성공 / 409 중복 이메일 / 500 일반 오류를 시연한다.
 export type SignupRouteStatus = 201 | 409 | 500
 

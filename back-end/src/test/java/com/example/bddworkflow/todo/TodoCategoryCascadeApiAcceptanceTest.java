@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ApiAcceptanceTest
-@Requirement("REQ-002")
+@Requirement("REQ-026")
 class TodoCategoryCascadeApiAcceptanceTest {
 
     private static final java.util.UUID USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-000000000064");

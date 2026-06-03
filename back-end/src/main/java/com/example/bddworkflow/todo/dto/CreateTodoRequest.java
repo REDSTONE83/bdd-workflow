@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.UUID;
 
-@Requirement("REQ-002")
+@Requirement("REQ-022")
 @Schema(description = "할 일 생성 요청. 제목은 trim된 뒤 검증되고 저장된다. completed 필드는 받지 않으며 항상 false로 시작한다.")
 public record CreateTodoRequest(
         @NotBlank

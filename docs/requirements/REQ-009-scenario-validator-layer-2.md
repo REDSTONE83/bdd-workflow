@@ -1,10 +1,17 @@
 # 요건 카드
 
 요건 ID: REQ-009
-제목: Gherkin 시나리오 검사 Layer 2 분리
+제목: Gherkin 시나리오 SCN-* 구조 검사
 우선순위: 중간
 상태: 승인
-구현 대상: harness
+요건 종류: 하네스
+명세 역할: 원자 요건
+대상 시스템: harness
+제품 영역: harness
+품질 속성: none
+검증 수준: static
+관련 요건: REQ-010
+대체 요건: 없음
 
 ## 사용자/목적
 
@@ -31,11 +38,11 @@
 
 ## 수용 기준
 
-- Gherkin `.feature` 파일의 구조 위반은 `build/harness/findings/scenarios.findings.json`에 SCN-* finding으로 정규화되어 보고된다
-- Feature 헤더가 없는 `.feature` 파일은 검사 결과에 오류로 보고된다
-- `@REQ-XXX` 태그가 없는 Feature는 검사 결과에 오류로 보고된다
-- 지원하지 않는 Gherkin 키워드(`Background`, `Scenario Outline` 등)를 사용한 `.feature`는 검사 결과에 오류로 보고된다
-- `validateHarness` 게이트는 SCN-* error finding을 발견하면 실패한다
+- (STATIC) Gherkin `.feature` 파일의 구조 위반은 `build/harness/findings/scenarios.findings.json`에 SCN-* finding으로 정규화되어 보고된다
+- (STATIC) Feature 헤더가 없는 `.feature` 파일은 검사 결과에 오류로 보고된다
+- (STATIC) `@REQ-XXX` 태그가 없는 Feature는 검사 결과에 오류로 보고된다
+- (STATIC) 지원하지 않는 Gherkin 키워드(`Background`, `Scenario Outline` 등)를 사용한 `.feature`는 검사 결과에 오류로 보고된다
+- (STATIC) `validateHarness` 게이트는 SCN-* error finding을 발견하면 실패한다
 
 ## 의사결정 로그
 
@@ -79,7 +86,7 @@
   검증 설계: `.feature`의 5개 Scenario가 카드 수용 기준 5개를 1:1로 `Covers:`로 연결한다.
   검사기 Skeleton: `tools/harness/validate-scenarios.mjs` 신규. 입력은 `build/harness/indexes/scenarios.index.json`, 출력은 `build/harness/findings/scenarios.findings.json`. CLI 인자 `--scenarios-index=PATH`, `--out=PATH`를 받아 fixture 테스트 가능 구조 유지. `scenario-index.mjs`는 issue에 `kind` 필드 추가만.
   데이터 계약: Skeleton 단계에서 `docs/harness/data-contracts.md`에 `scenarios.index.json` `issues[]` 스키마(`{line, message, kind}`)와 7개 `kind` enum, `scenarios.findings.json` owner 한 줄을 명시한다. `rule-namespaces.md`에 SCN-* 7개 룰 등록.
-  추적 정책: `구현 대상: harness`. 사용자-facing API/화면 연결 요구 없음. 5개 Scenario `Covers:`가 5개 AC를 1:1 커버하면 GREEN.
+  추적 정책: `대상 시스템: harness`. 사용자-facing API/화면 연결 요구 없음. 5개 Scenario `Covers:`가 5개 AC를 1:1 커버하면 GREEN.
   Gradle 실행 순서: `tasks.register('validateScenarios', Exec)` 신규. `generateScenarioIndex`에 dependsOn. `traceRequirements`, `validateHarness`, `traceRequirementCard`, `validateRequirementCard`, `validateRequirementCardBlue`에 dependsOn 추가.
   게이트 정책: `gate-trace.mjs`의 `--check`/`--require-blue`가 SCN-* error finding을 게이트 실패 사유에 추가한다. `summary.scenarioStandardsErrors`로 noun 도입.
   표준 용어: 추가 등록 없음.

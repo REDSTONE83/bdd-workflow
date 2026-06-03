@@ -40,7 +40,7 @@ const many: CategoryView[] = Array.from({ length: 20 }, (_, i) => ({
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 // Skeleton 단계 page mock 의 상호작용 검토용 in-memory 호스트.
-// 구현 단계에서 이 콜백들이 REQ-003 카테고리 API + TanStack Query mutation 으로 대체된다.
+// 구현 단계에서 이 콜백들이 카테고리 API + TanStack Query mutation 으로 대체된다.
 function CategoriesPageMock({ initial }: { initial: CategoryView[] }) {
   const [categories, setCategories] = useState<CategoryView[]>(initial)
   const idRef = useRef(initial.length)
@@ -90,7 +90,7 @@ const meta = {
   parameters: {
     layout: "fullscreen",
     harness: {
-      requirements: ["REQ-014"],
+      requirements: ["REQ-016", "REQ-017", "REQ-018", "REQ-019"],
     },
   },
   tags: ["autodocs"],

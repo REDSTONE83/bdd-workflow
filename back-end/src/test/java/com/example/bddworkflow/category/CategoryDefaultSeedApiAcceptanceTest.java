@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ApiAcceptanceTest
-@Requirement("REQ-003")
+@Requirement("REQ-020")
 class CategoryDefaultSeedApiAcceptanceTest {
 
     @Autowired

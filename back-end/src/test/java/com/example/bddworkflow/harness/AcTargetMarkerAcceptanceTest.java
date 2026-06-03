@@ -22,9 +22,10 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * REQ-012 AC 단위 테스트 대상 마커와 하네스 게이트 적용 — 카드 파서가 (BE)/(FE)/(FS)
- * 마커를 인식하고, 통합 게이트가 AC target에 따라 BE/FE/EITHER로 분기해 차단하며,
- * 추적 리포트와 표준 문서가 마커 규칙을 노출함을 검증한다.
+ * REQ-012 AC 단위 검증 채널 마커와 하네스 게이트 — 카드 파서가
+ * (API)/(UI)/(E2E)/(STATIC) 마커를 인식하고, 통합 게이트가 AC target에 따라
+ * 실행 검증 채널을 분기해 차단하며, 추적 리포트와 표준 문서가 마커 규칙을
+ * 노출함을 검증한다.
  */
 @AcceptanceTest
 @Requirement("REQ-012")
@@ -33,56 +34,65 @@ class AcTargetMarkerAcceptanceTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
-    @DisplayName("AC1 카드 파서는 (BE)/(FE)/(FS) 마커를 인식해 AC에 target을 부여한다")
-    @Covers("카드 파서는 수용 기준 bullet 시작에 위치한 `(BE)`, `(FE)`, `(FS)` 마커를 인식해 해당 AC의 target으로 부여한다")
+    @DisplayName("AC1 카드 파서는 (API)/(UI)/(E2E)/(STATIC) 마커를 인식해 AC에 target을 부여한다")
+    @Covers("카드 파서는 수용 기준 bullet 시작에 위치한 `(API)`, `(UI)`, `(E2E)`, `(STATIC)` 마커를 인식해 해당 AC의 target으로 부여한다")
     void parserAssignsTargetFromMarker() throws IOException {
-        // 빌드된 requirements.index.json은 indexRequirements 태스크 산출물. REQ-011은 (BE)/(FE)/(FS) 마커가 섞여 있다.
+        // 빌드된 requirements.index.json은 indexRequirements 태스크 산출물.
         JsonNode index = readJson(workspaceRoot().resolve("build/harness/indexes/requirements.index.json"));
-        JsonNode req011 = findCard(index, "REQ-011");
-        assertThat(req011).as("REQ-011 entry must be present").isNotNull();
-        boolean sawBE = false, sawFE = false, sawFS = false;
-        for (JsonNode ac : req011.get("acceptanceCriteria")) {
-            String target = ac.path("target").asText(null);
-            String text = ac.path("text").asText();
-            if ("BE".equals(target)) { sawBE = true; assertThat(text).doesNotStartWith("(BE)"); }
-            if ("FE".equals(target)) { sawFE = true; assertThat(text).doesNotStartWith("(FE)"); }
-            if ("FS".equals(target)) { sawFS = true; assertThat(text).doesNotStartWith("(FS)"); }
+        Map<String, Boolean> seen = new LinkedHashMap<>();
+        for (String target : List.of("API", "UI", "E2E", "STATIC")) {
+            seen.put(target, false);
         }
-        assertThat(sawBE).as("REQ-011 has at least one (BE) AC").isTrue();
-        assertThat(sawFE).as("REQ-011 has at least one (FE) AC").isTrue();
-        assertThat(sawFS).as("REQ-011 has at least one (FS) AC").isTrue();
+        for (JsonNode card : index.path("entries")) {
+            for (JsonNode ac : card.path("acceptanceCriteria")) {
+                String target = ac.path("target").asText(null);
+                String text = ac.path("text").asText();
+                if (seen.containsKey(target)) {
+                    seen.put(target, true);
+                    assertThat(text).doesNotStartWith("(" + target + ")");
+                }
+            }
+        }
+        assertThat(seen).containsEntry("API", true)
+                .containsEntry("UI", true)
+                .containsEntry("E2E", true)
+                .containsEntry("STATIC", true);
     }
 
     @Test
-    @DisplayName("AC2 마커가 없는 AC는 카드 구현 대상에 따라 BE/FE/FS/EITHER로 fallback된다")
-    @Covers("마커가 없는 AC는 카드 `구현 대상` 값에 따라 BE/FE/FS로 결정된다")
-    void fallbackByImplementationTarget() throws IOException, InterruptedException {
-        // fixture만 사용해 4개 구현 대상의 fallback 정책을 evaluator 결과로 직접 검증한다.
-        assertFallback("back-end", List.of("back-end"));
-        assertFallback("front-end", List.of("front-end"));
-        assertFallback("full-stack", List.of("back-end", "front-end"));
-        assertFallback("harness", List.of("harness"));
-    }
-
-    private static void assertFallback(String implementationTarget, List<String> expectedTargets)
-            throws IOException, InterruptedException {
-        ObjectNode reqIdx = requirementsFixture("REQ-FIXTURE", implementationTarget,
-                List.of(acFixture("plain AC fixture", null)));
-        EvaluateRun run = runEvaluateWithFixtures(reqIdx, backendIndexFixture(List.of()),
-                frontEndIndexFixture(List.of()), testResultsFixture(List.of()));
-        JsonNode row = findReq(run.state(), "REQ-FIXTURE").path("coverage").get(0);
-        assertThat(row.path("target").isNull() || row.path("target").asText("").isEmpty())
-                .as("fallback row carries no AC marker for implementationTarget=%s", implementationTarget)
-                .isTrue();
-        assertThat(checkTargets(row))
-                .as("fallback requiredChecks for implementationTarget=%s", implementationTarget)
-                .containsExactlyElementsOf(expectedTargets);
+    @DisplayName("AC2 마커가 없는 AC는 카드 구조 오류로 차단된다")
+    @Covers("마커가 없는 AC는 카드 구조 오류로 차단한다")
+    void missingMarkerEmitsCardAcMarkerMissing() throws IOException, InterruptedException {
+        Path ws = workspaceRoot();
+        Path indexFile = ws.resolve("build/harness/indexes/requirements.index.json");
+        Path findingsFile = ws.resolve("build/harness/findings/requirement-cards.findings.json");
+        Path indexBak = backupAndReplace(indexFile, requirementsFixture("REQ-FIXTURE", "harness",
+                List.of(acFixture("plain AC fixture", null))));
+        Path findingsBak = Files.exists(findingsFile) ? backup(findingsFile) : null;
+        try {
+            spawn(ws, List.of("node", ws.resolve("tools/harness/validate-requirement-cards.mjs").toString()));
+            JsonNode out = readJson(findingsFile);
+            boolean found = false;
+            for (JsonNode f : out.path("findings")) {
+                if ("CARD-AC-MARKER-MISSING".equals(f.path("ruleId").asText())) {
+                    found = true;
+                    assertThat(f.path("severity").asText()).isEqualTo("error");
+                    assertThat(f.path("strictSeverity").asText()).isEqualTo("error");
+                    assertThat(f.path("evidence").path("criterion").asText()).isEqualTo("plain AC fixture");
+                    break;
+                }
+            }
+            assertThat(found).as("CARD-AC-MARKER-MISSING emitted").isTrue();
+        } finally {
+            restore(indexBak, indexFile);
+            if (findingsBak != null) restore(findingsBak, findingsFile); else Files.deleteIfExists(findingsFile);
+        }
     }
 
     @Test
-    @DisplayName("AC3 허용 외 마커는 CARD-AC-TARGET-INVALID로 차단된다")
-    @Covers("AC 마커가 `BE`, `FE`, `FS` 외 값을 가지면 카드 정적 검증이 오류로 차단한다")
-    void invalidMarkerEmitsCardAcTargetInvalid() throws IOException, InterruptedException {
+    @DisplayName("AC3 허용 외 마커는 CARD-AC-MARKER-INVALID로 차단된다")
+    @Covers("AC 마커가 `API`, `UI`, `E2E`, `STATIC` 외 값을 가지면 카드 정적 검증이 오류로 차단한다")
+    void invalidMarkerEmitsCardAcMarkerInvalid() throws IOException, InterruptedException {
         // requirements.index.json fixture를 임시로 덮어쓰고 validate-requirement-cards.mjs spawn.
         Path ws = workspaceRoot();
         Path indexFile = ws.resolve("build/harness/indexes/requirements.index.json");
@@ -93,16 +103,16 @@ class AcTargetMarkerAcceptanceTest {
             spawn(ws, List.of("node", ws.resolve("tools/harness/validate-requirement-cards.mjs").toString()));
             JsonNode out = readJson(findingsFile);
             boolean found = false;
-            for (JsonNode f : out.get("findings")) {
-                if ("CARD-AC-TARGET-INVALID".equals(f.path("ruleId").asText())) {
+            for (JsonNode f : out.path("findings")) {
+                if ("CARD-AC-MARKER-INVALID".equals(f.path("ruleId").asText())) {
                     found = true;
                     assertThat(f.path("severity").asText()).isEqualTo("error");
                     assertThat(f.path("strictSeverity").asText()).isEqualTo("error");
-                    assertThat(f.path("evidence").path("invalidMarker").asText()).isEqualTo("API");
+                    assertThat(f.path("evidence").path("invalidMarker").asText()).isEqualTo("BE");
                     break;
                 }
             }
-            assertThat(found).as("CARD-AC-TARGET-INVALID emitted").isTrue();
+            assertThat(found).as("CARD-AC-MARKER-INVALID emitted").isTrue();
         } finally {
             restore(indexBak, indexFile);
             if (findingsBak != null) restore(findingsBak, findingsFile); else Files.deleteIfExists(findingsFile);
@@ -114,13 +124,13 @@ class AcTargetMarkerAcceptanceTest {
     @Covers("AC 마커는 백엔드 `@Covers`와 FE BDD `Covers` 값에 포함되지 않는다")
     void markersAreExcludedFromCoversValues() throws IOException {
         Path ws = workspaceRoot();
-        // 백엔드 source-index의 tests[].covers[] 값에 (BE)/(FE)/(FS)가 포함되어 있지 않다.
+        // 백엔드 source-index의 tests[].covers[] 값에 (API)/(UI)/(E2E)/(STATIC)가 포함되어 있지 않다.
         JsonNode be = readJson(ws.resolve("build/harness/indexes/backend.source-index.json"));
         for (JsonNode t : be.path("tests")) {
             for (JsonNode c : t.path("covers")) {
                 String text = c.isTextual() ? c.asText() : c.path("text").asText();
                 assertThat(text).as("backend @Covers must not start with marker token")
-                        .doesNotMatch("^\\((BE|FE|FS)\\)\\s.*");
+                        .doesNotMatch("^\\((API|UI|E2E|STATIC)\\)\\s.*");
             }
         }
         // FE source-index가 존재하면 같은 검증.
@@ -131,116 +141,109 @@ class AcTargetMarkerAcceptanceTest {
                 for (JsonNode c : t.path("covers")) {
                     String text = c.isTextual() ? c.asText() : c.path("text").asText();
                     assertThat(text).as("FE Covers must not start with marker token")
-                            .doesNotMatch("^\\((BE|FE|FS)\\)\\s.*");
+                            .doesNotMatch("^\\((API|UI|E2E|STATIC)\\)\\s.*");
                 }
             }
         }
     }
 
     @Test
-    @DisplayName("AC5 target=BE AC는 백엔드 Acceptance Test 커버가 없으면 evaluator가 MISSING + RED를 산출한다")
-    @Covers("통합 게이트는 target이 `BE`인 AC에 백엔드 Acceptance Test 커버가 없으면 차단한다")
-    void beTargetEvaluatorBranchesOnAcMarker() throws IOException, InterruptedException {
-        // 차단 케이스: (BE) AC + BE 테스트 없음 → row=MISSING, requiredChecks=[back-end], state=RED.
-        ObjectNode reqIdx = requirementsFixture("REQ-FIXTURE", "back-end",
-                List.of(acFixture("BE AC fixture", "BE")));
+    @DisplayName("AC5 target=API AC는 백엔드 Acceptance Test 커버가 없으면 evaluator가 MISSING + RED를 산출한다")
+    @Covers("통합 게이트는 target이 `API`인 AC에 백엔드 Acceptance Test 커버가 없으면 차단한다")
+    void apiTargetEvaluatorBranchesOnAcMarker() throws IOException, InterruptedException {
+        // 차단 케이스: (API) AC + API 테스트 없음 → row=MISSING, requiredChecks=[api], state=RED.
+        ObjectNode reqIdx = requirementsFixture("REQ-FIXTURE", "application",
+                List.of(acFixture("API AC fixture", "API")));
         EvaluateRun missing = runEvaluateWithFixtures(reqIdx, backendIndexFixture(List.of()),
                 frontEndIndexFixture(List.of()), testResultsFixture(List.of()));
         JsonNode missingReq = findReq(missing.state(), "REQ-FIXTURE");
         JsonNode missingRow = missingReq.path("coverage").get(0);
-        assertThat(missingRow.path("target").asText()).isEqualTo("BE");
+        assertThat(missingRow.path("target").asText()).isEqualTo("API");
         assertThat(missingRow.path("status").asText()).isEqualTo("MISSING");
-        assertThat(checkTargets(missingRow)).containsExactly("back-end");
+        assertThat(checkTargets(missingRow)).containsExactly("api");
         assertThat(missingReq.path("state").asText()).isEqualTo("RED");
         assertThat(redReasonRules(missingReq)).contains("TRACE-AC-MISSING");
 
-        // 통과 케이스: 같은 (BE) AC + BE 테스트 PASS → row=PASS, FE 테스트 부재가 BE AC를 막지 않는다.
-        ObjectNode passBeIdx = backendIndexFixture(List.of(
-                backendTestFixture("FixtureBeTest.acBe", "BE AC fixture", "REQ-FIXTURE")));
+        // 통과 케이스: 같은 (API) AC + 백엔드 테스트 PASS → row=PASS.
+        ObjectNode passApiIdx = backendIndexFixture(List.of(
+                backendTestFixture("FixtureApiTest.acApi", "API AC fixture", "REQ-FIXTURE")));
         ObjectNode passResults = testResultsFixture(List.of(
-                testResultEntry("FixtureBeTest.acBe", "PASS", "junit")));
-        EvaluateRun pass = runEvaluateWithFixtures(reqIdx, passBeIdx,
+                testResultEntry("FixtureApiTest.acApi", "PASS", "junit")));
+        EvaluateRun pass = runEvaluateWithFixtures(reqIdx, passApiIdx,
                 frontEndIndexFixture(List.of()), passResults);
         JsonNode passRow = findReq(pass.state(), "REQ-FIXTURE").path("coverage").get(0);
         assertThat(passRow.path("status").asText()).isEqualTo("PASS");
-        assertThat(checkTargets(passRow)).containsExactly("back-end");
+        assertThat(checkTargets(passRow)).containsExactly("api");
     }
 
     @Test
-    @DisplayName("AC6 target=FE AC는 FE BDD 테스트 커버가 없으면 evaluator가 MISSING + RED를 산출한다")
-    @Covers("통합 게이트는 target이 `FE`인 AC에 FE BDD 테스트 커버가 없으면 차단한다")
-    void feTargetEvaluatorBranchesOnAcMarker() throws IOException, InterruptedException {
-        // (FE) AC + FE 테스트 없음 → row=MISSING, requiredChecks=[front-end], state=RED.
-        ObjectNode reqIdx = requirementsFixture("REQ-FIXTURE", "front-end",
-                List.of(acFixture("FE AC fixture", "FE")));
+    @DisplayName("AC6 target=UI AC는 FE BDD 테스트 커버가 없으면 evaluator가 MISSING + RED를 산출한다")
+    @Covers("통합 게이트는 target이 `UI`인 AC에 FE BDD 테스트 커버가 없으면 차단한다")
+    void uiTargetEvaluatorBranchesOnAcMarker() throws IOException, InterruptedException {
+        // (UI) AC + FE 테스트 없음 → row=MISSING, requiredChecks=[ui], state=RED.
+        ObjectNode reqIdx = requirementsFixture("REQ-FIXTURE", "application",
+                List.of(acFixture("UI AC fixture", "UI")));
         EvaluateRun missing = runEvaluateWithFixtures(reqIdx, backendIndexFixture(List.of()),
                 frontEndIndexFixture(List.of()), testResultsFixture(List.of()));
         JsonNode missingReq = findReq(missing.state(), "REQ-FIXTURE");
         JsonNode missingRow = missingReq.path("coverage").get(0);
-        assertThat(missingRow.path("target").asText()).isEqualTo("FE");
+        assertThat(missingRow.path("target").asText()).isEqualTo("UI");
         assertThat(missingRow.path("status").asText()).isEqualTo("MISSING");
-        assertThat(checkTargets(missingRow)).containsExactly("front-end");
+        assertThat(checkTargets(missingRow)).containsExactly("ui");
         assertThat(missingReq.path("state").asText()).isEqualTo("RED");
         assertThat(redReasonRules(missingReq)).contains("TRACE-AC-MISSING");
 
-        // (FE) AC + FE 테스트 PASS → row=PASS, BE 테스트 부재가 FE AC를 막지 않는다.
-        ObjectNode passFeIdx = frontEndIndexFixture(List.of(
-                frontEndTestFixture("FixtureFeTest > acFe", "FE AC fixture", "REQ-FIXTURE")));
+        // (UI) AC + FE 테스트 PASS → row=PASS.
+        ObjectNode passUiIdx = frontEndIndexFixture(List.of(
+                frontEndTestFixture("FixtureUiTest > acUi", "UI AC fixture", "REQ-FIXTURE")));
         ObjectNode passResults = testResultsFixture(List.of(
-                testResultEntry("FixtureFeTest > acFe", "PASS", "playwright")));
+                testResultEntry("FixtureUiTest > acUi", "PASS", "playwright")));
         EvaluateRun pass = runEvaluateWithFixtures(reqIdx, backendIndexFixture(List.of()),
-                passFeIdx, passResults);
+                passUiIdx, passResults);
         JsonNode passRow = findReq(pass.state(), "REQ-FIXTURE").path("coverage").get(0);
         assertThat(passRow.path("status").asText()).isEqualTo("PASS");
-        assertThat(checkTargets(passRow)).containsExactly("front-end");
+        assertThat(checkTargets(passRow)).containsExactly("ui");
     }
 
     @Test
-    @DisplayName("AC7 target=FS AC는 백엔드와 FE 어느 한쪽 커버가 없으면 evaluator가 MISSING + RED를 산출한다")
-    @Covers("통합 게이트는 target이 `FS`인 AC에 백엔드와 FE 어느 한쪽이라도 커버가 없으면 차단한다")
-    void fsTargetEvaluatorRequiresBothSides() throws IOException, InterruptedException {
-        // (FS) AC + BE PASS + FE 없음 → row=MISSING(combineStatuses), requiredChecks=[{back-end,PASS},{front-end,MISSING}].
-        ObjectNode reqIdx = requirementsFixture("REQ-FIXTURE", "full-stack",
-                List.of(acFixture("FS AC fixture", "FS")));
-        ObjectNode beIdx = backendIndexFixture(List.of(
-                backendTestFixture("FixtureBeTest.acFs", "FS AC fixture", "REQ-FIXTURE")));
-        ObjectNode results = testResultsFixture(List.of(
-                testResultEntry("FixtureBeTest.acFs", "PASS", "junit")));
-        EvaluateRun run = runEvaluateWithFixtures(reqIdx, beIdx,
-                frontEndIndexFixture(List.of()), results);
+    @DisplayName("AC7 target=E2E AC는 Playwright 사용자 여정 테스트 커버가 없으면 evaluator가 MISSING + RED를 산출한다")
+    @Covers("통합 게이트는 target이 `E2E`인 AC에 Playwright 사용자 여정 테스트 커버가 없으면 차단한다")
+    void e2eTargetEvaluatorBranchesOnAcMarker() throws IOException, InterruptedException {
+        // (E2E) AC + FE 테스트 없음 → row=MISSING, requiredChecks=[e2e], state=RED.
+        ObjectNode reqIdx = requirementsFixture("REQ-FIXTURE", "application",
+                List.of(acFixture("E2E AC fixture", "E2E")));
+        EvaluateRun run = runEvaluateWithFixtures(reqIdx, backendIndexFixture(List.of()),
+                frontEndIndexFixture(List.of()), testResultsFixture(List.of()));
         JsonNode req = findReq(run.state(), "REQ-FIXTURE");
         JsonNode row = req.path("coverage").get(0);
-        assertThat(row.path("target").asText()).isEqualTo("FS");
+        assertThat(row.path("target").asText()).isEqualTo("E2E");
         assertThat(row.path("status").asText()).isEqualTo("MISSING");
-        Map<String, String> sideStatus = sideStatuses(row);
-        assertThat(sideStatus).containsEntry("back-end", "PASS").containsEntry("front-end", "MISSING");
+        assertThat(checkTargets(row)).containsExactly("e2e");
         assertThat(req.path("state").asText()).isEqualTo("RED");
 
-        // (FS) AC + 양쪽 모두 PASS → row=PASS.
-        ObjectNode feIdxBoth = frontEndIndexFixture(List.of(
-                frontEndTestFixture("FixtureFeTest > acFs", "FS AC fixture", "REQ-FIXTURE")));
+        // (E2E) AC + Playwright 테스트 PASS → row=PASS.
+        ObjectNode feIdx = frontEndIndexFixture(List.of(
+                frontEndTestFixture("FixtureE2eTest > acE2e", "E2E AC fixture", "REQ-FIXTURE")));
         ObjectNode resultsBoth = testResultsFixture(List.of(
-                testResultEntry("FixtureBeTest.acFs", "PASS", "junit"),
-                testResultEntry("FixtureFeTest > acFs", "PASS", "playwright")));
-        EvaluateRun bothPass = runEvaluateWithFixtures(reqIdx, beIdx, feIdxBoth, resultsBoth);
-        JsonNode bothRow = findReq(bothPass.state(), "REQ-FIXTURE").path("coverage").get(0);
-        assertThat(bothRow.path("status").asText()).isEqualTo("PASS");
-        assertThat(sideStatuses(bothRow))
-                .containsEntry("back-end", "PASS").containsEntry("front-end", "PASS");
+                testResultEntry("FixtureE2eTest > acE2e", "PASS", "playwright")));
+        EvaluateRun pass = runEvaluateWithFixtures(reqIdx, backendIndexFixture(List.of()), feIdx, resultsBoth);
+        JsonNode passRow = findReq(pass.state(), "REQ-FIXTURE").path("coverage").get(0);
+        assertThat(passRow.path("status").asText()).isEqualTo("PASS");
+        assertThat(checkTargets(passRow)).containsExactly("e2e");
     }
 
     @Test
-    @DisplayName("AC8 추적 리포트는 AC별 (target) 마커와 백엔드/FE 커버 상태를 함께 표시한다")
-    @Covers("추적 리포트는 각 AC의 target 마커와 백엔드/FE 커버 상태를 함께 표시한다")
+    @DisplayName("AC8 추적 리포트는 AC별 (target) 마커와 검증 상태를 함께 표시한다")
+    @Covers("추적 리포트는 각 AC의 target 마커와 검증 상태를 함께 표시한다")
     void traceReportShowsTargetAndPerSideStatus() throws IOException, InterruptedException {
-        // fixture state: REQ-X에 BE/FE/FS 세 종류 AC를 두고 render-trace-report.mjs 실행.
+        // fixture state: REQ-X에 API/UI/E2E/STATIC 네 종류 AC를 두고 render-trace-report.mjs 실행.
         Path ws = workspaceRoot();
         ObjectNode state = baseStateWithCard("REQ-X", "RED");
         ObjectNode req = (ObjectNode) state.get("requirements").get(0);
         req.put("title", "fixture for AC8");
         req.put("file", "(fixture)");
         req.put("status", "초안");
-        req.put("implementationTarget", "full-stack");
+        req.put("targetSystem", "application");
         req.set("apis", MAPPER.createArrayNode());
         req.set("tests", MAPPER.createArrayNode());
         req.set("scenarios", MAPPER.createArrayNode());
@@ -253,10 +256,10 @@ class AcTargetMarkerAcceptanceTest {
         req.set("terminology", MAPPER.createObjectNode().set("findings", MAPPER.createArrayNode()));
         ((ObjectNode) req.get("terminology")).set("counts", emptyCounts());
         ArrayNode coverage = MAPPER.createArrayNode();
-        coverage.add(coverageRow("BE AC fixture", "BE", "PASS", List.of(Map.entry("back-end", "PASS"))));
-        coverage.add(coverageRow("FE AC fixture", "FE", "PASS", List.of(Map.entry("front-end", "PASS"))));
-        coverage.add(coverageRow("FS AC fixture", "FS", "MISSING",
-                List.of(Map.entry("back-end", "PASS"), Map.entry("front-end", "MISSING"))));
+        coverage.add(coverageRow("API AC fixture", "API", "PASS", List.of(Map.entry("api", "PASS"))));
+        coverage.add(coverageRow("UI AC fixture", "UI", "PASS", List.of(Map.entry("ui", "PASS"))));
+        coverage.add(coverageRow("E2E AC fixture", "E2E", "MISSING", List.of(Map.entry("e2e", "MISSING"))));
+        coverage.add(coverageRow("STATIC AC fixture", "STATIC", "PASS", List.of(Map.entry("static", "PASS"))));
         req.set("coverage", coverage);
         req.set("redReasons", MAPPER.createArrayNode());
 
@@ -266,11 +269,10 @@ class AcTargetMarkerAcceptanceTest {
             Files.writeString(stateProd, MAPPER.writeValueAsString(state), StandardCharsets.UTF_8);
             spawn(ws, List.of("node", ws.resolve("tools/harness/render-trace-report.mjs").toString(), "--quiet"));
             String md = Files.readString(ws.resolve("build/harness/reports/trace-report.md"), StandardCharsets.UTF_8);
-            assertThat(md).as("(BE) marker rendered").contains("(BE) BE AC fixture");
-            assertThat(md).as("(FE) marker rendered").contains("(FE) FE AC fixture");
-            assertThat(md).as("(FS) marker rendered").contains("(FS) FS AC fixture");
-            assertThat(md).as("per-side status rendered for FS AC")
-                    .contains("Required checks: back-end=PASS, front-end=MISSING");
+            assertThat(md).as("(API) marker rendered").contains("PASS: (API) API AC fixture");
+            assertThat(md).as("(UI) marker rendered").contains("PASS: (UI) UI AC fixture");
+            assertThat(md).as("(E2E) marker rendered").contains("MISSING: (E2E) E2E AC fixture");
+            assertThat(md).as("(STATIC) marker rendered").contains("PASS: (STATIC) STATIC AC fixture");
         } finally {
             restore(stateBak, stateProd);
             // 리포트 재생성: production state로 다시 렌더링해 다른 테스트에 영향 없게 한다.
@@ -279,17 +281,17 @@ class AcTargetMarkerAcceptanceTest {
     }
 
     @Test
-    @DisplayName("AC9 표준 문서에 마커 작성 규칙, 유효값, fallback 규칙이 명시된다")
-    @Covers("표준 문서에는 마커 작성 규칙, 유효값, fallback 규칙이 명시된다")
-    void standardDocSpecifiesMarkerRulesAndFallback() throws IOException {
+    @DisplayName("AC9 표준 문서에 마커 작성 규칙, 유효값, 오류 규칙이 명시된다")
+    @Covers("표준 문서에는 마커 작성 규칙, 유효값, 오류 규칙이 명시된다")
+    void standardDocSpecifiesMarkerRulesAndErrors() throws IOException {
         Path doc = workspaceRoot().resolve("docs/standards/requirement-card.md");
         String content = Files.readString(doc, StandardCharsets.UTF_8);
-        assertThat(content).as("BE marker token mentioned").contains("`BE`");
-        assertThat(content).as("FE marker token mentioned").contains("`FE`");
-        assertThat(content).as("FS marker token mentioned").contains("`FS`");
-        assertThat(content).as("fallback rule mentioned").contains("fallback");
-        assertThat(content).as("CARD-AC-TARGET-INVALID block referenced").contains("CARD-AC-TARGET-INVALID");
-        assertThat(content).as("harness fallback rule mentioned").contains("harness");
+        assertThat(content).as("API marker token mentioned").contains("`API`");
+        assertThat(content).as("UI marker token mentioned").contains("`UI`");
+        assertThat(content).as("E2E marker token mentioned").contains("`E2E`");
+        assertThat(content).as("STATIC marker token mentioned").contains("`STATIC`");
+        assertThat(content).as("missing marker block referenced").contains("CARD-AC-MARKER-MISSING");
+        assertThat(content).as("invalid marker block referenced").contains("CARD-AC-MARKER-INVALID");
     }
 
     // ---------- helpers ----------
@@ -332,13 +334,20 @@ class AcTargetMarkerAcceptanceTest {
         card.put("title", "fixture invalid marker");
         card.put("priority", "중간");
         card.put("status", "초안");
-        card.put("implementationTargetRaw", "back-end");
+        card.put("requirementType", "하네스");
+        card.put("specRole", "원자 요건");
+        card.put("targetSystem", "harness");
+        card.put("productArea", "harness");
+        card.set("qualityAttributes", textArray("none"));
+        card.put("verificationLevel", "static");
+        card.set("relatedRequirementIds", MAPPER.createArrayNode());
+        card.set("replacedByRequirementIds", MAPPER.createArrayNode());
         card.put("approved", false);
         ArrayNode ac = MAPPER.createArrayNode();
         ObjectNode bad = MAPPER.createObjectNode();
-        bad.put("text", "(API) 허용 외 토큰");
+        bad.put("text", "(BE) 허용 외 토큰");
         bad.putNull("target");
-        bad.put("invalidMarker", "API");
+        bad.put("invalidMarker", "BE");
         ac.add(bad);
         card.set("acceptanceCriteria", ac);
         card.set("openQuestions", MAPPER.createArrayNode());
@@ -515,7 +524,7 @@ class AcTargetMarkerAcceptanceTest {
         }
     }
 
-    private static ObjectNode requirementsFixture(String cardId, String implementationTarget, List<ObjectNode> acs) {
+    private static ObjectNode requirementsFixture(String cardId, String targetSystem, List<ObjectNode> acs) {
         ObjectNode root = MAPPER.createObjectNode();
         root.put("generatedAt", "2026-05-26T00:00:00.000Z");
         root.put("schemaVersion", "1");
@@ -536,7 +545,14 @@ class AcTargetMarkerAcceptanceTest {
         card.put("title", cardId + " fixture");
         card.put("priority", "중간");
         card.put("status", "초안");
-        card.put("implementationTargetRaw", implementationTarget);
+        card.put("requirementType", "harness".equals(targetSystem) ? "하네스" : "기능");
+        card.put("specRole", "원자 요건");
+        card.put("targetSystem", targetSystem);
+        card.put("productArea", "harness".equals(targetSystem) ? "harness" : "platform");
+        card.set("qualityAttributes", textArray("none"));
+        card.put("verificationLevel", "harness".equals(targetSystem) ? "static" : "acceptance");
+        card.set("relatedRequirementIds", MAPPER.createArrayNode());
+        card.set("replacedByRequirementIds", MAPPER.createArrayNode());
         card.put("approved", false);
         ArrayNode acArr = MAPPER.createArrayNode();
         for (ObjectNode ac : acs) acArr.add(ac);
@@ -555,6 +571,12 @@ class AcTargetMarkerAcceptanceTest {
         root.set("entries", entries);
         root.set("issues", MAPPER.createArrayNode());
         return root;
+    }
+
+    private static ArrayNode textArray(String... values) {
+        ArrayNode arr = MAPPER.createArrayNode();
+        for (String value : values) arr.add(value);
+        return arr;
     }
 
     private static ObjectNode acFixture(String text, String target) {

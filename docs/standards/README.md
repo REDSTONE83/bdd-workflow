@@ -12,7 +12,7 @@
 
 문서 작성:
 
-- [`requirement-card.md`](./requirement-card.md): 요건 카드 형식, 필수 항목, 의사결정 로그 양식
+- [`requirement-card.md`](./requirement-card.md): 요건 카드 형식, 분류/명세 역할, 분리·병합 기준, AC 마커와 의사결정 로그 양식
 - [`terminology.md`](./terminology.md): 표준 용어 운영, safe/strict 모드 게이트
 
 코드 구조:
@@ -51,19 +51,20 @@
 3. 표준 문서를 갱신하고, 영향이 있는 요건 카드의 `의사결정 로그`에도 흔적을 남긴다.
 4. 필요한 경우 `AGENTS.md` 인덱스 항목 설명을 함께 갱신한다.
 
-## 기존 코드 마이그레이션
+## 기존 코드 정합
 
 표준을 새로 도입하거나 변경하면 기존 코드는 일시적으로 표준 위반 상태가 된다. 다음 기준으로 정리한다.
 
 - 같은 요건(예: REQ-002)이 아직 BLUE가 아니면, 그 요건의 작업 안에서 함께 정합한다. 별도 REQ를 만들지 않는다.
-- 이미 BLUE인 요건의 코드가 새 표준 위반이 되면, **마이그레이션 REQ를 별도로 발급**한다. 카드 의사결정 로그에 변경 표준 ID(파일 경로)와 변경 일자를 기록한다.
-- 마이그레이션 REQ의 수용 기준은 "기존 동작을 유지하면서 새 표준을 충족"이다. 도메인 동작 변경이 같이 들어가면 별도 REQ로 분리한다.
+- 이미 BLUE인 요건의 코드가 새 표준 위반이 되면, Change Set에서 작업 범위와 검증 명령을 관리한다. 요건 카드는 별도 전환 REQ를 만들지 않고, 관련 canonical REQ의 최종 범위/AC가 바뀌는 경우에만 갱신한다.
+- 기존 동작을 유지하면서 새 표준을 충족하는 작업은 Change Set 완료 조건으로 둔다. 도메인 동작 변경이 같이 들어가면 해당 기능/정책 REQ의 최종 명세를 갱신한다.
+- 큰 업무 카드를 사용자 목표와 생명주기 단위로 분리할 때는 기존 큰 카드를 상위 요건으로 재사용하지 않고, 신규 상위 요건과 신규 원자 요건을 발급한다. 기존 큰 카드는 `대체됨`으로 닫고, 신규 카드는 `검토중`으로 시작한다.
 
-이번 표준 묶음에서 마이그레이션 대상이 되는 대표 사례:
+이번 표준 묶음에서 정합 대상이 되는 대표 사례:
 
 - `ObjectNode` 기반 PATCH → `JsonNullable<T>` ([`api-contract.md`](./api-contract.md))
 - `Long id` + `GenerationType.IDENTITY` → 시간 정렬 UUID ([`id-policy.md`](./id-policy.md))
 - 비페이징 목록 응답 → `PageResponse<T>` + `Pageable` ([`api-contract.md`](./api-contract.md))
 - `application.yml`의 `spring.jackson.*` → `Jackson2ObjectMapperBuilderCustomizer` ([`api-contract.md`](./api-contract.md))
 - 미바인딩 `app.*` 프로젝트 설정 → typed `@ConfigurationProperties` 또는 명시적 예외 기록 ([`configuration.md`](./configuration.md))
-- 프런트엔드가 필요한 기존 BLUE 요건 → 별도 FE 마이그레이션 REQ 발급 후 `front-end` 또는 `full-stack` 구현 대상으로 진행 ([`front-end-project-structure.md`](./front-end-project-structure.md))
+- 구현 순서 때문에 API/화면이 갈라진 기존 BLUE 요건 → `명세 역할: 구현 슬라이스`로 표시하고 관련 원자 요건에 병합하거나 `대체됨`으로 닫는다 ([`requirement-card.md`](./requirement-card.md))

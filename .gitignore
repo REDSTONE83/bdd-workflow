@@ -2,6 +2,7 @@
 
 back-end/.gradle/
 back-end/build/
+back-end/bin/
 back-end/out/
 build/
 

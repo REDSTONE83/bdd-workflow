@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-@Requirement("REQ-003")
+@Requirement({"REQ-016", "REQ-017", "REQ-018", "REQ-019"})
 @Service
 @RequiredArgsConstructor
 public class CategoryService {

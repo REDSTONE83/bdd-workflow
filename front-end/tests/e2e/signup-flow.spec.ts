@@ -9,13 +9,13 @@ const VALID = {
   password: "Password123!",
 }
 
-// REQ-013 FE: 가입 성공 후 /login 이동 + 가입 완료 안내, 인증 상태 라우팅 가드.
+// REQ-001 FE: 가입 성공 후 /login 이동 + 가입 완료 안내, 인증 상태 라우팅 가드.
 test.describe("회원 가입 성공 흐름 / 인증 가드", () => {
   test("가입에 성공하면 /login 으로 이동해 가입 완료 안내가 보인다", async ({
     page,
   }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description: "회원 가입에 성공하면 사용자는 `/login` 화면으로 이동한다",
@@ -43,7 +43,7 @@ test.describe("회원 가입 성공 흐름 / 인증 가드", () => {
     page,
   }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description: "이미 인증된 사용자가 회원 가입 화면에 접근하면 자신의 할 일 목록 화면으로 이동한다",

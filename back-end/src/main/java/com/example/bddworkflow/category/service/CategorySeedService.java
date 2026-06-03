@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
-@Requirement("REQ-003")
+@Requirement("REQ-020")
 @Service
 @RequiredArgsConstructor
 public class CategorySeedService {

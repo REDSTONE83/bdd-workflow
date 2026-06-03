@@ -1,5 +1,5 @@
 @REQ-010
-Feature: 통합 하네스 게이트 도입
+Feature: 통합 하네스 게이트
 
   Scenario: gate.mjs가 3종 입력을 읽어 단일 게이트 결과를 만든다
     Covers:

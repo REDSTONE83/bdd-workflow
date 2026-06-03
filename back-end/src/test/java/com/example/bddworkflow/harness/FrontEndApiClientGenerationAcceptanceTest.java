@@ -22,7 +22,7 @@ import java.util.stream.StreamSupport;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * REQ-007 FE API client 생성 표준화 — 생성 script, generated 경계, SHA 메타파일,
+ * REQ-007 OpenAPI 기반 FE API 클라이언트 생성 — 생성 script, generated 경계, SHA 메타파일,
  * stale 검사, validate script 배선을 실행 가능한 검증으로 고정한다.
  */
 @AcceptanceTest

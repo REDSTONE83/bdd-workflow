@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-@Requirement("REQ-003")
+@Requirement("REQ-017")
 @Schema(description = "카테고리 생성 요청. 이름은 trim된 뒤 검증되고 저장된다.")
 public record CreateCategoryRequest(
         @NotBlank

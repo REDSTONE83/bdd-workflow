@@ -46,9 +46,9 @@ export const SignupCompletedNotice: Story = {
   parameters: {
     // meta 데코레이터가 이 진입 경로로 MemoryRouter 를 구성한다. 별도 Router 데코레이터를 더하지 않는다.
     initialEntries: ["/login?signupCompleted=1"],
-    // 회원 가입 성공 후 /login 으로 이동했을 때의 안내 상태는 REQ-013 책임이다.
+    // 회원 가입 성공 후 /login 으로 이동했을 때의 안내 상태는 REQ-001 책임이다.
     harness: {
-      requirements: ["REQ-013"],
+      requirements: ["REQ-001"],
     },
     docs: {
       description: {

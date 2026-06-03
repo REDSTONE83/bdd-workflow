@@ -43,17 +43,17 @@ import java.util.UUID;
         content = @Content(schema = @Schema(implementation = ApiError.class))))
 public class TodoController {
 
-    // REQ-002 의사결정 #(sort-keys, 2026-05-27): 기본 정렬은 도메인 고정(미완료 → 우선순위 → id),
+    // REQ-023 의사결정 #(sort-keys, 2026-05-27): 기본 정렬은 도메인 고정(미완료 → 우선순위 → id),
     // 사용자가 sort 를 직접 정하면 title/dueDate/createdAt 세 키만 허용한다. 다른 키는 InvalidSortKey 로 거절.
     private static final Set<String> ALLOWED_SORT_KEYS = Set.of("title", "dueDate", "createdAt");
 
     private final TodoService todoService;
 
-    @Requirement({"REQ-002", "REQ-004"})
+    @Requirement({"REQ-022", "REQ-004"})
     @Operation(
             summary = "할 일 생성",
             description = """
-                    Requirement: REQ-002
+                    Requirement: REQ-022
 
                     사용자는 자신의 할 일을 생성한다. 제목은 trim된 뒤 저장되며, completed는 항상 false로 시작한다.
                     """
@@ -73,11 +73,11 @@ public class TodoController {
                 .body(todoService.createTodo(principal.id(), request));
     }
 
-    @Requirement({"REQ-002", "REQ-004"})
+    @Requirement({"REQ-023", "REQ-004"})
     @Operation(
             summary = "할 일 목록 조회",
             description = """
-                    Requirement: REQ-002
+                    Requirement: REQ-023
 
                     사용자는 자신의 할 일 목록을 조회한다. 미완료 먼저, 우선순위 HIGH→MEDIUM→LOW, 식별자 오름차순으로 정렬된다.
                     """
@@ -94,14 +94,14 @@ public class TodoController {
         return ResponseEntity.ok(todoService.listTodos(principal.id(), pageable));
     }
 
-    @Requirement({"REQ-002", "REQ-004"})
+    @Requirement({"REQ-024", "REQ-027", "REQ-004"})
     @Operation(
             summary = "할 일 수정",
             description = """
-                    Requirement: REQ-002
+                    Requirement: REQ-024, REQ-027
 
                     사용자는 자신의 할 일을 부분 수정한다. 누락 필드는 유지하고, description/dueDate/categoryId는 명시적 null로 비울 수 있다.
-                    title/priority/completed는 명시적 null을 허용하지 않는다.
+                    title/priority/completed는 명시적 null을 허용하지 않는다. completed는 완료 상태 변경에 사용된다.
                     """
     )
     @ApiResponses({
@@ -120,11 +120,11 @@ public class TodoController {
         return ResponseEntity.ok(todoService.updateTodo(principal.id(), todoId, body));
     }
 
-    @Requirement({"REQ-002", "REQ-004"})
+    @Requirement({"REQ-025", "REQ-004"})
     @Operation(
             summary = "할 일 삭제",
             description = """
-                    Requirement: REQ-002
+                    Requirement: REQ-025
 
                     사용자는 자신의 할 일을 영구 삭제한다. 존재하지 않거나 타인 자원이면 404로 응답한다.
                     """

@@ -21,7 +21,7 @@ const meta = {
   parameters: {
     layout: "fullscreen",
     harness: {
-      requirements: ["REQ-014"],
+      requirements: ["REQ-016"],
     },
   },
   tags: ["autodocs"],

@@ -11,7 +11,7 @@ import {
   pageableQueryString,
 } from "./wire"
 
-// REQ-014: 카테고리 도메인 API 모듈. REQ-003 카테고리 계약(목록/생성/수정/삭제)을
+// REQ-016~REQ-019: 카테고리 도메인 API 모듈. 카테고리 계약(목록/생성/수정/삭제)을
 // FE view model 로 정규화하고, 중복 이름 409 를 DuplicateCategoryNameError 로 매핑한다.
 // 화면/훅이 generated OpenAPI client 를 직접 다루지 않도록 경계를 둔다.
 

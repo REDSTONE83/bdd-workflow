@@ -1,5 +1,5 @@
 // Fixture test for the AC marker parser in tools/harness/index-requirements.mjs.
-// 11 cases lock the parser/trace contract for REQ-012 (AC target marker).
+// These cases lock the parser/trace contract for the current AC verification markers.
 // Run with: node --test tools/harness/__tests__/
 
 import { describe, it } from 'node:test';
@@ -11,22 +11,26 @@ function parseOne(line) {
     return acceptanceCriterionItems(`- ${line}\n`)[0];
 }
 
-describe('acceptanceCriterionItems — AC marker parsing (REQ-012)', () => {
-    it('(BE) is recognized as target=BE and stripped', () => {
-        assert.deepEqual(parseOne('(BE) 정상 마커'), { text: '정상 마커', target: 'BE' });
+describe('acceptanceCriterionItems — AC marker parsing', () => {
+    it('(API) is recognized as target=API and stripped', () => {
+        assert.deepEqual(parseOne('(API) 정상 마커'), { text: '정상 마커', target: 'API' });
     });
 
-    it('(FE) is recognized as target=FE and stripped', () => {
-        assert.deepEqual(parseOne('(FE) 정상 마커'), { text: '정상 마커', target: 'FE' });
+    it('(UI) is recognized as target=UI and stripped', () => {
+        assert.deepEqual(parseOne('(UI) 정상 마커'), { text: '정상 마커', target: 'UI' });
     });
 
-    it('(FS) is recognized as target=FS and stripped', () => {
-        assert.deepEqual(parseOne('(FS) 정상 마커'), { text: '정상 마커', target: 'FS' });
+    it('(E2E) is recognized as target=E2E and stripped', () => {
+        assert.deepEqual(parseOne('(E2E) 정상 마커'), { text: '정상 마커', target: 'E2E' });
     });
 
-    it('(API) is reported as invalidMarker, text preserved verbatim', () => {
-        assert.deepEqual(parseOne('(API) 허용 외 토큰'),
-            { text: '(API) 허용 외 토큰', target: null, invalidMarker: 'API' });
+    it('(STATIC) is recognized as target=STATIC and stripped', () => {
+        assert.deepEqual(parseOne('(STATIC) 정상 마커'), { text: '정상 마커', target: 'STATIC' });
+    });
+
+    it('(BE) is reported as invalidMarker, text preserved verbatim', () => {
+        assert.deepEqual(parseOne('(BE) 허용 외 토큰'),
+            { text: '(BE) 허용 외 토큰', target: null, invalidMarker: 'BE' });
     });
 
     it('(API-V1) hyphenated token is reported as invalidMarker', () => {
@@ -34,20 +38,20 @@ describe('acceptanceCriterionItems — AC marker parsing (REQ-012)', () => {
             { text: '(API-V1) 하이픈 토큰', target: null, invalidMarker: 'API-V1' });
     });
 
-    it('(be) lowercase is reported as invalidMarker (case-sensitive valid set)', () => {
-        assert.deepEqual(parseOne('(be) 소문자'),
-            { text: '(be) 소문자', target: null, invalidMarker: 'be' });
+    it('(api) lowercase is reported as invalidMarker (case-sensitive valid set)', () => {
+        assert.deepEqual(parseOne('(api) 소문자'),
+            { text: '(api) 소문자', target: null, invalidMarker: 'api' });
     });
 
-    it('(BE): malformed colon-after-marker is reported as invalidMarker', () => {
+    it('(API): malformed colon-after-marker is reported as invalidMarker', () => {
         // valid form requires a space right after the closing paren.
-        assert.deepEqual(parseOne('(BE): 콜론 따라옴'),
-            { text: '(BE): 콜론 따라옴', target: null, invalidMarker: 'BE' });
+        assert.deepEqual(parseOne('(API): 콜론 따라옴'),
+            { text: '(API): 콜론 따라옴', target: null, invalidMarker: 'API' });
     });
 
-    it('(BE)foo without trailing space is reported as invalidMarker', () => {
-        assert.deepEqual(parseOne('(BE)공백 없음'),
-            { text: '(BE)공백 없음', target: null, invalidMarker: 'BE' });
+    it('(API)foo without trailing space is reported as invalidMarker', () => {
+        assert.deepEqual(parseOne('(API)공백 없음'),
+            { text: '(API)공백 없음', target: null, invalidMarker: 'API' });
     });
 
     it('(see foo) natural-language parenthesis with inner space is NOT a marker candidate', () => {
@@ -68,19 +72,21 @@ describe('acceptanceCriterionItems — AC marker parsing (REQ-012)', () => {
 describe('acceptanceCriterionItems — multi-bullet behavior', () => {
     it('parses a full block of mixed bullets in order', () => {
         const md = [
-            '- (BE) first',
-            '- (FE) second',
-            '- (FS) third',
+            '- (API) first',
+            '- (UI) second',
+            '- (E2E) third',
+            '- (STATIC) fourth',
             '- plain bullet',
-            '- (API) bad'
+            '- (BE) bad'
         ].join('\n');
         const out = acceptanceCriterionItems(md);
-        assert.equal(out.length, 5);
-        assert.equal(out[0].target, 'BE');
-        assert.equal(out[1].target, 'FE');
-        assert.equal(out[2].target, 'FS');
-        assert.equal(out[3].target, null);
-        assert.equal(out[3].invalidMarker, undefined);
-        assert.equal(out[4].invalidMarker, 'API');
+        assert.equal(out.length, 6);
+        assert.equal(out[0].target, 'API');
+        assert.equal(out[1].target, 'UI');
+        assert.equal(out[2].target, 'E2E');
+        assert.equal(out[3].target, 'STATIC');
+        assert.equal(out[4].target, null);
+        assert.equal(out[4].invalidMarker, undefined);
+        assert.equal(out[5].invalidMarker, 'BE');
     });
 });

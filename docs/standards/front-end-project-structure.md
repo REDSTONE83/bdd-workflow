@@ -146,15 +146,15 @@ Something.stories.tsx # Storybook story
 
 사람이 관리하는 ID는 계속 `REQ-XXX`만 둔다. 별도 화면 ID, 컴포넌트 ID, 시나리오 ID를 만들지 않는다.
 
-신규 카드에는 구현 대상을 명시한다.
+요건 카드에는 구현 표면이 아니라 `대상 시스템`과 AC별 검증 채널 마커를 명시한다.
 
 ```text
-구현 대상: back-end | front-end | full-stack
+대상 시스템: application | harness
+- (UI) 화면/라우팅/FE BDD 테스트로 검증할 수용 기준
+- (E2E) 여러 화면이나 기능을 관통하는 사용자 여정 수용 기준
 ```
 
-- 기존 카드에 구현 대상이 없으면 `back-end`로 본다.
-- `front-end`: API/DB 변경 없이 화면, 라우팅, 클라이언트 상태, 데스크톱 시각/접근성 품질을 구현한다.
-- `full-stack`: 같은 수용 기준을 API와 화면 양쪽에서 검증한다.
+화면, 라우팅, 클라이언트 상태, 데스크톱 시각/접근성 품질은 `(UI)` 또는 `(E2E)` AC와 FE source index 메타데이터로 추적한다.
 
 화면/route가 요건에 연결되어야 하는 경우 파일 상단 JSDoc 블록의 태그로 표시한다.
 요건 메타데이터는 JSDoc 단일 방식으로 통일하며, 컴포넌트/훅/유틸 어느 파일에도 별도
@@ -231,7 +231,7 @@ npm run validate:full   # Storybook/E2E 포함 전체 FE 게이트
 - `npm run validate`: typecheck, lint, Vitest, Vite build를 실행한다.
 - `npm run validate:full`: 빠른 게이트에 Storybook build와 Playwright E2E를 더한다.
 - `npm run source-index` 또는 `./gradlew generateFrontEndSourceIndex`: route, page, story, FE BDD 테스트의 `Requirement`/`Covers` 메타데이터를 수집한다.
-- 통합 `validateHarness`: 구현 대상이 `front-end` 또는 `full-stack`인 카드의 FE BDD 커버리지와 테스트 결과를 RED/GREEN/BLUE 판정에 반영한다.
+- 통합 `validateHarness`: `(UI)` 또는 `(E2E)` AC의 FE BDD 커버리지와 테스트 결과를 RED/GREEN/BLUE 판정에 반영한다.
 
 ## 정적 검사 정책
 

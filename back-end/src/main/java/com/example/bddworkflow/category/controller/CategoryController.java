@@ -45,16 +45,16 @@ import java.util.UUID;
         content = @Content(schema = @Schema(implementation = ApiError.class))))
 public class CategoryController {
 
-    // REQ-003: 카테고리 목록은 사용자 표시 순서를 기준으로 한다. id 는 동률 보조 정렬이므로 클라이언트에 노출하지 않는다.
+    // REQ-016: 카테고리 목록은 사용자 표시 순서를 기준으로 한다. id 는 동률 보조 정렬이므로 클라이언트에 노출하지 않는다.
     private static final Set<String> ALLOWED_SORT_KEYS = Set.of("displayOrder");
 
     private final CategoryService categoryService;
 
-    @Requirement({"REQ-003", "REQ-004"})
+    @Requirement({"REQ-017", "REQ-004"})
     @Operation(
             summary = "카테고리 생성",
             description = """
-                    Requirement: REQ-003
+                    Requirement: REQ-017
 
                     사용자는 자신의 카테고리를 생성한다. 이름은 trim된 뒤 저장되며 사용자 안에서 유일해야 한다.
                     """
@@ -76,11 +76,11 @@ public class CategoryController {
                 .body(categoryService.createCategory(principal.id(), request));
     }
 
-    @Requirement({"REQ-003", "REQ-004"})
+    @Requirement({"REQ-016", "REQ-004"})
     @Operation(
             summary = "카테고리 목록 조회",
             description = """
-                    Requirement: REQ-003
+                    Requirement: REQ-016
 
                     사용자는 자신의 카테고리 목록을 정렬 순서 오름차순, 동률이면 식별자 오름차순으로 조회한다.
                     """
@@ -97,11 +97,11 @@ public class CategoryController {
         return ResponseEntity.ok(categoryService.listCategories(principal.id(), pageable));
     }
 
-    @Requirement({"REQ-003", "REQ-004"})
+    @Requirement({"REQ-018", "REQ-004"})
     @Operation(
             summary = "카테고리 수정",
             description = """
-                    Requirement: REQ-003
+                    Requirement: REQ-018
 
                     사용자는 자신의 카테고리를 부분 수정한다. 요청 본문에 없는 필드는 기존 값을 유지하며,
                     color와 description은 명시적으로 null을 보내면 값을 비운다.
@@ -125,11 +125,11 @@ public class CategoryController {
         return ResponseEntity.ok(categoryService.updateCategory(principal.id(), categoryId, body));
     }
 
-    @Requirement({"REQ-003", "REQ-004"})
+    @Requirement({"REQ-019", "REQ-004"})
     @Operation(
             summary = "카테고리 삭제",
             description = """
-                    Requirement: REQ-003
+                    Requirement: REQ-019
 
                     사용자는 자신의 카테고리를 영구 삭제한다. 존재하지 않거나 타인 자원이면 404로 응답한다.
                     """

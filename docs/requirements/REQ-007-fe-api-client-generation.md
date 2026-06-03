@@ -1,10 +1,17 @@
 # 요건 카드
 
 요건 ID: REQ-007
-제목: FE API client 생성 표준화
+제목: OpenAPI 기반 FE API 클라이언트 생성
 우선순위: 중간
 상태: 승인
-구현 대상: harness
+요건 종류: 하네스
+명세 역할: 원자 요건
+대상 시스템: harness
+제품 영역: harness
+품질 속성: compatibility
+검증 수준: static
+관련 요건: REQ-006, REQ-008
+대체 요건: 없음
 
 ## 사용자/목적
 
@@ -33,11 +40,11 @@
 
 ## 수용 기준
 
-- 프런트엔드 개발자는 한 명령으로 현재 OpenAPI 계약 기준의 API client를 생성할 수 있다
-- 생성된 API client는 `front-end/src/api/generated` 아래에만 기록된다
-- API client를 생성하면 현재 OpenAPI 계약을 가리키는 메타파일이 함께 갱신된다
-- OpenAPI 계약이 바뀐 뒤 API client를 다시 생성하지 않으면 검사 결과에 오래된 client로 보고된다
-- 프런트엔드 전체 검증 명령은 API client 생성 결과와 계약 검사를 함께 확인한다
+- (STATIC) 프런트엔드 개발자는 한 명령으로 현재 OpenAPI 계약 기준의 API client를 생성할 수 있다
+- (STATIC) 생성된 API client는 `front-end/src/api/generated` 아래에만 기록된다
+- (STATIC) API client를 생성하면 현재 OpenAPI 계약을 가리키는 메타파일이 함께 갱신된다
+- (STATIC) OpenAPI 계약이 바뀐 뒤 API client를 다시 생성하지 않으면 검사 결과에 오래된 client로 보고된다
+- (STATIC) 프런트엔드 전체 검증 명령은 API client 생성 결과와 계약 검사를 함께 확인한다
 
 ## 의사결정 로그
 
@@ -51,7 +58,7 @@
   결정: 이 요건은 FE 화면이 아니라 도구 파이프라인 요건으로 추적한다.
   이유: 생성 client와 메타파일은 사용자-facing 화면/route/story가 아니며, 화면 표면 연결을 요구하면 추적 의미가 어긋난다.
   결정자: Tech Lead
-  영향: `구현 대상: harness`로 두고, Acceptance Test 또는 FE BDD 테스트가 수용 기준을 커버하면 GREEN 판정이 가능하다.
+  영향: `대상 시스템: harness`로 두고, Acceptance Test 또는 FE BDD 테스트가 수용 기준을 커버하면 GREEN 판정이 가능하다.
 
 - 결정일: 2026-05-23
   결정: FE API client 생성 도구는 `openapi-typescript`와 `openapi-fetch` 조합으로 시작한다.

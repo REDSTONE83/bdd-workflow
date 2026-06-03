@@ -1,5 +1,5 @@
 /**
- * @Requirement REQ-014
+ * @Requirement REQ-016, REQ-017, REQ-018, REQ-019
  * @Route /categories
  * @Page CategoriesPageContainer
  * @UsesApi GET /categories mount
@@ -7,9 +7,9 @@
  * @UsesApi PATCH /categories/{categoryId} submit
  * @UsesApi DELETE /categories/{categoryId} submit
  *
- * REQ-014 카테고리 관리 화면 컨테이너.
+ * REQ-016~REQ-019 카테고리 관리 화면 컨테이너.
  * 표현 컴포넌트 CategoriesPage 에 TanStack Query 서버 상태(무한 목록)와
- * 생성/수정/삭제 mutation(REQ-003 카테고리 API)을 결합한다.
+ * 생성/수정/삭제 mutation(REQ-017~REQ-019 카테고리 API)을 결합한다.
  */
 import { CategoriesPage } from "./CategoriesPage"
 import {

@@ -11,7 +11,7 @@ const VALID = {
   password: "Password123!",
 }
 
-// REQ-013 FE: 회원 가입 화면 폼 구성/검증/제출 중/중복 이메일/접근성/데스크톱 레이아웃.
+// REQ-001 FE: 회원 가입 화면 폼 구성/검증/제출 중/중복 이메일/접근성/데스크톱 레이아웃.
 test.describe("회원 가입 화면 폼", () => {
   test.beforeEach(async ({ page }) => {
     await installAuthRoutes(page, { authenticated: null })
@@ -19,7 +19,7 @@ test.describe("회원 가입 화면 폼", () => {
 
   test("회원 가입 카드 구조와 로그인 링크", async ({ page }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description:
@@ -48,7 +48,7 @@ test.describe("회원 가입 화면 폼", () => {
 
   test("빈 입력으로 제출하면 각 입력 아래에 안내가 보인다", async ({ page }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description:
@@ -66,7 +66,7 @@ test.describe("회원 가입 화면 폼", () => {
 
   test("이름이 100자를 초과하면 너무 길다는 안내가 보인다", async ({ page }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description: "사용자 이름이 100자를 초과하면 사용자 이름이 너무 길다는 안내가 보인다",
@@ -86,7 +86,7 @@ test.describe("회원 가입 화면 폼", () => {
     page,
   }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description:
@@ -105,7 +105,7 @@ test.describe("회원 가입 화면 폼", () => {
 
   test("비밀번호가 8자 미만이면 너무 짧다는 안내가 보인다", async ({ page }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description: "비밀번호가 8자 미만이면 비밀번호가 너무 짧다는 안내가 보인다",
@@ -125,7 +125,7 @@ test.describe("회원 가입 화면 폼", () => {
     page,
   }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description:
@@ -147,7 +147,7 @@ test.describe("회원 가입 화면 폼", () => {
     page,
   }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description:
@@ -169,7 +169,7 @@ test.describe("회원 가입 화면 폼", () => {
     page,
   }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description:
@@ -216,7 +216,7 @@ test.describe("회원 가입 화면 폼", () => {
     page,
   }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description:
@@ -246,7 +246,7 @@ test.describe("회원 가입 화면 폼", () => {
 
   test("데스크톱 화면에서 카드가 가로로 넘치지 않는다", async ({ page }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description:
@@ -269,7 +269,7 @@ test.describe("회원 가입 화면 폼", () => {
 
   test("자동 접근성 검사에서 위반이 없다", async ({ page }, testInfo) => {
     testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-013" },
+      { type: "Requirement", description: "REQ-001" },
       {
         type: "Covers",
         description: "회원 가입 화면은 자동 접근성 검사에서 위반이 없어야 한다",

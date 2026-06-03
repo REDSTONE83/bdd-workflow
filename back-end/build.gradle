@@ -111,6 +111,13 @@ tasks.register('indexRequirements', Exec) {
     commandLine 'node', harnessTool('index-requirements.mjs')
 }
 
+tasks.register('indexChangeSets', Exec) {
+    group = 'verification'
+    description = 'Parse docs/change-sets/*.md into build/harness/indexes/change-sets.index.json.'
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('index-change-sets.mjs')
+}
+
 tasks.register('indexTestResults', Exec) {
     group = 'verification'
     description = 'Collect JUnit XML + Playwright JSON into build/harness/indexes/test-results.index.json.'
@@ -124,6 +131,24 @@ tasks.register('validateRequirementCards', Exec) {
     dependsOn tasks.named('indexRequirements'), tasks.named('indexTerminology')
     workingDir workspaceDir
     commandLine 'node', harnessTool('validate-requirement-cards.mjs')
+}
+
+tasks.register('generateRequirementSchemaReport', Exec) {
+    group = 'verification'
+    description = 'Render build/harness/reports/requirement-schema-report.{md,json} from requirement card findings.'
+    dependsOn tasks.named('validateRequirementCards')
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('render-requirement-schema-report.mjs')
+}
+
+tasks.register('generateChangeSetReport', Exec) {
+    group = 'verification'
+    description = 'Render build/harness/reports/change-set-report.{md,json} from change set index and current requirement state.'
+    dependsOn tasks.named('indexChangeSets'),
+            tasks.named('indexRequirements'),
+            tasks.named('validateRequirementCards')
+    workingDir workspaceDir
+    commandLine 'node', harnessTool('render-change-set-report.mjs')
 }
 
 tasks.register('validateCrossArtifact', Exec) {
@@ -153,8 +178,10 @@ tasks.register('traceRequirements', Exec) {
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
             tasks.named('indexRequirements'),
+            tasks.named('indexChangeSets'),
             tasks.named('indexTestResults'),
             tasks.named('validateRequirementCards'),
+            tasks.named('generateRequirementSchemaReport'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
             tasks.named('validateScenarios'),
@@ -170,8 +197,10 @@ tasks.register('traceRequirementsAfterTest', Exec) {
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
             tasks.named('indexRequirements'),
+            tasks.named('indexChangeSets'),
             tasks.named('indexTestResults'),
             tasks.named('validateRequirementCards'),
+            tasks.named('generateRequirementSchemaReport'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
             tasks.named('validateScenarios'),
@@ -255,8 +284,10 @@ tasks.register('validateHarness', Exec) {
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
             tasks.named('indexRequirements'),
+            tasks.named('indexChangeSets'),
             tasks.named('indexTestResults'),
             tasks.named('validateRequirementCards'),
+            tasks.named('generateRequirementSchemaReport'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
             tasks.named('validateScenarios'),
@@ -283,8 +314,10 @@ tasks.register('traceRequirementCard', Exec) {
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
             tasks.named('indexRequirements'),
+            tasks.named('indexChangeSets'),
             tasks.named('indexTestResults'),
             tasks.named('validateRequirementCards'),
+            tasks.named('generateRequirementSchemaReport'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
             tasks.named('validateScenarios'),
@@ -302,8 +335,10 @@ tasks.register('validateRequirementCard', Exec) {
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
             tasks.named('indexRequirements'),
+            tasks.named('indexChangeSets'),
             tasks.named('indexTestResults'),
             tasks.named('validateRequirementCards'),
+            tasks.named('generateRequirementSchemaReport'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
             tasks.named('validateScenarios'),
@@ -323,8 +358,10 @@ tasks.register('validateRequirementCardBlue', Exec) {
             tasks.named('generateFrontEndSourceIndex'),
             tasks.named('generateScenarioIndex'),
             tasks.named('indexRequirements'),
+            tasks.named('indexChangeSets'),
             tasks.named('indexTestResults'),
             tasks.named('validateRequirementCards'),
+            tasks.named('generateRequirementSchemaReport'),
             tasks.named('validateCrossArtifact'),
             tasks.named('validateFrontEndStandards'),
             tasks.named('validateScenarios'),
@@ -343,6 +380,8 @@ tasks.register('harnessReport') {
             'Reports always produce before exit, but the task exit code still reflects test pass/fail. ' +
             'Trace runs as a finalizer of test, so the trace report sees the latest test results.'
     dependsOn tasks.named('validateStandards'),
+            tasks.named('generateRequirementSchemaReport'),
+            tasks.named('generateChangeSetReport'),
             tasks.named('validateTerminology'),
             tasks.named('test')
 }

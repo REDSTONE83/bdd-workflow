@@ -63,11 +63,11 @@ function bulletItems(markdown) {
         .filter(Boolean);
 }
 
-const AC_TARGET_TOKENS = ['BE', 'FE', 'FS'];
+const AC_TARGET_TOKENS = ['API', 'UI', 'E2E', 'STATIC'];
 // 마커는 bullet 시작의 `(TOKEN) ` 형태로만 valid이다. 괄호 안에 공백이 없는 토큰을 마커
-// 후보로 넓게 잡고, 허용 토큰(BE/FE/FS)이며 뒤에 공백이 따라오는 경우만 stripped target으로
-// 인정한다. 그 외 — 허용 외 토큰이거나 뒤에 공백이 없는 malformed 형태(예: `(BE):`,
-// `(API-V1)`, `(be)`) — 는 invalidMarker로 보고한다. `(see foo)`, `(예: A)`처럼 괄호 안에
+// 후보로 넓게 잡고, 허용 토큰(API/UI/E2E/STATIC)이며 뒤에 공백이 따라오는 경우만 stripped target으로
+// 인정한다. 그 외 — 허용 외 토큰이거나 뒤에 공백이 없는 malformed 형태(예: `(API):`,
+// `(API-V1)`, `(api)`) — 는 invalidMarker로 보고한다. `(see foo)`, `(예: A)`처럼 괄호 안에
 // 공백이 있으면 자연어로 간주해 마커 후보에서 제외한다.
 const AC_MARKER_VALID_PATTERN = /^\(([^()\s]+)\)\s+/;
 const AC_MARKER_LOOSE_PATTERN = /^\(([^()\s]+)\)/;
@@ -91,14 +91,37 @@ function normalizeApprovalStatus(status) {
     return ['승인', 'approved', 'blue'].includes(normalized);
 }
 
+function headerValue(content, label) {
+    return content.match(new RegExp(`^${escapeRegExp(label)}:[ \\t]*(.+)$`, 'm'))?.[1]?.trim() ?? '';
+}
+
+function splitList(raw) {
+    if (!raw || /^없음$/.test(raw.trim())) return [];
+    return raw
+        .split(/[,，]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+}
+
+function requirementRefs(raw) {
+    return [...new Set(raw.match(/\bREQ-\d{3,}\b/g) ?? [])];
+}
+
 function parseCard(file) {
     const content = fs.readFileSync(file, 'utf8');
-    const idRaw = content.match(/^요건 ID:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+    const idRaw = headerValue(content, '요건 ID');
     const id = REQUIREMENT_ID_PATTERN.test(idRaw) ? idRaw : '';
-    const title = content.match(/^제목:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
-    const priority = content.match(/^우선순위:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
-    const status = content.match(/^상태:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
-    const implementationTargetRaw = content.match(/^구현 대상:[ \t]*(.+)$/m)?.[1]?.trim() ?? '';
+    const title = headerValue(content, '제목');
+    const priority = headerValue(content, '우선순위');
+    const status = headerValue(content, '상태');
+    const requirementType = headerValue(content, '요건 종류');
+    const specRole = headerValue(content, '명세 역할');
+    const targetSystem = headerValue(content, '대상 시스템');
+    const productArea = headerValue(content, '제품 영역');
+    const qualityAttributes = splitList(headerValue(content, '품질 속성'));
+    const verificationLevel = headerValue(content, '검증 수준');
+    const relatedRequirementIds = requirementRefs(headerValue(content, '관련 요건'));
+    const replacedByRequirementIds = requirementRefs(headerValue(content, '대체 요건'));
     const acceptanceCriteria = acceptanceCriterionItems(section(content, '수용 기준'));
     const openQuestions = bulletItems(section(content, '열린 질문'))
         .filter((item) => !/^없음$/.test(item.trim()));
@@ -119,7 +142,14 @@ function parseCard(file) {
         title,
         priority,
         status,
-        implementationTargetRaw,
+        requirementType,
+        specRole,
+        targetSystem,
+        productArea,
+        qualityAttributes,
+        verificationLevel,
+        relatedRequirementIds,
+        replacedByRequirementIds,
         approved: normalizeApprovalStatus(status),
         acceptanceCriteria,
         openQuestions,
@@ -145,7 +175,14 @@ function toEntry(card) {
         title: card.title,
         priority: card.priority,
         status: card.status,
-        implementationTargetRaw: card.implementationTargetRaw,
+        requirementType: card.requirementType,
+        specRole: card.specRole,
+        targetSystem: card.targetSystem,
+        productArea: card.productArea,
+        qualityAttributes: card.qualityAttributes,
+        verificationLevel: card.verificationLevel,
+        relatedRequirementIds: card.relatedRequirementIds,
+        replacedByRequirementIds: card.replacedByRequirementIds,
         approved: card.approved,
         acceptanceCriteria: card.acceptanceCriteria,
         openQuestions: card.openQuestions,

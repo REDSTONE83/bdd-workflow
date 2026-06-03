@@ -43,7 +43,6 @@ const terminologyReportPath = path.join(findingsDir, 'terminology.findings.json'
 const terminologyIndexPath = path.join(indexesDir, 'terminology.index.json');
 const stateOutFile = path.join(stateDir, 'trace.state.json');
 
-const ALLOWED_IMPLEMENTATION_TARGETS = ['back-end', 'front-end', 'full-stack', 'harness'];
 const REQUIREMENT_ID_PATTERN = /^REQ-\d{3,}$/;
 
 function parseCliArgs(argv) {
@@ -94,17 +93,20 @@ function readAllRequirementCards() {
     }
     const payload = JSON.parse(fs.readFileSync(requirementsIndexPath, 'utf8'));
     return (payload.entries ?? []).map((entry) => {
-        const implementationTarget = ALLOWED_IMPLEMENTATION_TARGETS.includes(entry.implementationTargetRaw)
-            ? entry.implementationTargetRaw
-            : 'back-end';
         return {
             id: entry.id ?? '',
             idRaw: entry.idRaw ?? '',
             title: entry.title ?? '',
             priority: entry.priority ?? '',
             status: entry.status ?? '',
-            implementationTarget,
-            implementationTargetRaw: entry.implementationTargetRaw ?? '',
+            requirementType: entry.requirementType ?? '',
+            specRole: entry.specRole ?? '',
+            targetSystem: entry.targetSystem ?? '',
+            productArea: entry.productArea ?? '',
+            qualityAttributes: entry.qualityAttributes ?? [],
+            verificationLevel: entry.verificationLevel ?? '',
+            relatedRequirementIds: entry.relatedRequirementIds ?? [],
+            replacedByRequirementIds: entry.replacedByRequirementIds ?? [],
             approved: Boolean(entry.approved),
             file: path.join(workspaceRoot, entry.location?.file ?? ''),
             referencedRequirementIds: entry.referencedRequirementIds ?? [],
@@ -336,53 +338,38 @@ function frontEndSurfacesForRequirement(card, frontEndIndex) {
     };
 }
 
-function hasFrontEndSurface(s) {
-    return (s.pages ?? []).length > 0 || (s.routes ?? []).length > 0 || (s.stories ?? []).length > 0;
-}
-
-// REQ-012: AC target 마커가 있으면 마커 우선, 없으면 카드 구현 대상으로 fallback.
-// 'EITHER'는 harness 카드의 "BE 또는 FE 어느 한쪽이라도 커버" 정책 라벨.
-function effectiveCoveragePolicy(acTarget, implementationTarget) {
-    if (acTarget === 'BE') return 'BE';
-    if (acTarget === 'FE') return 'FE';
-    if (acTarget === 'FS') return 'FS';
-    switch (implementationTarget) {
-        case 'back-end': return 'BE';
-        case 'front-end': return 'FE';
-        case 'full-stack': return 'FS';
-        case 'harness': return 'EITHER';
-        default: return 'BE';
+function effectiveCoveragePolicy(acTarget) {
+    switch (acTarget) {
+        case 'API': return 'API';
+        case 'UI': return 'UI';
+        case 'E2E': return 'E2E';
+        case 'STATIC': return 'STATIC';
+        default: return 'UNKNOWN';
     }
 }
 
-function targetCoverageForCriterion(criterion, requirementTests, requirementScenarios, results, acTarget, implementationTarget) {
+function targetCoverageForCriterion(criterion, requirementTests, requirementScenarios, results, acTarget) {
     const backEndTests = requirementTests.filter((t) => t.source !== 'front-end');
     const frontEndTests = requirementTests.filter((t) => t.source === 'front-end');
-    const policy = effectiveCoveragePolicy(acTarget, implementationTarget);
-    if (policy === 'BE') {
+    const policy = effectiveCoveragePolicy(acTarget);
+    if (policy === 'API') {
         const cov = statusForCriterion(criterion, backEndTests, requirementScenarios, results);
-        return { ...cov, requiredChecks: [{ target: 'back-end', status: cov.status }] };
+        return { ...cov, requiredChecks: [{ target: 'api', status: cov.status }] };
     }
-    if (policy === 'FE') {
+    if (policy === 'UI') {
         const cov = statusForCriterion(criterion, frontEndTests, requirementScenarios, results);
-        return { ...cov, requiredChecks: [{ target: 'front-end', status: cov.status }] };
+        return { ...cov, requiredChecks: [{ target: 'ui', status: cov.status }] };
     }
-    if (policy === 'FS') {
-        const be = statusForCriterion(criterion, backEndTests, requirementScenarios, results);
-        const fe = statusForCriterion(criterion, frontEndTests, requirementScenarios, results);
-        return {
-            status: combineStatuses([be.status, fe.status]),
-            tests: [...be.tests, ...fe.tests],
-            scenarios: be.scenarios,
-            requiredChecks: [
-                { target: 'back-end', status: be.status },
-                { target: 'front-end', status: fe.status }
-            ]
-        };
+    if (policy === 'E2E') {
+        const cov = statusForCriterion(criterion, frontEndTests, requirementScenarios, results);
+        return { ...cov, requiredChecks: [{ target: 'e2e', status: cov.status }] };
     }
-    // EITHER: BE+FE 합집합 — 어느 한쪽이라도 AC를 커버하면 PASS.
-    const cov = statusForCriterion(criterion, requirementTests, requirementScenarios, results);
-    return { ...cov, requiredChecks: [{ target: 'harness', status: cov.status }] };
+    if (policy === 'STATIC') {
+        const cov = statusForCriterion(criterion, requirementTests, requirementScenarios, results);
+        return { ...cov, requiredChecks: [{ target: 'static', status: cov.status }] };
+    }
+    const cov = statusForCriterion(criterion, [], requirementScenarios, results);
+    return { ...cov, requiredChecks: [{ target: 'unknown', status: cov.status }] };
 }
 
 function traceReason(ruleId, message, evidence = {}) {
@@ -403,21 +390,19 @@ function evaluateRequirement(card, apis, tests, scenarios, entities, results, fr
         return {
             criterion: text,
             target,
-            ...targetCoverageForCriterion(text, requirementTests, requirementScenarios, results, target, card.implementationTarget)
+            ...targetCoverageForCriterion(text, requirementTests, requirementScenarios, results, target)
         };
     });
+
+    if (['대체됨', '폐기'].includes(card.status)) {
+        return { ...card, state: 'INACTIVE', redReasons: [], blueBlockedBy: [],
+            apis: requirementApis, tests: requirementTests, scenarios: requirementScenarios,
+            entities: requirementEntities, frontEnd: frontEndSurfaces, coverage };
+    }
 
     const redReasons = [];
     if (card.acceptanceCriteria.length === 0) {
         redReasons.push(traceReason('TRACE-AC-EMPTY', '수용 기준 없음', { requirementId: card.id }));
-    }
-    if (['back-end', 'full-stack'].includes(card.implementationTarget) && requirementApis.length === 0) {
-        redReasons.push(traceReason('TRACE-NO-API', '관련 API 없음',
-            { requirementId: card.id, implementationTarget: card.implementationTarget }));
-    }
-    if (['front-end', 'full-stack'].includes(card.implementationTarget) && !hasFrontEndSurface(frontEndSurfaces)) {
-        redReasons.push(traceReason('TRACE-NO-FE-SURFACE', '관련 FE 화면/스토리 없음',
-            { requirementId: card.id, implementationTarget: card.implementationTarget }));
     }
     for (const row of coverage) {
         if (row.status === 'PASS') continue;
@@ -548,6 +533,7 @@ function buildModel(allCards, cards, apis, tests, entities, results, terminology
         red: requirements.filter((r) => r.state === 'RED').length,
         green: requirements.filter((r) => r.state === 'GREEN').length,
         blue: requirements.filter((r) => r.state === 'BLUE').length,
+        inactive: requirements.filter((r) => r.state === 'INACTIVE').length,
         unknownApis: unknownApis.length,
         unknownTests: unknownTests.length,
         unknownEntities: unknownEntities.length,
