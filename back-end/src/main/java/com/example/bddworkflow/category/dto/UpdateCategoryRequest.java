@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.openapitools.jackson.nullable.JsonNullable;
 
-@Requirement("REQ-003")
+@Requirement("REQ-018")
 @Schema(description = "카테고리 수정 요청 (부분 수정). 누락된 필드는 변경되지 않으며, color/description은 명시적 null로 비울 수 있다.")
 public class UpdateCategoryRequest {
 

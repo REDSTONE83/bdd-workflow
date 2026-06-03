@@ -10,10 +10,10 @@ test.describe("App shell", () => {
     await installAuthRoutes(page, { authenticated: null })
   })
 
-  test("renders the React/Vite/shadcn foundation", async ({ page }, testInfo) => {
+  test("renders the application app shell", async ({ page }, testInfo) => {
     testInfo.annotations.push(
       { type: "Requirement", description: "REQ-005" },
-      { type: "Covers", description: "프런트엔드 기반 앱 셸이 표시된다" },
+      { type: "Covers", description: "애플리케이션 기본 앱 셸이 표시된다" },
     )
 
     await page.goto("/")

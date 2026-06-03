@@ -21,7 +21,7 @@ import java.util.stream.StreamSupport;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * REQ-008 FE API 계약 검사 강화 — drift와 API 경계 위반을 error finding으로 고정한다.
+ * REQ-008 FE API 계약 오류 검사 — drift와 API 경계 위반을 error finding으로 고정한다.
  */
 @AcceptanceTest
 @Requirement("REQ-008")

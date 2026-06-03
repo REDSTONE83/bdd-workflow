@@ -1,5 +1,5 @@
 @REQ-004
-Feature: JWT 기반 인증 전환
+Feature: JWT 기반 인증
 
   # ----- 정상 인증 -----
 

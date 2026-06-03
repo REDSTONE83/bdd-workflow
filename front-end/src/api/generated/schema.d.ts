@@ -36,7 +36,7 @@ export interface paths {
         };
         /**
          * 할 일 목록 조회
-         * @description Requirement: REQ-002
+         * @description Requirement: REQ-023
          *
          *     사용자는 자신의 할 일 목록을 조회한다. 미완료 먼저, 우선순위 HIGH→MEDIUM→LOW, 식별자 오름차순으로 정렬된다.
          */
@@ -44,7 +44,7 @@ export interface paths {
         put?: never;
         /**
          * 할 일 생성
-         * @description Requirement: REQ-002
+         * @description Requirement: REQ-022
          *
          *     사용자는 자신의 할 일을 생성한다. 제목은 trim된 뒤 저장되며, completed는 항상 false로 시작한다.
          */
@@ -64,7 +64,7 @@ export interface paths {
         };
         /**
          * 카테고리 목록 조회
-         * @description Requirement: REQ-003
+         * @description Requirement: REQ-016
          *
          *     사용자는 자신의 카테고리 목록을 정렬 순서 오름차순, 동률이면 식별자 오름차순으로 조회한다.
          */
@@ -72,7 +72,7 @@ export interface paths {
         put?: never;
         /**
          * 카테고리 생성
-         * @description Requirement: REQ-003
+         * @description Requirement: REQ-017
          *
          *     사용자는 자신의 카테고리를 생성한다. 이름은 trim된 뒤 저장되며 사용자 안에서 유일해야 한다.
          */
@@ -141,7 +141,7 @@ export interface paths {
         post?: never;
         /**
          * 할 일 삭제
-         * @description Requirement: REQ-002
+         * @description Requirement: REQ-025
          *
          *     사용자는 자신의 할 일을 영구 삭제한다. 존재하지 않거나 타인 자원이면 404로 응답한다.
          */
@@ -150,10 +150,10 @@ export interface paths {
         head?: never;
         /**
          * 할 일 수정
-         * @description Requirement: REQ-002
+         * @description Requirement: REQ-024, REQ-027
          *
          *     사용자는 자신의 할 일을 부분 수정한다. 누락 필드는 유지하고, description/dueDate/categoryId는 명시적 null로 비울 수 있다.
-         *     title/priority/completed는 명시적 null을 허용하지 않는다.
+         *     title/priority/completed는 명시적 null을 허용하지 않는다. completed는 완료 상태 변경에 사용된다.
          */
         patch: operations["updateTodo"];
         trace?: never;
@@ -170,7 +170,7 @@ export interface paths {
         post?: never;
         /**
          * 카테고리 삭제
-         * @description Requirement: REQ-003
+         * @description Requirement: REQ-019
          *
          *     사용자는 자신의 카테고리를 영구 삭제한다. 존재하지 않거나 타인 자원이면 404로 응답한다.
          */
@@ -179,7 +179,7 @@ export interface paths {
         head?: never;
         /**
          * 카테고리 수정
-         * @description Requirement: REQ-003
+         * @description Requirement: REQ-018
          *
          *     사용자는 자신의 카테고리를 부분 수정한다. 요청 본문에 없는 필드는 기존 값을 유지하며,
          *     color와 description은 명시적으로 null을 보내면 값을 비운다.
@@ -469,7 +469,7 @@ export interface components {
          *     - 누락된 필드는 변경되지 않는다.
          *     - description / dueDate / categoryId 는 명시적 null로 비울 수 있다.
          *     - title / priority / completed 는 명시적 null을 허용하지 않으며 보낼 경우 400 VALIDATION_FAILED.
-         *     - completed는 true/false로 완료 토글에 사용된다.
+         *     - completed는 true/false로 완료 상태 변경에 사용된다.
          */
         UpdateTodoRequest: {
             title?: components["schemas"]["JsonNullableString"];

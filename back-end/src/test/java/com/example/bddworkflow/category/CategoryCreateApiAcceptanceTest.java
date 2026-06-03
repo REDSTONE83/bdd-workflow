@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ApiAcceptanceTest
-@Requirement("REQ-003")
+@Requirement("REQ-017")
 class CategoryCreateApiAcceptanceTest {
 
     private static final java.util.UUID USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-000000000064");

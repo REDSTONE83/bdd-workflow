@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * REQ-010 통합 하네스 게이트 도입 — gate.mjs가 단일 Layer 4 판정기로 동작하고,
+ * REQ-010 통합 하네스 게이트 — gate.mjs가 단일 Layer 4 판정기로 동작하고,
  * BE/FE/SCN/CARD/REF/TRC/TRACE/TRM 8개 카테고리를 한 번에 차단함을 검증한다.
  *
  * fixture 전략: production 경로(`build/harness/state/`, `build/harness/findings/`)의

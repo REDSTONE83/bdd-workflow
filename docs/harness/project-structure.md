@@ -10,9 +10,12 @@ bdd-workflow/
   docs/
     README.md
     harness/
+      change-set.md
       overview.md
       project-structure.md
       requirement-authoring.md
+    change-sets/
+      2026-06-01-requirement-card-harness-migration.md
     requirements/
       REQ-001-email-signup.md
     scenarios/
@@ -49,6 +52,7 @@ bdd-workflow/
         scenarios.index.json
         terminology.index.json
         requirements.index.json
+        change-sets.index.json
         test-results.index.json
       findings/
         back-end-standards.findings.json
@@ -62,6 +66,8 @@ bdd-workflow/
       reports/
         trace-report.md
         trace-report.json
+        change-set-report.md
+        change-set-report.json
         back-end-standards-report.md
         terminology-report.md
       schema-preview.sql
@@ -177,8 +183,15 @@ docs/harness/
 하네스 자체의 운영 문서를 둔다.
 
 - `overview.md`: 하네스 목적, 추적 구조, 상태 판정
+- `change-set.md`: 사용자 요청 단위 작업 범위와 리포트 기준
 - `project-structure.md`: 프로젝트 전체 폴더 구조
 - `requirement-authoring.md`: 질문 기반 요건 작성과 BDD 테스트 리뷰 절차
+
+```text
+docs/change-sets/
+```
+
+사용자 요청을 처리하기 위한 작업 범위를 둔다. Change Set은 영구 명세 원천이 아니며, 별도 사람이 관리하는 ID 없이 파일 경로를 identity로 쓴다.
 
 ```text
 docs/requirements/

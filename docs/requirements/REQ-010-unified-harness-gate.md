@@ -1,10 +1,17 @@
 # 요건 카드
 
 요건 ID: REQ-010
-제목: 통합 하네스 게이트 도입
+제목: 통합 하네스 게이트
 우선순위: 높음
 상태: 승인
-구현 대상: harness
+요건 종류: 하네스
+명세 역할: 원자 요건
+대상 시스템: harness
+제품 영역: harness
+품질 속성: none
+검증 수준: static
+관련 요건: REQ-006, REQ-008, REQ-009, REQ-012
+대체 요건: 없음
 
 ## 사용자/목적
 
@@ -42,16 +49,16 @@
 
 ## 수용 기준
 
-- `tools/harness/gate.mjs`는 `build/harness/state/trace.state.json`, `build/harness/findings/*.findings.json`, `build/harness/findings/terminology.findings.json`을 읽어 단일 게이트 결과(exit code + 카테고리별 요약)를 만든다
-- `gate.mjs`는 실패 사유를 `TRACE`/`CARD`/`REF`/`TRC`/`BE`/`FE`/`SCN`/`TRM` 카테고리 라벨로 분리해서 보고한다
-- `gate.mjs --check`는 `back-end-standards.findings.json`에 `severity: error` finding이 있으면 BE 카테고리 실패로 차단한다
-- `gate.mjs --check`는 `terminology.findings.json`에 `strictSeverity: error` finding이 있으면 TRM 카테고리 실패로 차단한다
-- `gate.mjs --check`는 RED 카드, 카드 구조 위반(CARD-*), REF-* unknown reference, FE-* error, SCN-* error, TRC-* error finding이 있으면 각 카테고리 실패로 차단한다
-- `gate.mjs --require-blue`는 `--check` 조건에 더해 GREEN 카드가 있으면 TRACE 카테고리 실패로 차단한다
-- `gate.mjs --requirement REQ-XXX`는 `finding.requirements[]`와 선택 카드 ID의 교집합으로 finding을 거른다. `requirements: []` 전역 finding은 단일 카드 게이트에서 차단되지 않고 `validateHarness` 전체 게이트에서만 차단된다
-- `validateHarness`/`validateRequirementCard`/`validateRequirementCardBlue` Gradle 태스크는 `trace-requirements.mjs`를 호출하고 `trace-requirements.mjs`는 최종 단계로 `gate.mjs`를 호출한다. Gradle 태스크의 `validateStandardsStrict` 직접 의존은 `validateStandards`로 교체된다
-- `tools/harness/gate-trace.mjs`는 삭제되고 `tools/harness/trace-requirements.mjs`는 evaluate → render → `gate.mjs`를 직렬 spawn한다
-- 본 요건의 정책 변경(terminology strict 차단)과 출력 계약(8개 카테고리 라벨, owner/rule prefix 매핑)이 `docs/standards/terminology.md`, `docs/standards/requirement-card.md`, `AGENTS.md`, `docs/harness/data-contracts.md`에 반영된다
+- (STATIC) `tools/harness/gate.mjs`는 `build/harness/state/trace.state.json`, `build/harness/findings/*.findings.json`, `build/harness/findings/terminology.findings.json`을 읽어 단일 게이트 결과(exit code + 카테고리별 요약)를 만든다
+- (STATIC) `gate.mjs`는 실패 사유를 `TRACE`/`CARD`/`REF`/`TRC`/`BE`/`FE`/`SCN`/`TRM` 카테고리 라벨로 분리해서 보고한다
+- (STATIC) `gate.mjs --check`는 `back-end-standards.findings.json`에 `severity: error` finding이 있으면 BE 카테고리 실패로 차단한다
+- (STATIC) `gate.mjs --check`는 `terminology.findings.json`에 `strictSeverity: error` finding이 있으면 TRM 카테고리 실패로 차단한다
+- (STATIC) `gate.mjs --check`는 RED 카드, 카드 구조 위반(CARD-*), REF-* unknown reference, FE-* error, SCN-* error, TRC-* error finding이 있으면 각 카테고리 실패로 차단한다
+- (STATIC) `gate.mjs --require-blue`는 `--check` 조건에 더해 GREEN 카드가 있으면 TRACE 카테고리 실패로 차단한다
+- (STATIC) `gate.mjs --requirement REQ-XXX`는 `finding.requirements[]`와 선택 카드 ID의 교집합으로 finding을 거른다. `requirements: []` 전역 finding은 단일 카드 게이트에서 차단되지 않고 `validateHarness` 전체 게이트에서만 차단된다
+- (STATIC) `validateHarness`/`validateRequirementCard`/`validateRequirementCardBlue` Gradle 태스크는 `trace-requirements.mjs`를 호출하고 `trace-requirements.mjs`는 최종 단계로 `gate.mjs`를 호출한다. Gradle 태스크의 `validateStandardsStrict` 직접 의존은 `validateStandards`로 교체된다
+- (STATIC) `tools/harness/gate-trace.mjs`는 삭제되고 `tools/harness/trace-requirements.mjs`는 evaluate → render → `gate.mjs`를 직렬 spawn한다
+- (STATIC) 본 요건의 정책 변경(terminology strict 차단)과 출력 계약(8개 카테고리 라벨, owner/rule prefix 매핑)이 `docs/standards/terminology.md`, `docs/standards/requirement-card.md`, `AGENTS.md`, `docs/harness/data-contracts.md`에 반영된다
 
 ## 의사결정 로그
 
@@ -95,7 +102,7 @@
   검증 설계: `docs/scenarios/REQ-010-unified-harness-gate.feature`의 10개 Scenario가 카드 수용 기준 10개를 1:1 `Covers:`로 연결한다.
   도구 Skeleton: `tools/harness/gate.mjs` 신규. 입력은 `build/harness/state/trace.state.json` + `build/harness/findings/{requirement-cards,cross-artifact,back-end-standards,front-end-standards,scenarios,terminology}.findings.json` 6종. 누락 입력은 누락 경로와 안내 메시지를 출력하고 exit 2. CLI 인자 `--check`, `--require-blue`, `--requirement REQ-XXX`(반복 가능), `--quiet` 지원. CATEGORY_ORDER 상수로 8개 카테고리 라벨(`TRACE`/`CARD`/`REF`/`TRC`/`BE`/`FE`/`SCN`/`TRM`) 고정. TRC는 ruleId `TRC-*` error severity만 차단(TRC-COV-* warning은 정보 출력). TRM은 `strictSeverity: error` 차단. TRACE 카운트는 `state.requirements[]`에서 selectedIds로 다시 카운트(`state.summary` 신뢰 안 함). `gate-trace.mjs` 삭제, `trace-requirements.mjs` 최종 spawn 대상을 `gate.mjs`로 교체.
   데이터 계약: Skeleton 단계에서 `docs/harness/data-contracts.md` "게이트 (Layer 4)" 섹션에 입력 3종 + 8개 카테고리 매핑 표 + exit code 정책 + TRACE selectedIds 재카운트 정책 명시. `docs/harness/rule-namespaces.md` Layer 4 섹션에 8개 카테고리 분기 갱신.
-  추적 정책: `구현 대상: harness`. 사용자-facing API/화면 연결 요구 없음. 10개 Scenario `Covers:`가 10개 AC를 1:1 커버하면 GREEN.
+  추적 정책: `대상 시스템: harness`. 사용자-facing API/화면 연결 요구 없음. 10개 Scenario `Covers:`가 10개 AC를 1:1 커버하면 GREEN.
   Gradle 실행 순서: `validateHarness`/`validateRequirementCard`/`validateRequirementCardBlue`가 `validateStandardsStrict` 직접 의존을 `validateStandards`(non-strict, findings emit only)로 교체. 호출 진입점(`trace-requirements.mjs`)은 유지. test 태스크의 `mustRunAfter`도 `validateStandards`만 남김.
   게이트 정책: TRM strict 차단 정책 도입(`gate.mjs`가 `terminology.findings.json`의 `strictSeverity: error`까지 차단). BE-* error 차단 신규 흡수. `validateTerminologyStrict`/`validateStandardsStrict`는 단독 진단 도구로 남고 통합 게이트 체인에서는 빠짐.
   표준 용어: 추가 등록 없음.

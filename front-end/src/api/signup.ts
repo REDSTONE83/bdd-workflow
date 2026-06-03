@@ -1,7 +1,7 @@
 import { apiClient } from "./client"
 import type { SignupInput, SignupResult } from "@/features/signup/types"
 
-// REQ-013: 회원 가입 도메인 API 모듈.
+// REQ-001: 회원 가입 도메인 API 모듈.
 // REQ-001 의 가입 계약(201/400/409)을 FE view model(SignupResult)로 정규화한다.
 // SignupPageContainer 가 apiClient 의 OpenAPI 타입을 직접 다루지 않도록 경계를 둔다.
 

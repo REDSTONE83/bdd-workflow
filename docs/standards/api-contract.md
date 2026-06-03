@@ -187,7 +187,7 @@ if (req.name().isPresent()) {
 }
 ```
 
-수동 ObjectNode/JsonNode 분기는 신규 코드에서 사용하지 않는다. 이미 작성된 코드는 마이그레이션 REQ로 정리한다.
+수동 ObjectNode/JsonNode 분기는 신규 코드에서 사용하지 않는다. 이미 작성된 코드는 Change Set 작업 범위에서 정합하고, 요건 카드는 최종 API 계약만 남긴다.
 
 ### Jackson / ObjectMapper 구성
 

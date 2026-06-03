@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ApiAcceptanceTest
-@Requirement("REQ-002")
+@Requirement("REQ-023")
 class TodoListPaginationApiAcceptanceTest {
 
     private static final UUID USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000064");
@@ -145,7 +145,7 @@ class TodoListPaginationApiAcceptanceTest {
     }
 
     /**
-     * REQ-002 기본 정렬 결과:
+     * REQ-023 기본 정렬 결과:
      *   미완료 그룹: T3(HIGH) → T1(MEDIUM) → T5(MEDIUM) → T4(LOW)
      *   완료 그룹:   T2(HIGH) → T6(LOW)
      */

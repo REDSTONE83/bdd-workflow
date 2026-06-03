@@ -12,14 +12,14 @@ import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.LocalDate;
 import java.util.UUID;
 
-@Requirement("REQ-002")
+@Requirement({"REQ-024", "REQ-027"})
 @Schema(description = """
         할 일 수정 요청 (부분 수정).
 
         - 누락된 필드는 변경되지 않는다.
         - description / dueDate / categoryId 는 명시적 null로 비울 수 있다.
         - title / priority / completed 는 명시적 null을 허용하지 않으며 보낼 경우 400 VALIDATION_FAILED.
-        - completed는 true/false로 완료 토글에 사용된다.
+        - completed는 true/false로 완료 상태 변경에 사용된다.
         """)
 public class UpdateTodoRequest {
 

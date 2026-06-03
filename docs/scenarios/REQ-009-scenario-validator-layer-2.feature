@@ -1,5 +1,5 @@
 @REQ-009
-Feature: Gherkin 시나리오 검사 Layer 2 분리
+Feature: Gherkin 시나리오 SCN-* 구조 검사
 
   Scenario: 시나리오 구조 위반이 SCN-* finding으로 정규화된다
     Covers:

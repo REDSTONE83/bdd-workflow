@@ -1,5 +1,5 @@
 @REQ-008
-Feature: FE API 계약 검사 강화
+Feature: FE API 계약 오류 검사
 
   Scenario: OpenAPI 계약 산출물 누락을 오류로 차단한다
     Covers:

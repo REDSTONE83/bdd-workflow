@@ -22,7 +22,7 @@ import java.util.stream.StreamSupport;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * REQ-009 Gherkin 시나리오 검사 Layer 2 분리 — scenario-index의 raw issue가
+ * REQ-009 Gherkin 시나리오 SCN-* 구조 검사 — scenario-index의 raw issue가
  * validate-scenarios.mjs를 통해 SCN-* finding으로 정규화되고, validateHarness 게이트가
  * SCN-* error를 차단함을 확인한다.
  *
@@ -127,8 +127,8 @@ class ScenarioValidatorLayer2AcceptanceTest {
         ObjectNode feature = MAPPER.createObjectNode();
         feature.put("file", "docs/scenarios/outline.feature");
         feature.put("title", "Outline Feature");
-        feature.set("tags", arrayOf("@REQ-002"));
-        feature.set("requirementIds", arrayOf("REQ-002"));
+        feature.set("tags", arrayOf("@REQ-021"));
+        feature.set("requirementIds", arrayOf("REQ-021"));
         feature.set("scenarios", MAPPER.createArrayNode());
         ArrayNode issues = MAPPER.createArrayNode();
         issues.add(issueNode("SCN-UNSUPPORTED-KEYWORD", 4, "Scenario Outline 는 현재 하네스가 지원하지 않음"));
@@ -146,7 +146,7 @@ class ScenarioValidatorLayer2AcceptanceTest {
     @DisplayName("AC5 SCN-* error finding이 있으면 validateHarness 게이트(gate.mjs)가 실패한다")
     @Covers("`validateHarness` 게이트는 SCN-* error finding을 발견하면 실패한다")
     void gateFailsOnScenarioStandardsErrors(@TempDir Path tmp) throws IOException, InterruptedException {
-        // REQ-010 통합 게이트는 scenarios.findings.json 의 SCN-* error 를 직접 차단한다.
+        // REQ-010 통합 하네스 게이트는 scenarios.findings.json 의 SCN-* error 를 직접 차단한다.
         // fixture: BLUE state + scenarios.findings.json 에 SCN-* error 1건 + 나머지 finding 파일은 빈 owner shell.
         ObjectNode state = MAPPER.createObjectNode();
         state.put("generatedAt", "2026-05-23T00:00:00.000Z");

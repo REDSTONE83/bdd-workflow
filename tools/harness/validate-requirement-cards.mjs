@@ -31,9 +31,14 @@ const REQUIRED_SECTIONS = [
     'BDD 테스트 리뷰',
     '열린 질문'
 ];
-const ALLOWED_STATUSES = ['초안', '검토중', '승인'];
+const ALLOWED_STATUSES = ['초안', '검토중', '승인', '대체됨', '폐기'];
 const ALLOWED_PRIORITIES = ['높음', '중간', '낮음'];
-const ALLOWED_IMPLEMENTATION_TARGETS = ['back-end', 'front-end', 'full-stack', 'harness'];
+const ALLOWED_REQUIREMENT_TYPES = ['기능', '비기능', '통합', '정책', '하네스'];
+const ALLOWED_SPEC_ROLES = ['원자 요건', '상위 요건', '구현 슬라이스'];
+const ALLOWED_TARGET_SYSTEMS = ['application', 'harness'];
+const ALLOWED_QUALITY_ATTRIBUTES = ['none', 'accessibility', 'security', 'performance', 'compatibility', 'usability'];
+const ALLOWED_VERIFICATION_LEVELS = ['acceptance', 'e2e', 'mixed', 'static'];
+const PRODUCT_AREA_PATTERN = /^[a-z][a-z0-9-]*$/;
 const REQUIREMENT_ID_PATTERN = /^REQ-\d{3,}$/;
 const REQUIREMENT_FILENAME_PATTERN = /^(REQ-\d{3,})-[^/]+\.md$/;
 const TERM_KEY_PATTERN = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){1,2}$/;
@@ -65,7 +70,7 @@ function duplicateItems(items) {
     return [...dupes];
 }
 
-const AC_TARGET_TOKENS = ['BE', 'FE', 'FS'];
+const AC_TARGET_TOKENS = ['API', 'UI', 'E2E', 'STATIC'];
 
 function acText(criterion) {
     return typeof criterion === 'string' ? criterion : criterion.text;
@@ -124,10 +129,47 @@ function scenarioStaleFinding(card) {
     return null;
 }
 
+function verificationLevelTargetFinding(card) {
+    const targets = [...new Set((card.acceptanceCriteria ?? [])
+        .map((criterion) => typeof criterion === 'string' ? null : criterion.target)
+        .filter(Boolean))];
+    if (!card.verificationLevel || targets.length === 0) return null;
+
+    const allowed = {
+        acceptance: ['API', 'UI'],
+        e2e: ['E2E'],
+        mixed: AC_TARGET_TOKENS,
+        static: ['STATIC']
+    }[card.verificationLevel];
+    if (!allowed) return null;
+
+    const invalidTargets = targets.filter((target) => !allowed.includes(target));
+    if (invalidTargets.length > 0) {
+        return findingForCard(card, 'CARD-VERIFICATION-LEVEL-AC-MISMATCH',
+            `검증 수준 "${card.verificationLevel}"과 맞지 않는 AC 마커가 있음: ${invalidTargets.join(', ')}`,
+            { verificationLevel: card.verificationLevel, targets, allowedTargets: allowed });
+    }
+
+    if (card.verificationLevel === 'mixed' && targets.length < 2) {
+        return findingForCard(card, 'CARD-VERIFICATION-LEVEL-AC-MISMATCH',
+            '검증 수준 "mixed"는 둘 이상의 AC 마커 종류가 필요함',
+            { verificationLevel: card.verificationLevel, targets });
+    }
+
+    if (card.verificationLevel !== 'mixed' && targets.length > 1) {
+        return findingForCard(card, 'CARD-VERIFICATION-LEVEL-AC-MISMATCH',
+            `검증 수준 "${card.verificationLevel}"은 단일 AC 마커 종류만 가져야 함`,
+            { verificationLevel: card.verificationLevel, targets });
+    }
+
+    return null;
+}
+
 function validateCard(card, allCards, terminologyIndex) {
     const findings = [];
     const fname = path.basename(card.location?.file ?? '');
     const fnameMatch = fname.match(REQUIREMENT_FILENAME_PATTERN);
+    const knownIds = new Set(allCards.map((c) => c.id).filter(Boolean));
 
     if (!card.idRaw) {
         findings.push(findingForCard(card, 'CARD-ID-MISSING', '요건 ID 누락'));
@@ -165,10 +207,102 @@ function validateCard(card, allCards, terminologyIndex) {
             { value: card.status, allowed: ALLOWED_STATUSES }));
     }
 
-    if (card.implementationTargetRaw && !ALLOWED_IMPLEMENTATION_TARGETS.includes(card.implementationTargetRaw)) {
-        findings.push(findingForCard(card, 'CARD-TARGET-INVALID',
-            `구현 대상 값이 허용 목록(${ALLOWED_IMPLEMENTATION_TARGETS.join(', ')}) 외: "${card.implementationTargetRaw}"`,
-            { value: card.implementationTargetRaw, allowed: ALLOWED_IMPLEMENTATION_TARGETS }));
+    if (!card.requirementType) {
+        findings.push(findingForCard(card, 'CARD-REQUIREMENT-TYPE-MISSING', '요건 종류 누락'));
+    } else if (!ALLOWED_REQUIREMENT_TYPES.includes(card.requirementType)) {
+        findings.push(findingForCard(card, 'CARD-REQUIREMENT-TYPE-INVALID',
+            `요건 종류 값이 허용 목록(${ALLOWED_REQUIREMENT_TYPES.join(', ')}) 외: "${card.requirementType}"`,
+            { value: card.requirementType, allowed: ALLOWED_REQUIREMENT_TYPES }));
+    }
+
+    if (!card.specRole) {
+        findings.push(findingForCard(card, 'CARD-SPEC-ROLE-MISSING', '명세 역할 누락'));
+    } else if (!ALLOWED_SPEC_ROLES.includes(card.specRole)) {
+        findings.push(findingForCard(card, 'CARD-SPEC-ROLE-INVALID',
+            `명세 역할 값이 허용 목록(${ALLOWED_SPEC_ROLES.join(', ')}) 외: "${card.specRole}"`,
+            { value: card.specRole, allowed: ALLOWED_SPEC_ROLES }));
+    }
+
+    if (!card.targetSystem) {
+        findings.push(findingForCard(card, 'CARD-TARGET-SYSTEM-MISSING', '대상 시스템 누락'));
+    } else if (!ALLOWED_TARGET_SYSTEMS.includes(card.targetSystem)) {
+        findings.push(findingForCard(card, 'CARD-TARGET-SYSTEM-INVALID',
+            `대상 시스템 값이 허용 목록(${ALLOWED_TARGET_SYSTEMS.join(', ')}) 외: "${card.targetSystem}"`,
+            { value: card.targetSystem, allowed: ALLOWED_TARGET_SYSTEMS }));
+    }
+
+    if (!card.productArea) {
+        findings.push(findingForCard(card, 'CARD-PRODUCT-AREA-MISSING', '제품 영역 누락'));
+    } else if (!PRODUCT_AREA_PATTERN.test(card.productArea)) {
+        findings.push(findingForCard(card, 'CARD-PRODUCT-AREA-INVALID',
+            `제품 영역은 소문자/숫자/하이픈 키 형식이어야 함: "${card.productArea}"`,
+            { value: card.productArea }));
+    }
+
+    const qualityAttributes = card.qualityAttributes ?? [];
+    if (qualityAttributes.length === 0) {
+        findings.push(findingForCard(card, 'CARD-QUALITY-ATTRIBUTE-MISSING', '품질 속성 누락'));
+    }
+    for (const attr of qualityAttributes) {
+        if (ALLOWED_QUALITY_ATTRIBUTES.includes(attr)) continue;
+        findings.push(findingForCard(card, 'CARD-QUALITY-ATTRIBUTE-INVALID',
+            `품질 속성 값이 허용 목록(${ALLOWED_QUALITY_ATTRIBUTES.join(', ')}) 외: "${attr}"`,
+            { value: attr, allowed: ALLOWED_QUALITY_ATTRIBUTES }));
+    }
+    if (qualityAttributes.includes('none') && qualityAttributes.length > 1) {
+        findings.push(findingForCard(card, 'CARD-QUALITY-ATTRIBUTE-NONE-MIXED',
+            '`품질 속성: none`은 다른 품질 속성과 함께 쓸 수 없음',
+            { qualityAttributes }));
+    }
+
+    if (!card.verificationLevel) {
+        findings.push(findingForCard(card, 'CARD-VERIFICATION-LEVEL-MISSING', '검증 수준 누락'));
+    } else if (!ALLOWED_VERIFICATION_LEVELS.includes(card.verificationLevel)) {
+        findings.push(findingForCard(card, 'CARD-VERIFICATION-LEVEL-INVALID',
+            `검증 수준 값이 허용 목록(${ALLOWED_VERIFICATION_LEVELS.join(', ')}) 외: "${card.verificationLevel}"`,
+            { value: card.verificationLevel, allowed: ALLOWED_VERIFICATION_LEVELS }));
+    }
+
+    for (const related of card.relatedRequirementIds ?? []) {
+        if (knownIds.has(related)) continue;
+        findings.push(findingForCard(card, 'CARD-RELATED-REQ-UNKNOWN',
+            `관련 요건이 존재하지 않음: ${related}`,
+            { relatedRequirementId: related }));
+    }
+
+    for (const replacement of card.replacedByRequirementIds ?? []) {
+        if (knownIds.has(replacement)) continue;
+        findings.push(findingForCard(card, 'CARD-REPLACED-BY-UNKNOWN',
+            `대체 요건이 존재하지 않음: ${replacement}`,
+            { replacedByRequirementId: replacement }));
+    }
+
+    if (card.status === '대체됨' && (card.replacedByRequirementIds ?? []).length === 0) {
+        findings.push(findingForCard(card, 'CARD-REPLACED-BY-REQUIRED',
+            '상태=대체됨인 카드는 대체 요건을 적어야 함'));
+    }
+
+    if (card.specRole === '구현 슬라이스' && (card.relatedRequirementIds ?? []).length === 0) {
+        findings.push(findingForCard(card, 'CARD-SLICE-RELATED-REQ-MISSING',
+            '명세 역할=구현 슬라이스인 카드는 관련 요건을 적어야 함'));
+    }
+
+    if (card.requirementType === '통합') {
+        if (!['e2e', 'mixed'].includes(card.verificationLevel)) {
+            findings.push(findingForCard(card, 'CARD-INTEGRATION-VERIFICATION-LEVEL',
+                '요건 종류=통합인 카드는 검증 수준이 e2e 또는 mixed여야 함',
+                { verificationLevel: card.verificationLevel }));
+        }
+        if (!(card.acceptanceCriteria ?? []).some((criterion) => typeof criterion !== 'string' && criterion.target === 'E2E')) {
+            findings.push(findingForCard(card, 'CARD-INTEGRATION-E2E-AC-MISSING',
+                '요건 종류=통합인 카드는 (E2E) 수용 기준을 하나 이상 가져야 함'));
+        }
+    }
+
+    if (card.requirementType === '하네스' && card.targetSystem && card.targetSystem !== 'harness') {
+        findings.push(findingForCard(card, 'CARD-HARNESS-TARGET-SYSTEM',
+            '요건 종류=하네스인 카드는 대상 시스템이 harness여야 함',
+            { targetSystem: card.targetSystem }));
     }
 
     for (const sec of REQUIRED_SECTIONS) {
@@ -191,11 +325,17 @@ function validateCard(card, allCards, terminologyIndex) {
     for (const criterion of card.acceptanceCriteria ?? []) {
         if (typeof criterion === 'string') continue;
         if (criterion.invalidMarker) {
-            findings.push(findingForCard(card, 'CARD-AC-TARGET-INVALID',
+            findings.push(findingForCard(card, 'CARD-AC-MARKER-INVALID',
                 `수용 기준 마커가 허용값(${AC_TARGET_TOKENS.join('/')}) 아님: "(${criterion.invalidMarker})"`,
                 { criterion: criterion.text, invalidMarker: criterion.invalidMarker, allowed: AC_TARGET_TOKENS }));
+        } else if (!criterion.target) {
+            findings.push(findingForCard(card, 'CARD-AC-MARKER-MISSING',
+                `수용 기준 마커 누락: "${criterion.text}"`,
+                { criterion: criterion.text, allowed: AC_TARGET_TOKENS }));
         }
     }
+    const verificationFinding = verificationLevelTargetFinding(card);
+    if (verificationFinding) findings.push(verificationFinding);
 
     for (const term of card.terms ?? []) {
         if (!TERM_KEY_PATTERN.test(term)) {

@@ -1,10 +1,17 @@
 # 요건 카드
 
 요건 ID: REQ-006
-제목: OpenAPI 계약 산출물과 FE API 검사 룰
+제목: OpenAPI 기반 FE API 계약 검증
 우선순위: 중간
 상태: 승인
-구현 대상: harness
+요건 종류: 하네스
+명세 역할: 원자 요건
+대상 시스템: harness
+제품 영역: harness
+품질 속성: compatibility
+검증 수준: static
+관련 요건: REQ-007, REQ-008
+대체 요건: 없음
 
 ## 사용자/목적
 
@@ -32,11 +39,11 @@
 
 ## 수용 기준
 
-- 백엔드 빌드 한 번에 OpenAPI 계약 JSON이 `build/harness/indexes/openapi.index.json`에 생성된다
-- OpenAPI 계약에는 현재 백엔드가 노출하는 모든 HTTP 엔드포인트의 method와 path가 포함된다
-- 프런트엔드 API 모듈이 호출하는 method와 path가 OpenAPI 계약에 없으면 해당 호출이 검사 결과에 보고된다
-- 프런트엔드 생성 클라이언트가 현재 OpenAPI 계약보다 오래되면 해당 클라이언트가 검사 결과에 보고된다
-- OpenAPI 계약 산출물이 빌드 결과에 없으면 검사 결과에 별도로 보고된다
+- (STATIC) 백엔드 빌드 한 번에 OpenAPI 계약 JSON이 `build/harness/indexes/openapi.index.json`에 생성된다
+- (STATIC) OpenAPI 계약에는 현재 백엔드가 노출하는 모든 HTTP 엔드포인트의 method와 path가 포함된다
+- (STATIC) 프런트엔드 API 모듈이 호출하는 method와 path가 OpenAPI 계약에 없으면 해당 호출이 검사 결과에 보고된다
+- (STATIC) 프런트엔드 생성 클라이언트가 현재 OpenAPI 계약보다 오래되면 해당 클라이언트가 검사 결과에 보고된다
+- (STATIC) OpenAPI 계약 산출물이 빌드 결과에 없으면 검사 결과에 별도로 보고된다
 
 ## 의사결정 로그
 
@@ -88,6 +95,12 @@
   결정자: 사용자
   영향: Skeleton 단계 진입 직전에 후보 키를 정하고 draft add. 카드의 `## 표준 용어`는 Skeleton 산출 시점에 채운다.
 
+- 결정일: 2026-06-02
+  결정: REQ-006은 새 ID로 분리하지 않고 기존 ID를 유지한 채 `하네스` / `원자 요건` 카드로 전환한다.
+  이유: 본 카드는 사용자-facing 제품 기능이 아니라 OpenAPI 계약 인덱스와 FE API 정적 검사 룰을 소유하는 단일 하네스 능력이다.
+  결정자: Product Owner, Tech Lead
+  영향: 카드 헤더를 새 스키마로 보강하고 모든 AC에 `(STATIC)` 마커를 부여한다. Scenario `Covers:`와 실행 테스트 `@Covers` 문장은 마커 없이 기존 문장을 유지한다. 기존 승인된 동작과 검증 범위는 바꾸지 않는다.
+
 ## BDD 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-006-openapi-contract-and-fe-api-rules.feature`
@@ -102,7 +115,7 @@
   화면/라우팅 Skeleton: 해당 없음. `front-end/src/api/**` 디렉터리는 본 REQ에서 생성하지 않는다(생성 클라이언트 도입은 별도 단계). source-index의 apiCalls 추출은 디렉터리가 생긴 뒤 자동 활성화.
   표준 용어: `openapi.contract`, `api.operation`, `api.client` draft 등록. 카드 `## 표준 용어` 절에 적용.
   검사기 골격: `tools/harness/validate-front-end-standards.mjs`에 `FE-API-CONTRACT-MISSING`, `FE-API-UNKNOWN-OPERATION`, `FE-API-CLIENT-STALE` 룰 ID 등록. 초기 severity는 warning. OpenAPI 인덱스 부재 시 `FE-API-CONTRACT-MISSING` warning 1건 emit 확인. 향후 표준 확정 후 strictSeverity를 error로 승격하면서 `gate-trace`가 `feStandardsErrors`로 차단.
-  추적 정책: 사용자-facing API/화면이 없는 하네스·계약 파이프라인 요건이므로 `구현 대상: harness`로 분류. `ALLOWED_IMPLEMENTATION_TARGETS`에 `harness` 신설(2026-05-23), trace는 API/FE 표면 연결을 요구하지 않고 수용 기준 커버 테스트만 본다. 표준 문서 갱신: `docs/standards/requirement-card.md`, `docs/harness/overview.md`. 데이터 계약 갱신: `docs/harness/data-contracts.md`에 `openapi.index.json` 디렉터리·`api-operation`/`api-call` kind·`apiCalls[]` 명시.
+  추적 정책: 사용자-facing API/화면이 없는 하네스·계약 파이프라인 요건이므로 `대상 시스템: harness`로 분류한다. trace는 API/FE 표면 연결을 요구하지 않고 수용 기준 커버 테스트만 본다. 표준 문서 갱신: `docs/standards/requirement-card.md`, `docs/harness/overview.md`. 데이터 계약 갱신: `docs/harness/data-contracts.md`에 `openapi.index.json` 디렉터리·`api-operation`/`api-call` kind·`apiCalls[]` 명시.
   Gradle 실행 순서: `OpenApiContractDumpTest`는 일반 `test` 태스크에서 제외(`exclude '**/OpenApiContractDumpTest.class'`)하고, 전용 `generateOpenApiIndex`(Test 타입) 태스크 하나만 그것을 실행한다. `validateFrontEndStandards`가 `generateOpenApiIndex`에 dependsOn으로 묶이므로, trace/validateHarness/단일 카드 게이트(`traceRequirementCard`, `validateRequirementCard`, `validateRequirementCardBlue`)는 전이적으로 최신 `openapi.index.json`을 본다. `./gradlew test`만 호출해도 finalizedBy(`traceRequirementsAfterTest`) 체인을 통해 동일하게 인덱스가 갱신된다. 중복 실행 없음(`./gradlew clean test`에서 `OpenApiContractDumpTest` 1회만 PASSED 확인).
   검증: `./gradlew compileJava`, `./gradlew compileTestJava`, `./gradlew generateHarnessSourceIndex`, `./gradlew generateFrontEndSourceIndex`, `./gradlew generateOpenApiIndex`, `./gradlew traceRequirementCard -Preq=REQ-006` 통과. `./gradlew validateRequirementCardBlue -Preq=REQ-001`로 다른 BLUE 카드 회귀 확인.
   승인자: 사용자

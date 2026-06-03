@@ -17,7 +17,7 @@
 - profile 파일은 base 설정의 값을 환경별로 override한다. profile 파일에만 존재하는 새 `app.*` 키도 동일하게 typed properties 필드가 필요하다.
 - 신규 코드에서 프로젝트 소유 설정을 읽을 때는 흩어진 `@Value("${app...}")` 대신 `@ConfigurationProperties`를 사용한다.
 - 민감 값은 로컬/테스트 기본값만 저장소에 두고, 운영 값은 외부 설정으로 override한다.
-- 프로젝트 소유 properties 타입을 새로 만들거나 수정할 때는 가능하면 `@ConfigurationProperties(ignoreUnknownFields = false)`를 사용한다. 기존 운영 설정과 충돌할 수 있으면 마이그레이션 요건에서 별도로 적용한다.
+- 프로젝트 소유 properties 타입을 새로 만들거나 수정할 때는 가능하면 `@ConfigurationProperties(ignoreUnknownFields = false)`를 사용한다. 기존 운영 설정과 충돌할 수 있으면 Change Set에서 전환 작업을 관리하고, 요건 카드는 전환 후 최종 설정 정책만 소유한다.
 
 ## 의도적 미바인딩 예외
 

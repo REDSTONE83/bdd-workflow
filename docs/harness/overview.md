@@ -11,8 +11,15 @@
 ```text
 요건 카드
   REQ-001
+  요건 종류 / 명세 역할 / 대상 시스템 / 검증 수준
   수용 기준 (AC, 카드 완료 여부 기계 판정)
+  AC 검증 채널 마커 (API / UI / E2E / STATIC)
   요건 Skeleton 승인 이력 (BDD 테스트 리뷰 섹션 - Skeleton 결과)
+
+Change Set
+  docs/change-sets/2026-06-01-slug.md         // 사용자 요청 단위 작업 범위
+  영향 요건: REQ-001, REQ-002                 // 명세 원천이 아니라 진행 추적용 묶음
+  완료 조건 / 검증 명령 / 열린 논의
 
 시나리오 문서 (Gherkin)
   docs/scenarios/REQ-001-*.feature
@@ -34,7 +41,7 @@ JPA Entity
 
 Acceptance Test
   @Requirement("REQ-001")
-  @Covers("수용 기준 문장")                   // AC 커버리지 신호, Scenario.Covers 와 연결
+  @Covers("수용 기준 문장")                   // AC 커버리지 신호, Scenario.Covers 와 연결. 카드 마커는 포함하지 않음.
   @DisplayName("케이스 단위 자유 레이블")     // JUnit 표시용. 시나리오 제목과 일치할 필요 없음
   SignupApiAcceptanceTest.signupWithValidRequestReturnsCreated
 
@@ -47,6 +54,7 @@ Front-end
 검증 리포트
   REQ-001 -> AC -> Scenario(.feature) -> Test -> PASS/FAIL -> RED/GREEN/BLUE
   (Scenario ↔ Test 연결은 Scenario.Covers ∩ Test.@Covers 로 판단)
+  Change Set -> affected REQ -> 카드 스키마 상태 -> RED/GREEN/BLUE
 ```
 
 `@Covers`가 있는 테스트만 AC 커버리지에 포함된다. `@Covers`가 없는 테스트는 보조 테스트로 분류해 별도로 표시한다. `.feature`는 공유 BDD 명세 + 하네스 추적 입력으로만 사용하며 Cucumber 실행 도구는 도입하지 않는다.
@@ -62,6 +70,9 @@ AGENTS.md
 docs/harness/requirement-authoring.md
   질문 기반 요건 작성과 BDD 테스트 리뷰 절차
 
+docs/harness/change-set.md
+  사용자 요청 단위 작업 범위와 Change Set 리포트 기준
+
 docs/harness/project-structure.md
   프로젝트 전체 폴더 구조와 파일 배치 기준
 
@@ -73,6 +84,9 @@ docs/harness/rule-namespaces.md
 
 docs/requirements
   사람이 관리하는 요건 카드
+
+docs/change-sets
+  사용자 요청 단위 작업 범위. 별도 사람이 관리하는 ID를 만들지 않고 파일 경로를 identity로 사용.
 
 docs/scenarios
   Gherkin `.feature` 시나리오 원본. FE/BE/QA 공유 명세이자 하네스 추적 입력.
@@ -101,8 +115,10 @@ tools/harness/
   validate-back-end-standards.mjs 백엔드 정적 검사기 (Layer 2, prefix `BE-*`)
   validate-front-end-standards.mjs FE 정적 검사기 (Layer 2, prefix `FE-*`, 예정)
   trace-requirements.mjs          orchestration wrapper: evaluate-trace-state → render-trace-report → gate.mjs
+  index-change-sets.mjs           Change Set 원본 파서 (Layer 1)
   evaluate-trace-state.mjs        카드 state 계산 (Layer 3)
   render-trace-report.mjs         trace 리포트 렌더링 (Layer 4)
+  render-change-set-report.mjs    Change Set 영향 REQ 리포트 렌더링 (Layer 4)
   gate.mjs                        통합 게이트 단일 판정기 (Layer 4, REQ-010)
 
 back-end/tools/preview-schema.mjs
@@ -139,7 +155,7 @@ build/harness
 
 세부 JSON 형태는 [`data-contracts.md`](./data-contracts.md), 룰 prefix(`BE-*` / `FE-*` / `TRC-*` 등)는 [`rule-namespaces.md`](./rule-namespaces.md).
 
-`trace-requirements.mjs`는 기존 CLI 호환 wrapper로 남아 `evaluate-trace-state.mjs` → `render-trace-report.mjs` → `gate.mjs`를 직렬 spawn한다. 통합 게이트 단일 판정기는 `gate.mjs`(REQ-010)이고 8개 카테고리(`TRACE`/`CARD`/`REF`/`TRC`/`BE`/`FE`/`SCN`/`TRM`)로 분류된 실패 사유를 출력한다. 자세한 입출력 계약은 [`data-contracts.md`](./data-contracts.md#게이트-layer-4)를 본다.
+`trace-requirements.mjs`는 wrapper로 남아 `evaluate-trace-state.mjs` → `render-trace-report.mjs` → `render-requirement-schema-report.mjs` → `render-change-set-report.mjs` → `gate.mjs`를 직렬 spawn한다. 통합 게이트 단일 판정기는 `gate.mjs`(REQ-010)이고 8개 카테고리(`TRACE`/`CARD`/`REF`/`TRC`/`BE`/`FE`/`SCN`/`TRM`)로 분류된 실패 사유를 출력한다. Change Set 리포트는 작업 범위 확인용이며 게이트 카테고리에 포함하지 않는다. 자세한 입출력 계약은 [`data-contracts.md`](./data-contracts.md#게이트-layer-4)를 본다.
 
 ## 리포트 신선도
 
@@ -153,25 +169,20 @@ build/harness
 
 `RED`는 개발 중 또는 검증 실패 상태다.
 
-- 구현 대상에 맞는 연결 없음
-  - `back-end`: 관련 API 없음
-  - `front-end`: 관련 FE 화면/route/story 없음
-  - `full-stack`: 관련 API 또는 FE 화면/route/story 없음
-  - `harness`: API/FE 표면 연결을 요구하지 않으므로 이 사유로 RED가 되지 않는다
 - 수용 기준 커버 테스트 없음
 - 테스트 미실행
 - 테스트 실패 또는 스킵
 - 알려지지 않은 요건 ID가 코드에 남아 있음 (`@Requirement`에 카드에 없는 ID가 하나라도 포함)
+- AC 마커가 없거나 알 수 없어 검증 채널을 계산할 수 없음
 
 `GREEN`은 구현 검증 통과 상태다.
 
-- 구현 대상에 맞는 API 또는 FE 화면/route/story 연결 있음 (`harness` 대상은 해당 없음)
-- 구현 대상에 맞는 수용 기준 커버 테스트가 모두 PASS
-  - `back-end`: 백엔드 Acceptance Test
-  - `front-end`: Playwright FE BDD 테스트
-  - `full-stack`: 백엔드 Acceptance Test와 Playwright FE BDD 테스트 모두
-  - `harness`: 백엔드 Acceptance Test 또는 Playwright FE BDD 테스트 (어느 쪽이든 AC를 커버하면 통과)
-- 연결 테스트 모두 PASS
+- 모든 수용 기준이 AC 마커가 요구하는 검증 채널에서 PASS
+  - `(API)`: 백엔드 Acceptance Test
+  - `(UI)`: Playwright FE BDD 테스트
+  - `(E2E)`: Playwright 사용자 여정 테스트
+  - `(STATIC)`: 하네스/정적 검사 검증 테스트
+- 연결된 테스트 결과가 모두 PASS
 
 `BLUE`는 정리 완료 상태다.
 
@@ -179,7 +190,9 @@ build/harness
 - 요건 카드 승인
 - 열린 질문 없음
 
-Skeleton 단계의 카드(`@Covers` 또는 FE `Covers` 테스트 부재)는 정상적으로 RED로 표시된다. 이 시점에는 strict 게이트인 `validateHarness`를 돌리지 않고 `compileJava`, `generateHarnessSourceIndex`, `generateFrontEndSourceIndex`, `previewSchema`, `traceRequirementCard`로 인터페이스와 현황만 본다. 작성 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
+`INACTIVE`는 `상태: 대체됨` 또는 `상태: 폐기` 카드다. 카드 구조 검증은 계속 받지만 RED/GREEN/BLUE 완료 판정 대상에서는 제외된다.
+
+Skeleton 단계의 카드(`@Covers` 또는 FE `Covers` 테스트 부재)는 정상적으로 RED로 표시된다. 이 시점에는 strict 게이트인 `validateHarness`를 돌리지 않고 `compileJava`, `generateHarnessSourceIndex`, `generateFrontEndSourceIndex`, `previewSchema`, `traceRequirementCard`로 인터페이스와 현황만 본다. 카드 스키마 오류는 Skeleton 단계에서도 수정해야 한다. 작성 절차는 [`requirement-authoring.md`](./requirement-authoring.md).
 
 ## 품질 게이트
 
@@ -191,7 +204,7 @@ npm run validate
 
 루트 `npm run validate`는 내부적으로 `back-end`의 `validateHarness` Gradle 태스크를 호출한다. Java 테스트와 JavaParser source index 생성은 Gradle 소유라 Gradle 태스크를 유지하되, 작업자는 루트에서 통합 게이트를 실행한다.
 
-이 명령은 테스트를 먼저 실행한 뒤, 요건 카드와 코드(API, Entity, Acceptance Test, FE BDD 테스트) 연결 상태를 검사한다. 알려지지 않은 요건 ID가 하나라도 섞여 있으면 실패한다. FE BDD 테스트 결과는 `front-end/test-results/e2e-results.json`만 읽는다. 부분 Playwright 실행은 `front-end/test-results/e2e-results.partial.json`에 기록되므로 FE 대상 카드가 있으면 `cd front-end && npm run e2e` 또는 `npm run validate:full`로 전체 Playwright JSON 결과를 먼저 갱신한다.
+이 명령은 테스트를 먼저 실행한 뒤, 요건 카드와 코드(API, Entity, Acceptance Test, FE BDD 테스트) 연결 상태를 검사한다. 알려지지 않은 요건 ID가 하나라도 섞여 있으면 실패한다. FE BDD 테스트 결과는 `front-end/test-results/e2e-results.json`만 읽는다. 부분 Playwright 실행은 `front-end/test-results/e2e-results.partial.json`에 기록되므로 `(UI)` 또는 `(E2E)` AC가 있는 카드를 검증하기 전에는 `cd front-end && npm run e2e` 또는 `npm run validate:full`로 전체 Playwright JSON 결과를 먼저 갱신한다.
 
 백엔드 상세 태스크를 직접 실행해야 할 때는 다음 호환 진입점을 쓴다.
 
@@ -211,9 +224,9 @@ cd back-end
 
 ## 요건 작성과 리뷰 흐름
 
-요건 카드는 사용자에게 질문하며 구체화한다. 질문은 기본적으로 한 번에 하나씩 진행하고, 아직 확정되지 않은 질문은 `열린 질문`에 둔다. 답변이 확정되면 그 내용을 `범위`/`제외 범위`/`수용 기준`/`의사결정 로그` 중 해당 위치에 반영하고 `열린 질문`에서 제거한 뒤 다음 질문으로 넘어간다.
+요건 카드는 사용자에게 질문하며 구체화한다. 새 사용자 요청은 먼저 Change Set으로 보고, 기존 원자 요건 수정인지, 통합/비기능/정책/구현 슬라이스인지 판단한다. 기능 변경이나 정책 전환은 별도 전환 REQ를 만들지 않고 canonical REQ의 최종 범위와 AC를 갱신한다. 질문은 기본적으로 한 번에 하나씩 진행하고, 아직 확정되지 않은 질문은 Change Set의 `열린 논의` 또는 요건 카드의 `열린 질문`에 둔다. 답변이 확정되면 명세 내용은 요건 카드의 `범위`/`제외 범위`/`수용 기준`/`의사결정 로그` 중 해당 위치에 반영하고, 작업 범위 내용은 Change Set의 `작업 범위`/`완료 조건`에 반영한다.
 
-수용 기준이 확정되면 **요건 1개 단위**로 진행한다. 검증 설계(`.feature` 시나리오 묶음)와 요건 Skeleton(API/DB/Service 골격, 필요 시 화면/라우팅 Skeleton)을 한 번에 만들어 사용자 승인을 받는다. Skeleton 단계에서는 Controller/DTO/Entity/Repository/Service의 인터페이스와 계약, 화면 이름/업무 진입점/route 초안/접근 권한/주요 표시 정보에 집중하고, 업무 로직과 실제 FE 컴포넌트 구현은 하지 않는다. 필요한 동작 설계는 Service/Controller 내부 코멘트와 카드 Skeleton 승인 이력으로 남긴다.
+수용 기준이 확정되면 영향 REQ 집합 단위로 작업할 수 있다. 단, 명세와 완료 판정은 각 REQ의 AC 단위로 유지한다. 검증 설계(`.feature` 시나리오 묶음)와 요건 Skeleton(API/DB/Service 골격, 필요 시 화면/라우팅 Skeleton)을 만들어 사용자 승인을 받는다. Skeleton 단계에서는 Controller/DTO/Entity/Repository/Service의 인터페이스와 계약, 화면 이름/업무 진입점/route 초안/접근 권한/주요 표시 정보에 집중하고, 업무 로직과 실제 FE 컴포넌트 구현은 하지 않는다. 필요한 동작 설계는 Service/Controller 내부 코멘트와 카드 Skeleton 승인 이력으로 남긴다.
 
 사용자 승인을 받은 같은 요건은 승인된 `.feature`의 `Covers:`에 포함된 AC를 검증하는 실행 테스트와 실제 Service 업무 로직, 컨트롤러 본문, FE 화면/라우팅/API 연동을 작성한다. 한 시나리오에 입력 변형/경계값별 여러 테스트가 귀속되는 것이 일반적이다.
 

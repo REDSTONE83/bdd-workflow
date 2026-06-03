@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.UUID;
 
-@Requirement("REQ-003")
+@Requirement("REQ-017")
 @Schema(description = "카테고리 생성 응답")
 public record CreateCategoryResponse(
         @Schema(description = "카테고리 식별자", example = "01900000-0000-7000-8000-000000000000")

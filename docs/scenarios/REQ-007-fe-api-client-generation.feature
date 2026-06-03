@@ -1,5 +1,5 @@
 @REQ-007
-Feature: FE API client 생성 표준화
+Feature: OpenAPI 기반 FE API 클라이언트 생성
 
   Scenario: 개발자가 한 명령으로 API client를 생성한다
     Covers:

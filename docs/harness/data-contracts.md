@@ -14,6 +14,7 @@ build/harness/
     scenarios.index.json
     terminology.index.json
     requirements.index.json
+    change-sets.index.json
     test-results.index.json
     openapi.index.json                         # REQ-006: Spring /v3/api-docs dump 정규화
   findings/                                    # Layer 2: validator 출력
@@ -28,6 +29,10 @@ build/harness/
   reports/                                     # Layer 4: reporter 출력
     trace-report.md
     trace-report.json
+    requirement-schema-report.md
+    requirement-schema-report.json
+    change-set-report.md
+    change-set-report.json
     back-end-standards-report.md
     terminology-report.md
   schema-preview.sql                           # Entity DDL 미리보기 (백엔드 단독)
@@ -64,7 +69,7 @@ build/harness/
   "kind": "api" | "dto" | "entity" | "repository" | "service" | "bean" |
           "page" | "route" | "story" | "feature" | "scenario" |
           "test" | "card" | "term" | "test-result" |
-          "api-operation" | "api-call" | "api-usage",
+          "api-operation" | "api-call" | "api-usage" | "change-set",
   "requirements": ["REQ-XXX"],
   "location": {
     "file": "front-end/src/...",
@@ -88,7 +93,8 @@ build/harness/
 - `story`: `title`, `story`, `component`
 - `scenario`: `title`, `featureTitle`, `featureTags[]`, `covers[]`, `steps[]`
 - `test`: `source` (`back-end` | `front-end`), `displayName`, `titlePath[]`, `covers[]`, `resultKeys[]`
-- `card`: `id`, `title`, `status`, `priority`, `implementationTarget`, `acceptanceCriteria[]`, `openQuestions[]`, `terms[]`, `sectionPresent`, `approved`, `bddReviewIncomplete`, `bddReviewApproved`. `acceptanceCriteria[]`는 `string`이 아니라 `{ text, target, invalidMarker? }` 객체 배열이다 (REQ-012). `text`는 bullet 시작의 마커 토큰을 제거한 원문, `target`은 `BE | FE | FS | null`(마커 없음 + fallback 미적용), `invalidMarker`는 bullet 시작에 마커처럼 보이는 토큰이 있으나 허용 목록(`BE`/`FE`/`FS`) 밖일 때만 채워진다. 같은 카드의 `@Covers`, FE BDD `Covers`, `.feature` `Covers:` 매칭은 모두 `text` 값으로 한다.
+- `card`: `id`, `title`, `status`, `priority`, `requirementType`, `specRole`, `targetSystem`, `productArea`, `qualityAttributes[]`, `verificationLevel`, `relatedRequirementIds[]`, `replacedByRequirementIds[]`, `acceptanceCriteria[]`, `openQuestions[]`, `terms[]`, `sectionPresent`, `approved`, `bddReviewIncomplete`, `bddReviewApproved`. `acceptanceCriteria[]`는 `string`이 아니라 `{ text, target, invalidMarker? }` 객체 배열이다. `text`는 bullet 시작의 마커 토큰을 제거한 원문, `target`은 `API | UI | E2E | STATIC | null`, `invalidMarker`는 bullet 시작에 마커처럼 보이는 토큰이 있으나 허용 목록 밖일 때만 채워진다. 같은 카드의 `@Covers`, FE BDD `Covers`, `.feature` `Covers:` 매칭은 모두 `text` 값으로 한다.
+- `change-set`: `title`, `status`, `requestedDate`, `changeTypes[]`, `affectedRequirementIds[]`, `discussionStatus`, `requestSummary[]`, `scopeItems[]`, `outOfScopeItems[]`, `completionCriteria[]`, `verificationCommands[]`, `decisions[]`, `openDiscussions[]`, `sectionPresent`, `referencedRequirementIds[]`. Change Set은 별도 사람이 관리하는 ID를 만들지 않으므로 `location.identity`는 repo-relative 파일 경로다. `requirements[]`에는 `affectedRequirementIds[]`를 그대로 둔다.
 - `term`: `key`, `surfaces[]`, `mode`
 - `test-result`: `identity`, `alternateIdentities[]`, `status` (`PASS` | `FAIL` | `SKIP` | `NOT_RUN`), `runtime` (`junit` | `playwright`). 엔트리 `kind`는 항상 `"test-result"`이고, runner 구분은 `runtime` 필드를 쓴다.
 - `api-operation` (REQ-006, `indexes/openapi.index.json`): `method` (대문자), `path` (OpenAPI paths 키 그대로 — 예: `/users/{id}`), `operationId`. `location.identity`는 `METHOD path`. 인덱스 최상위에 `sha256` (`rawOpenApi`를 객체 키 정렬 canonical JSON으로 직렬화한 값의 SHA-256), `rawOpenApi` (원본 `/v3/api-docs` JSON)을 함께 둔다. 이 인덱스는 `entries[]`와 함께 두 필드를 추가로 갖는 점에서 다른 source index와 다르다.
@@ -184,20 +190,20 @@ build/harness/
   "requirements": [
     {
       "id": "REQ-005",
-      "title": "프런트엔드 기반 앱 셸",
+      "title": "애플리케이션 기본 앱 셸",
       "status": "검토중",
-      "implementationTarget": "front-end",
-      "state": "RED" | "GREEN" | "BLUE",
+      "requirementType": "기능",
+      "specRole": "원자 요건",
+      "targetSystem": "application",
+      "productArea": "platform",
+      "qualityAttributes": ["usability"],
+      "verificationLevel": "mixed",
+      "state": "RED" | "GREEN" | "BLUE" | "INACTIVE",
       "redReasons": [
-        {
-          "ruleId": "TRACE-NO-FE-SURFACE",
-          "message": "관련 FE 화면/스토리 없음",
-          "evidence": { "requirementId": "REQ-005", "implementationTarget": "front-end" }
-        },
         {
           "ruleId": "TRACE-AC-FAIL",
           "message": "수용 기준 문장: NOT_RUN",
-          "evidence": { "criterion": "수용 기준 문장", "status": "NOT_RUN", "requiredChecks": [{ "target": "front-end", "status": "NOT_RUN" }] }
+          "evidence": { "criterion": "수용 기준 문장", "status": "NOT_RUN", "requiredChecks": [{ "target": "ui", "status": "NOT_RUN" }] }
         }
       ],
       "blueBlockedBy": ["요건 카드 상태가 승인 아님: 검토중", "열린 질문 남음"],
@@ -206,10 +212,10 @@ build/harness/
       "frontEnd": { "pages": [...], "routes": [...], "stories": [...], "apiUsages": [...], "apiCalls": [...] },
       "coverage": [
         {
-          "criterion": "프런트엔드 기반 앱 셸이 표시된다",
-          "target": "BE" | "FE" | "FS" | null,
+          "criterion": "애플리케이션 기본 앱 셸이 표시된다",
+          "target": "API" | "UI" | "E2E" | "STATIC" | null,
           "status": "PASS" | "FAIL" | "SKIP" | "NOT_RUN" | "MISSING",
-          "requiredChecks": [{ "target": "back-end" | "front-end" | "harness", "status": "PASS" }],
+          "requiredChecks": [{ "target": "api" | "ui" | "e2e" | "static" | "unknown", "status": "PASS" }],
           "tests": [/* 연결된 test 인덱스 항목 + result */],
           "scenarios": [/* 연결된 scenario 인덱스 항목 */]
         }
@@ -219,21 +225,25 @@ build/harness/
 }
 ```
 
-coverage row의 `target`은 AC 단위 마커(`BE`/`FE`/`FS`/`null`, REQ-012)이고, 같은 row의 `requiredChecks[].target`은 evaluator가 실제로 요구하는 검증 단위 라벨이라 의미가 다르다. 후자의 값은 다음 세 가지 중 하나다.
+coverage row의 `target`은 AC 단위 마커(`API`/`UI`/`E2E`/`STATIC`/`null`)이고, 같은 row의 `requiredChecks[].target`은 evaluator가 실제로 요구하는 검증 단위 라벨이다.
 
-- `back-end`: 백엔드 Acceptance Test 커버만 요구. AC marker가 `BE`거나, marker가 없고 카드 `구현 대상`이 `back-end`인 경우.
-- `front-end`: FE BDD 테스트 커버만 요구. AC marker가 `FE`거나, marker가 없고 카드 `구현 대상`이 `front-end`인 경우.
-- `harness`: 백엔드와 FE 어느 한쪽 커버라도 있으면 통과(EITHER 정책). marker 없는 AC + 카드 `구현 대상: harness`에서만 산출된다. 이름은 카드 분류와 같지만 의미는 "백엔드/FE 합집합 커버"다.
+- `api`: 백엔드 Acceptance Test 커버만 요구한다.
+- `ui`: Playwright FE BDD 테스트 커버만 요구한다.
+- `e2e`: Playwright 사용자 여정 테스트 커버만 요구한다.
+- `static`: 백엔드 Acceptance Test 또는 FE BDD 테스트 어느 쪽이든 커버를 인정한다.
+- `unknown`: AC 마커가 없거나 인식되지 않아 검증 채널을 계산할 수 없다. 카드 구조 오류와 TRACE RED가 함께 발생한다.
 
-AC marker가 `FS`거나 marker가 없고 카드 `구현 대상`이 `full-stack`인 경우는 `requiredChecks`에 `back-end`와 `front-end` 두 항목이 들어가고 양쪽 모두 PASS여야 row가 PASS다. AC marker가 `null`일 때의 전체 fallback 매핑은 `back-end`→`BE`, `front-end`→`FE`, `full-stack`→`FS`, `harness`→어느 한쪽이라도 커버다.
+AC marker가 `null`일 때의 카드 단위 fallback은 없다.
 
-`redReasons[]`는 `{ ruleId, message, evidence }` 객체 배열이다. `ruleId`는 [`rule-namespaces.md`](./rule-namespaces.md)의 `TRACE-*` prefix 중 하나(`TRACE-AC-EMPTY` / `TRACE-NO-API` / `TRACE-NO-FE-SURFACE` / `TRACE-AC-MISSING` / `TRACE-AC-FAIL` / `TRACE-AC-NO-FEATURE`)다. `message`는 리포트에 사람 친화적으로 노출되는 한 줄 문자열이고, `evidence`는 ruleId별로 의미 있는 보조 데이터(예: AC 문장, status, 대상 카드 ID)를 담는다. 리포터(`render-trace-report.mjs`)는 `- [{ruleId}] {message}` 형태로 prefix를 노출한다.
+`redReasons[]`는 `{ ruleId, message, evidence }` 객체 배열이다. `ruleId`는 [`rule-namespaces.md`](./rule-namespaces.md)의 `TRACE-*` prefix 중 하나(`TRACE-AC-EMPTY` / `TRACE-AC-MISSING` / `TRACE-AC-FAIL` / `TRACE-AC-NO-FEATURE`)다. `message`는 리포트에 사람 친화적으로 노출되는 한 줄 문자열이고, `evidence`는 ruleId별로 의미 있는 보조 데이터(예: AC 문장, status, 대상 카드 ID)를 담는다. 리포터(`render-trace-report.mjs`)는 `- [{ruleId}] {message}` 형태로 prefix를 노출한다.
 
 ## 리포터 출력 (Layer 4)
 
 `reports/*.md`는 사람이 읽는 형태, `reports/*.json`은 머신 소비 (CI, IDE, 대시보드)다.
 
-- `trace-report.{md,json}`: 전체 카드 state + coverage + 연결된 finding 요약. 단일 카드 필터 실행은 `trace-report-REQ-XXX.{md,json}`처럼 suffix를 붙인다.
+- `trace-report.{md,json}`: 전체 카드 state + coverage + 연결된 finding 요약. 단일 카드 필터 실행은 `trace-report-REQ-XXX.{md,json}`처럼 suffix를 붙인다. trace summary는 최신 `change-set-report.json`의 `summary.changeSetWarnings`를 `Change Set warnings: N`으로 함께 표시하지만, 이 값은 report-only 가시성 정보이며 게이트 차단 조건이 아니다.
+- `requirement-schema-report.{md,json}`: 새 요건 카드 스키마 적합성 리포트. 카드별 누락/허용값/마커/관련 요건 오류를 `CARD-*` finding 기준으로 묶는다.
+- `change-set-report.{md,json}`: 사용자 요청 단위 작업 범위와 영향 REQ의 카드 스키마 상태, RED/GREEN/BLUE 상태를 묶는다. Change Set은 게이트 입력이 아니라 진행 상태 리포트다.
 - `back-end-standards-report.md`: BE-* 룰별 그룹 보고서.
 - `terminology-report.md`: 표준 용어 검사 결과(safe/strict 공유 출력).
 

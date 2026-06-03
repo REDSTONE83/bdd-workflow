@@ -7,6 +7,7 @@
 ## 핵심 원칙
 
 - 요건 카드는 `/docs/requirements`에 둔다.
+- 사용자 요청 단위 작업 범위는 `/docs/change-sets`에 둔다. Change Set은 명세 원천이 아니며, 별도 사람이 관리하는 ID를 만들지 않고 파일 경로를 identity로 쓴다.
 - BDD 시나리오는 `/docs/scenarios`의 Gherkin `.feature`로 관리한다. PO/QA/기획자/프론트엔드/백엔드가 함께 검토하는 공유 명세이자 하네스 추적 입력이며, Cucumber 실행 도구는 도입하지 않는다.
 - API 명세는 Spring Boot 컨트롤러와 DTO 애너테이션에 둔다.
 - DB 스키마는 JPA `@Entity` 클래스에 둔다. 컬럼 단위 추적이 필요하면 필드에도 `@Requirement`를 붙인다.
@@ -18,6 +19,7 @@
 
 ## 문서 구조
 
+- `docs/change-sets`: 사용자 요청을 처리하기 위한 작업 범위
 - `docs/requirements`: 무엇을 만들어야 하는가 (요건 카드)
 - `docs/scenarios`: 사용자가 어떻게 경험하는가 (Gherkin `.feature` 시나리오)
 - `docs/standards`: 어떤 방식으로 만들어야 하는가 (구현 표준)
@@ -30,6 +32,7 @@
 
 ```text
 docs/requirements/*.md
+docs/change-sets/*.md
 docs/scenarios/*.feature
 docs/standards/*.md
 back-end/src/main/java/**/*
@@ -86,7 +89,7 @@ front-end/tools/**/*
 
 요건 작성과 BDD 테스트 리뷰 절차는 [`docs/harness/requirement-authoring.md`](docs/harness/requirement-authoring.md)에 둔다. 핵심 순서만 옮기면 다음과 같다.
 
-1. 사용자 요청을 요건 카드 초안으로 정리한다.
+1. 사용자 요청을 Change Set으로 정리하고, 기존 REQ 수정인지 새 REQ가 필요한지 판단한다.
 2. 모호한 범위, 예외, 정책, 권한, 상태 변화, 정량 기준을 사용자에게 질문한다. 기본은 한 번에 하나씩 확인하고, 서로 분리하면 오해가 생기는 항목만 최대 3개까지 묶는다. **질문은 항상 선택지형으로 만들고 첫 항목을 `(권장)` 표기와 한 줄 근거가 붙은 추천안으로 둔다** (자세한 형식은 [`requirement-authoring.md`](docs/harness/requirement-authoring.md#선택지와-추천안은-기본값이다)). 미해결 질문은 `열린 질문`에 둔다.
 3. 답변이 확정되면 그 내용을 `범위`/`제외 범위`/`수용 기준` 중 해당 위치에 반영하고, 정책 선택이 따로 필요한 결정은 `의사결정 로그`에 남긴다. 해당 항목은 `열린 질문`에서 제거한다.
 4. 표준 용어 검색/등록은 `node tools/harness/terminology.mjs ...`로 한다 (`draft.json` 직접 편집 금지).
@@ -135,6 +138,7 @@ cd back-end
 ./gradlew generateOpenApiIndex       # /v3/api-docs dump 1회 -> build/harness/indexes/openapi.index.json
 ./gradlew previewSchema              # Entity 기반 DDL 미리보기
 ./gradlew traceRequirements          # 추적 리포트 생성 (always exit 0)
+./gradlew generateChangeSetReport    # Change Set 영향 REQ 상태 리포트 생성
 ./gradlew traceRequirementCard -Preq=REQ-XXX        # 단일 카드 추적 리포트 (always exit 0)
 ./gradlew validateRequirementCard -Preq=REQ-XXX     # 단일 카드 strict 게이트 (RED 또는 카드 구조 위반 시 실패)
 ./gradlew validateRequirementCardBlue -Preq=REQ-XXX # 단일 카드 BLUE 게이트 (BLUE 미달 시 실패)

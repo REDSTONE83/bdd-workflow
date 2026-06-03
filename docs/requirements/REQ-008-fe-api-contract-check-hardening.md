@@ -1,10 +1,17 @@
 # 요건 카드
 
 요건 ID: REQ-008
-제목: FE API 계약 검사 강화
+제목: FE API 계약 오류 검사
 우선순위: 중간
 상태: 승인
-구현 대상: harness
+요건 종류: 하네스
+명세 역할: 원자 요건
+대상 시스템: harness
+제품 영역: harness
+품질 속성: compatibility
+검증 수준: static
+관련 요건: REQ-006, REQ-007
+대체 요건: 없음
 
 ## 사용자/목적
 
@@ -31,11 +38,11 @@
 
 ## 수용 기준
 
-- OpenAPI 계약 산출물이 없으면 FE API 계약 검사 결과가 오류로 보고된다
-- 프런트엔드 API 모듈이 OpenAPI 계약에 없는 method와 path를 호출하면 검사 결과가 오류로 보고된다
-- 생성된 API client의 OpenAPI 메타파일이 없으면 검사 결과가 오류로 보고된다
-- 생성된 API client가 현재 OpenAPI 계약보다 오래되면 검사 결과가 오류로 보고된다
-- 애플리케이션 소스가 `front-end/src/api` 밖에서 직접 `fetch`를 호출하면 검사 결과가 오류로 보고된다
+- (STATIC) OpenAPI 계약 산출물이 없으면 FE API 계약 검사 결과가 오류로 보고된다
+- (STATIC) 프런트엔드 API 모듈이 OpenAPI 계약에 없는 method와 path를 호출하면 검사 결과가 오류로 보고된다
+- (STATIC) 생성된 API client의 OpenAPI 메타파일이 없으면 검사 결과가 오류로 보고된다
+- (STATIC) 생성된 API client가 현재 OpenAPI 계약보다 오래되면 검사 결과가 오류로 보고된다
+- (STATIC) 애플리케이션 소스가 `front-end/src/api` 밖에서 직접 `fetch`를 호출하면 검사 결과가 오류로 보고된다
 
 ## 의사결정 로그
 

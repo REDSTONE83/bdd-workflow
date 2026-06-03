@@ -1,10 +1,10 @@
 /**
- * @Requirement REQ-014
+ * @Requirement REQ-016, REQ-017, REQ-018, REQ-019
  * @Page CategoriesPage
  *
  * 카테고리 관리 화면 표현(presentational) 컴포넌트. 보호 앱 셸 안에서 카테고리 목록을 보여주고,
  * 생성/수정 모달과 삭제 확인 모달로 CRUD 흐름을 구성한다. 목록 데이터와 외부 API 호출,
- * 가상 스크롤 로드는 모두 콜백 prop 으로 주입받는다. 실제 TanStack Query/REQ-003 API 결합은
+ * 가상 스크롤 로드는 모두 콜백 prop 으로 주입받는다. 실제 TanStack Query/API 결합은
  * CategoriesPageContainer 가 담당하고, Storybook 은 in-memory mock 으로 상태를 강제한다.
  */
 import { AlertCircle, Plus } from "lucide-react"

@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test"
 
 import { routeApi } from "./apiRoute"
 
-// REQ-014: 카테고리 API(REQ-003 계약)를 in-memory 상태로 mock 한다.
+// REQ-016~REQ-019: 카테고리 API 계약을 in-memory 상태로 mock 한다.
 // GET /categories(page/size 페이징), POST /categories(201/중복 409),
 // PATCH /categories/{id}(부분 수정/중복 409), DELETE /categories/{id}(204).
 // 생성/수정/삭제 후 다시 GET 하면 갱신된 목록이 보이도록 store 를 유지한다.

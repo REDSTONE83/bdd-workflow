@@ -1,8 +1,8 @@
 /**
- * @Requirement REQ-013
+ * @Requirement REQ-001
  * @Page SignupPage
  *
- * REQ-013 회원 가입 화면 표현(presentational) 컴포넌트.
+ * REQ-001 회원 가입 화면 표현(presentational) 컴포넌트.
  *
  * 책임:
  * - 실제 DOM과 Tailwind 스타일로 화면을 그린다 (REQ-011 LoginPage 와 같은 main + Card 패턴).

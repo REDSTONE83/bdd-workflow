@@ -14,7 +14,7 @@ import {
 import { categoryQueryKeys } from "../queryKeys"
 import { CATEGORY_PAGE_SIZE, type CategoryInput, type CategoryView } from "../types"
 
-// REQ-014: 카테고리 서버 상태 훅. docs/standards/front-end-state.md 의 무한 로드/invalidation 규약을 따른다.
+// REQ-016~REQ-019: 카테고리 서버 상태 훅. docs/standards/front-end-state.md 의 무한 로드/invalidation 규약을 따른다.
 // - 목록: useInfiniteQuery 로 묶음 크기 20 의 묶음을 이어 받고, 누적 묶음을 평탄화해 view model 로 반환한다.
 // - 생성/수정/삭제: useMutation, 성공 시 lists() 를 무효화해 첫 묶음부터 다시 받는다.
 

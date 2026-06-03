@@ -4,8 +4,9 @@
 //
 // 흐름:
 //   1) evaluate-trace-state.mjs  (state/trace.state.json 갱신)
-//   2) render-trace-report.mjs   (reports/trace-report.{md,json} + 호환 평탄 경로 갱신)
-//   3) gate.mjs                  (--check/--require-blue 인 경우 exit code 결정. REQ-010)
+//   2) render-requirement-schema-report.mjs / render-change-set-report.mjs
+//   3) render-trace-report.mjs   (reports/trace-report.{md,json} + 호환 평탄 경로 갱신)
+//   4) gate.mjs                  (--check/--require-blue 인 경우 exit code 결정. REQ-010)
 //
 // 옛 monolith가 들고 있던 입력 수집/상태 계산/리포트 렌더링/게이트 판정 책임은 모두
 // 세 도구로 분리되었다. 본 파일은 spawn 오케스트레이션만 담당한다.
@@ -88,7 +89,12 @@ const evalArgs = [
 let status = runToolQuiet('evaluate-trace-state.mjs', evalArgs);
 if (status !== 0) process.exit(status);
 
-// Step 2: 리포트 렌더링. wrapper의 stdout은 옛 CLI 호환 규칙만 따른다.
+// Step 2: 보조 리포트 렌더링. trace summary가 최신 Change Set warnings를 노출할 수 있게
+// Change Set report를 trace report보다 먼저 갱신한다.
+status = runToolQuiet('render-requirement-schema-report.mjs', []);
+if (status !== 0) process.exit(status);
+status = runToolQuiet('render-change-set-report.mjs', []);
+if (status !== 0) process.exit(status);
 status = runToolQuiet('render-trace-report.mjs', []);
 if (status !== 0) process.exit(status);
 

@@ -15,6 +15,7 @@ const workspaceRoot = path.resolve(__dirname, '..', '..');
 const outputDir = path.join(workspaceRoot, 'build', 'harness');
 const stateOutFile = path.join(outputDir, 'state', 'trace.state.json');
 const reportsDir = path.join(outputDir, 'reports');
+const changeSetReportJsonPath = path.join(reportsDir, 'change-set-report.json');
 
 function parseCliArgs(argv) {
     let quiet = false;
@@ -37,6 +38,21 @@ function reportBaseName(model) {
 }
 
 function emptyTerminologyCounts() { return { error: 0, warning: 0, strictError: 0, byKind: {} }; }
+
+function readChangeSetReportSummary() {
+    if (!fs.existsSync(changeSetReportJsonPath)) {
+        return { present: false, warnings: 0 };
+    }
+    try {
+        const payload = JSON.parse(fs.readFileSync(changeSetReportJsonPath, 'utf8'));
+        return {
+            present: true,
+            warnings: payload?.summary?.changeSetWarnings ?? 0
+        };
+    } catch {
+        return { present: false, warnings: 0 };
+    }
+}
 
 function tallyFindings(findings) {
     const counts = emptyTerminologyCounts();
@@ -84,6 +100,7 @@ function buildMarkdown(model) {
     lines.push(`- RED: ${model.summary.red}`);
     lines.push(`- GREEN: ${model.summary.green}`);
     lines.push(`- BLUE: ${model.summary.blue}`);
+    if (typeof model.summary.inactive === 'number') lines.push(`- INACTIVE: ${model.summary.inactive}`);
     lines.push(`- Unknown API references: ${model.summary.unknownApis}`);
     lines.push(`- Unknown test references: ${model.summary.unknownTests}`);
     lines.push(`- Unknown entity references: ${model.summary.unknownEntities}`);
@@ -120,13 +137,29 @@ function buildMarkdown(model) {
     } else {
         lines.push('- Terminology report: 없음 (`./gradlew validateTerminology` 실행 필요)');
     }
+    if (model.changeSetReport?.present) {
+        lines.push(`- Change Set warnings: ${model.changeSetReport.warnings} (report-only; --check 미반영)`);
+    } else {
+        lines.push('- Change Set warnings: unavailable (`./gradlew generateChangeSetReport` 실행 필요)');
+    }
     lines.push('');
 
     for (const requirement of model.requirements) {
         lines.push(`## ${requirement.id} ${requirement.title}`, '');
         lines.push(`State: ${requirement.state}`);
         lines.push(`Card status: ${requirement.status || '미기재'}`);
-        lines.push(`Implementation target: ${requirement.implementationTarget}`);
+        lines.push(`Requirement type: ${requirement.requirementType || '미기재'}`);
+        lines.push(`Spec role: ${requirement.specRole || '미기재'}`);
+        lines.push(`Target system: ${requirement.targetSystem || '미기재'}`);
+        lines.push(`Product area: ${requirement.productArea || '미기재'}`);
+        lines.push(`Quality attributes: ${(requirement.qualityAttributes ?? []).join(', ') || '미기재'}`);
+        lines.push(`Verification level: ${requirement.verificationLevel || '미기재'}`);
+        if ((requirement.relatedRequirementIds ?? []).length > 0) {
+            lines.push(`Related requirements: ${requirement.relatedRequirementIds.join(', ')}`);
+        }
+        if ((requirement.replacedByRequirementIds ?? []).length > 0) {
+            lines.push(`Replaced by: ${requirement.replacedByRequirementIds.join(', ')}`);
+        }
         lines.push(`Card: ${path.relative(workspaceRoot, requirement.file)}`);
         lines.push('');
 
@@ -146,13 +179,7 @@ function buildMarkdown(model) {
 
         lines.push('### APIs', '');
         if (requirement.apis.length === 0) {
-            if (requirement.implementationTarget === 'front-end') {
-                lines.push('- (front-end 대상 - API 요구 없음)');
-            } else if (requirement.implementationTarget === 'harness') {
-                lines.push('- (harness 대상 - 사용자-facing API 요구 없음)');
-            } else {
-                lines.push('- MISSING');
-            }
+            lines.push('- (없음)');
         } else {
             for (const api of requirement.apis) {
                 lines.push(`- ${api.http} / ${api.controller} [${api.requirements.join(', ')}]`);
@@ -180,11 +207,7 @@ function buildMarkdown(model) {
         const apiUsages = requirement.frontEnd?.apiUsages ?? [];
         const apiCalls = requirement.frontEnd?.apiCalls ?? [];
         if (pages.length === 0 && routes.length === 0 && stories.length === 0 && apiUsages.length === 0 && apiCalls.length === 0) {
-            if (requirement.implementationTarget === 'harness') {
-                lines.push('- (harness 대상 - FE 화면/스토리 요구 없음)');
-            } else {
-                lines.push('- (없음)');
-            }
+            lines.push('- (없음)');
         } else {
             for (const route of routes) {
                 lines.push(`- route ${route.path} (${route.file}:${route.line ?? 0}) [${route.requirements.join(', ')}]`);
@@ -360,6 +383,7 @@ function main() {
         process.exit(1);
     }
     const model = JSON.parse(fs.readFileSync(stateOutFile, 'utf8'));
+    model.changeSetReport = readChangeSetReportSummary();
     const markdown = buildMarkdown(model);
     const baseName = reportBaseName(model);
     const reportMdPath = path.join(reportsDir, `${baseName}.md`);

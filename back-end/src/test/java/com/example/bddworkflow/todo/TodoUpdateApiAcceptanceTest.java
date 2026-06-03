@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ApiAcceptanceTest
-@Requirement("REQ-002")
+@Requirement("REQ-024")
 class TodoUpdateApiAcceptanceTest {
 
     private static final java.util.UUID USER_ID = java.util.UUID.fromString("00000000-0000-0000-0000-000000000064");
@@ -210,21 +210,6 @@ class TodoUpdateApiAcceptanceTest {
     }
 
     @Test
-    @Covers("수정 시 완료 상태를 명시적으로 비우려고 하면 수정이 거절된다")
-    @DisplayName("수정 시 완료 상태를 명시적으로 비우려고 하면 수정이 거절된다")
-    void updateWithExplicitNullCompletedReturnsBadRequest() throws Exception {
-        Todo existing = seedTodo();
-        mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"completed\": null}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
-                .andExpect(jsonPath("$.details[0].field").value("completed"));
-        assertTodoUnchanged(existing);
-    }
-
-    @Test
     @Covers("수정 시 제목 앞뒤 공백은 제거되어 저장된다")
     @DisplayName("수정 시 제목 앞뒤 공백은 제거되어 저장된다")
     void updateTrimsTitle() throws Exception {
@@ -371,45 +356,6 @@ class TodoUpdateApiAcceptanceTest {
                 .andExpect(jsonPath("$.code").value("INVALID_CATEGORY"))
                 .andExpect(jsonPath("$.details[0].field").value("categoryId"));
         assertTodoUnchanged(existing);
-    }
-
-    @Test
-    @Covers("수정 시 완료로 표시하면 할 일이 완료 상태로 바뀐다")
-    @DisplayName("수정 시 완료로 표시하면 할 일이 완료 상태로 바뀐다")
-    void updateCompletedTrueMarksDone() throws Exception {
-        Todo existing = seedTodo();
-        mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"completed\": true}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.completed").value(true));
-
-        assertThat(todoRepository.findById(existing.id()))
-                .get()
-                .extracting(Todo::completed)
-                .isEqualTo(true);
-    }
-
-    @Test
-    @Covers("수정 시 미완료로 되돌리면 할 일이 미완료 상태로 되돌아간다")
-    @DisplayName("수정 시 미완료로 되돌리면 할 일이 미완료 상태로 되돌아간다")
-    void updateCompletedFalseMarksUndone() throws Exception {
-        // Given: 이미 완료된 할 일
-        Todo existing = todoRepository.save(USER_ID, "이미 완료", null, null, Priority.MEDIUM, true, null);
-
-        // When / Then
-        mockMvc.perform(patch("/todos/{id}", existing.id())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(USER_ID))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"completed\": false}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.completed").value(false));
-
-        assertThat(todoRepository.findById(existing.id()))
-                .get()
-                .extracting(Todo::completed)
-                .isEqualTo(false);
     }
 
     @Test

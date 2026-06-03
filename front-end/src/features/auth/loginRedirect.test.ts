@@ -13,7 +13,7 @@ describe("resolveLoginRedirect", () => {
     }
   })
 
-  it("보호 진입점 /todos 와 /categories 는 신뢰 이동 대상이다 (REQ-014)", () => {
+  it("보호 진입점 /todos 와 /categories 는 신뢰 이동 대상이다 (REQ-016)", () => {
     expect(resolveLoginRedirect("/todos")).toBe("/todos")
     expect(resolveLoginRedirect("/categories")).toBe("/categories")
   })

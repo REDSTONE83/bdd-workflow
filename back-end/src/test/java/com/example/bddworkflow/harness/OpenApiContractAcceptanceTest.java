@@ -22,7 +22,7 @@ import java.util.stream.StreamSupport;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * REQ-006 OpenAPI 계약 산출물과 FE API 검사 룰 — 5 AC를 실행 가능한 검증으로 옮긴 테스트.
+ * REQ-006 OpenAPI 기반 FE API 계약 검증 — 5 AC를 실행 가능한 검증으로 옮긴 테스트.
  *
  * - AC1/AC2는 generateOpenApiIndex 산출물(build/harness/indexes/openapi.index.json)을 직접 읽어 확인한다.
  * - AC3/AC4/AC5는 validate-front-end-standards.mjs에 fixture를 CLI로 주입해 finding을 확인한다.

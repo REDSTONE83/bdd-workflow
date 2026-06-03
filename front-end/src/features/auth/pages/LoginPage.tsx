@@ -48,7 +48,7 @@ export function LoginPage() {
     emailRef.current?.focus()
   }, [])
 
-  // (REQ-013) 회원 가입 성공 후 /login?signupCompleted=1 로 이동해 오면 가입 완료 안내를
+  // (REQ-001) 회원 가입 성공 후 /login?signupCompleted=1 로 이동해 오면 가입 완료 안내를
   // 표시하고, 새로고침 시 반복 노출되지 않도록 쿼리를 history replace 로 정리한다.
   useEffect(() => {
     if (searchParams.get("signupCompleted") === "1") {

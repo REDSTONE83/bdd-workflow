@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@Requirement("REQ-002")
+@Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026"})
 @Service
 public class TodoService {
 
@@ -118,9 +118,9 @@ public class TodoService {
     }
 
     /**
-     * REQ-003 카테고리 삭제 시 비-cascade 연결 해제. 호출 트랜잭션 안에서 일괄 update 한다.
+     * REQ-019 카테고리 삭제 시 비-cascade 연결 해제. 호출 트랜잭션 안에서 일괄 update 한다.
      */
-    @Requirement("REQ-003")
+    @Requirement({"REQ-019", "REQ-026"})
     @Transactional
     public void detachCategoryFromAllTodos(UUID categoryId) {
         todoRepository.detachCategoryFromAllTodos(categoryId);

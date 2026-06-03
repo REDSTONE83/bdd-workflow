@@ -21,7 +21,7 @@ import java.util.UUID;
         uniqueConstraints = @UniqueConstraint(name = "uk_category_user_name", columnNames = {"user_id", "name"})
 )
 @EntityListeners(AuditingEntityListener.class)
-@Requirement("REQ-003")
+@Requirement({"REQ-016", "REQ-017", "REQ-018", "REQ-019", "REQ-020"})
 public class Category {
 
     @Id
@@ -29,32 +29,32 @@ public class Category {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @Requirement("REQ-003")
+    @Requirement({"REQ-016", "REQ-017", "REQ-018", "REQ-019", "REQ-020"})
     @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
     private UUID userId;
 
-    @Requirement("REQ-003")
+    @Requirement({"REQ-016", "REQ-017", "REQ-018", "REQ-019", "REQ-020"})
     @Column(nullable = false, length = 50)
     private String name;
 
-    @Requirement("REQ-003")
+    @Requirement({"REQ-016", "REQ-017", "REQ-018", "REQ-020"})
     @Column(length = 7)
     private String color;
 
-    @Requirement("REQ-003")
+    @Requirement({"REQ-017", "REQ-018"})
     @Column(length = 500)
     private String description;
 
-    @Requirement("REQ-003")
+    @Requirement({"REQ-016", "REQ-017", "REQ-018", "REQ-020"})
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
 
-    @Requirement("REQ-003")
+    @Requirement({"REQ-016", "REQ-017", "REQ-018", "REQ-019", "REQ-020"})
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @Requirement("REQ-003")
+    @Requirement({"REQ-016", "REQ-017", "REQ-018", "REQ-019", "REQ-020"})
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
