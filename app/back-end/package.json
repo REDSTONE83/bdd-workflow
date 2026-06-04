@@ -1,0 +1,10 @@
+{
+  "name": "bdd-workflow-harness-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "./gradlew test",
+    "openapi:index": "./gradlew generateOpenApiIndex",
+    "schema:preview": "./gradlew previewSchema"
+  }
+}

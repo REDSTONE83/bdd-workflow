@@ -1,9 +1,16 @@
 .DS_Store
 
-back-end/.gradle/
-back-end/build/
-back-end/bin/
-back-end/out/
+app/back-end/.gradle/
+app/back-end/build/
+app/back-end/bin/
+app/back-end/out/
+app/front-end/node_modules/
+app/front-end/dist/
+app/front-end/storybook-static/
+app/front-end/playwright-report/
+app/front-end/test-results/
+harness/.gradle/
+harness/**/build/
 build/
 
 *.class

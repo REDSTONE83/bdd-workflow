@@ -1,0 +1,98 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.5'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+sourceSets {
+    openApiIndex {
+        java {
+            srcDir 'src/openApiIndex/java'
+        }
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+configurations {
+    openApiIndexImplementation.extendsFrom implementation, testImplementation
+    openApiIndexRuntimeOnly.extendsFrom runtimeOnly, testRuntimeOnly
+}
+
+dependencies {
+    def springBootBom = org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+
+    implementation platform(springBootBom)
+    compileOnly platform(springBootBom)
+    annotationProcessor platform(springBootBom)
+    runtimeOnly platform(springBootBom)
+    testImplementation platform(springBootBom)
+    testRuntimeOnly platform(springBootBom)
+    openApiIndexImplementation platform(springBootBom)
+    openApiIndexRuntimeOnly platform(springBootBom)
+
+    implementation 'com.example.bddworkflow.harness:bdd-workflow-harness-annotations:0.0.1-SNAPSHOT'
+
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.security:spring-security-crypto'
+    implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    runtimeOnly 'com.h2database:h2'
+
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'com.nimbusds:nimbus-jose-jwt'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+tasks.register('generateOpenApiIndex', Test) {
+    group = 'verification'
+    description = 'Run the back-end OpenAPI export adapter to refresh build/app/indexes/openapi.index.json.'
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.openApiIndex.output.classesDirs
+    classpath = sourceSets.openApiIndex.runtimeClasspath
+    include '**/OpenApiContractDumpTest.class'
+    systemProperty 'harness.outputRoot', System.getenv('HARNESS_OUTPUT_ROOT') ?: layout.projectDirectory.dir('../../build/app').asFile.absolutePath
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+    doFirst {
+        delete layout.buildDirectory.dir('test-results/generateOpenApiIndex').get().asFile
+        delete layout.buildDirectory.dir('reports/tests/generateOpenApiIndex').get().asFile
+    }
+    reports {
+        html.outputLocation = layout.projectDirectory.dir('../../build/app/reports/tests/generateOpenApiIndex')
+        junitXml.outputLocation = layout.projectDirectory.dir('../../build/app/test-results/generateOpenApiIndex')
+    }
+    outputs.upToDateWhen { false }
+}
+
+tasks.register('previewSchema', Exec) {
+    group = 'verification'
+    description = 'Generate DDL preview from the latest harness source index.'
+    workingDir projectDir
+    commandLine 'node', 'tools/preview-schema.mjs'
+}
