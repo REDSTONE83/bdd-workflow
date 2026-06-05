@@ -7,6 +7,8 @@
     "app:report": "node harness/tools/run.mjs app:trace",
     "app:trace": "node harness/tools/run.mjs app:trace",
     "app:validate": "node harness/tools/run.mjs app:validate",
+    "app:e2e": "node harness/tools/run.mjs app:e2e",
+    "app:e2e:live": "node harness/tools/run.mjs app:e2e:live",
     "app:source-index": "node harness/tools/run.mjs app:source-index",
     "app:front-end-source-index": "node harness/tools/run.mjs app:front-end-source-index",
     "app:scenario-index": "node harness/tools/run.mjs app:scenario-index",

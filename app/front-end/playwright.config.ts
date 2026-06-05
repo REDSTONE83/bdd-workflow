@@ -5,6 +5,7 @@ const e2eResultsFile =
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  testIgnore: "**/*.live.spec.ts",
   outputDir: "test-results/artifacts",
   reporter: [
     ["list"],

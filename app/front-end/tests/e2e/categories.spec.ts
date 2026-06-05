@@ -4,24 +4,15 @@ import { expect, test } from "@playwright/test"
 import { DEFAULT_USER, installAuthRoutes } from "./_helpers/auth-mocks"
 import { installCategoryRoutes } from "./_helpers/category-mocks"
 
-// REQ-015~REQ-019 FE BDD: 카테고리 관리 화면. 모든 테스트는 카테고리 API 를 mock 하고
-// 사용자가 관찰할 수 있는 결과만 검증한다(Query cache/구현 세부는 고정하지 않는다).
+// REQ-016~REQ-019 FE BDD: 카테고리 관리 화면. 모든 테스트는 카테고리 API 를 mock 하고
+// 사용자가 관찰할 수 있는 결과만 검증한다. 상위 REQ-015 통합 여정은 live smoke 가 커버한다.
 
-test.describe("카테고리 관리 — 전체 여정", () => {
+test.describe("카테고리 관리 — mock 전체 여정", () => {
   test.beforeEach(async ({ page }) => {
     await installAuthRoutes(page, { authenticated: DEFAULT_USER })
   })
 
-  test("카테고리를 확인하고 만들고 수정한 뒤 삭제할 수 있다", async ({ page }, testInfo) => {
-    testInfo.annotations.push(
-      { type: "Requirement", description: "REQ-015" },
-      {
-        type: "Covers",
-        description:
-          "로그인 사용자는 카테고리 화면에서 카테고리를 확인하고 새 카테고리를 만든 뒤 수정하고 삭제할 수 있다",
-      },
-    )
-
+  test("카테고리를 확인하고 만들고 수정한 뒤 삭제할 수 있다", async ({ page }) => {
     await installCategoryRoutes(page, {
       initial: [{ id: "c1", name: "업무", color: "#3b82f6" }],
     })

@@ -201,6 +201,18 @@ function backEndTest() {
     runBackEndGradle('back-end:test', 'test');
 }
 
+function frontEndNpm(label, script) {
+    run(label, 'npm', ['run', script], { cwd: frontEndRoot, scope: 'application' });
+}
+
+function frontEndE2e() {
+    frontEndNpm('front-end:e2e', 'e2e');
+}
+
+function frontEndLiveE2e() {
+    frontEndNpm('front-end:e2e:live', 'e2e:live');
+}
+
 function selfTest() {
     const files = selfTestFiles();
     if (files.length === 0) {
@@ -232,6 +244,8 @@ function appTrace(args) {
 function appValidate(args) {
     collectAppStaticInputs();
     backEndTest();
+    frontEndE2e();
+    frontEndLiveE2e();
     indexTestResults('application');
     emitFindingsAndReports('application');
     runNodeTool('application', 'app:validate', 'trace-requirements.mjs', ['--check', ...args]);
@@ -239,6 +253,14 @@ function appValidate(args) {
 
 function appTest() {
     backEndTest();
+}
+
+function appE2e() {
+    frontEndE2e();
+}
+
+function appLiveE2e() {
+    frontEndLiveE2e();
 }
 
 function harnessTrace(args) {
@@ -275,6 +297,8 @@ Commands:
   app:validate [trace args...]       Run application tests, application indexes, validators, and app gate.
   app:trace [trace args...]          Refresh application indexes/findings/reports and render app trace.
   app:test                           Run application back-end JUnit tests.
+  app:e2e                            Run application front-end mock Playwright E2E tests.
+  app:e2e:live                       Run application live Playwright integration smoke tests.
   app:source-index                   Generate build/app/indexes/backend.source-index.json.
   app:front-end-source-index         Generate build/app/indexes/front-end.source-index.json.
   app:scenario-index                 Generate build/app/indexes/scenarios.index.json.
@@ -305,6 +329,12 @@ switch (command) {
         break;
     case 'app:test':
         appTest();
+        break;
+    case 'app:e2e':
+        appE2e();
+        break;
+    case 'app:e2e:live':
+        appLiveE2e();
         break;
     case 'app:source-index':
         sourceIndex();

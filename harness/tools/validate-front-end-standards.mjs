@@ -10,6 +10,8 @@
 //   FE-TEST-DYN              Playwright BDD annotation이 literal {type,description} 형태가 아님
 //   FE-TEST-COVERS-NO-REQ    Covers 메타데이터는 있으나 Requirement 메타데이터 없음
 //   FE-TEST-REQ-NO-COVERS    Requirement 메타데이터는 있으나 Covers 메타데이터 없음
+//   FE-E2E-LIVE-LOCATION     상위 요건 E2E AC를 커버하는 Playwright 테스트가 live 디렉터리 밖에 있음
+//   FE-LIVE-MOCK-IMPORT      live Playwright spec이 API mock helper를 import함
 //   FE-STORY-MISSING-STATE   공통 UI primitive의 stories 파일에 표준 정의 필수 상태가 누락
 //   FE-API-CONTRACT-MISSING  OpenAPI 계약 산출물 부재
 //   FE-API-UNKNOWN-OPERATION FE actual API 호출이 OpenAPI 계약의 method+path에 없음
@@ -33,15 +35,17 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { currentScope, frontEndRoot, outputRootFor, repoRelative, workspaceRoot } from './workspace-config.mjs';
+import { currentScope, frontEndRoot as workspaceFrontEndRoot, outputRootFor, repoRelative, workspaceRoot } from './workspace-config.mjs';
 
 const repoRoot = workspaceRoot;
 const scope = currentScope();
 const outputDir = outputRootFor();
 const DEFAULTS = {
+    frontEndRoot: workspaceFrontEndRoot,
     feSourceIndex: path.join(outputDir, 'indexes', 'front-end.source-index.json'),
+    requirementsIndex: path.join(outputDir, 'indexes', 'requirements.index.json'),
     openApiIndex: path.join(outputDir, 'indexes', 'openapi.index.json'),
-    generatedMeta: path.join(frontEndRoot, 'src', 'api', 'generated', '.openapi-source.sha256'),
+    generatedMeta: path.join(workspaceFrontEndRoot, 'src', 'api', 'generated', '.openapi-source.sha256'),
     out: path.join(outputDir, 'findings', 'front-end-standards.findings.json')
 };
 
@@ -49,7 +53,9 @@ const DEFAULTS = {
 function parseCliArgs(argv) {
     const cfg = { ...DEFAULTS };
     for (const arg of argv) {
-        if (arg.startsWith('--fe-source-index=')) cfg.feSourceIndex = path.resolve(arg.slice('--fe-source-index='.length));
+        if (arg.startsWith('--front-end-root=')) cfg.frontEndRoot = path.resolve(arg.slice('--front-end-root='.length));
+        else if (arg.startsWith('--fe-source-index=')) cfg.feSourceIndex = path.resolve(arg.slice('--fe-source-index='.length));
+        else if (arg.startsWith('--requirements-index=')) cfg.requirementsIndex = path.resolve(arg.slice('--requirements-index='.length));
         else if (arg.startsWith('--openapi-index=')) cfg.openApiIndex = path.resolve(arg.slice('--openapi-index='.length));
         else if (arg.startsWith('--generated-meta=')) cfg.generatedMeta = path.resolve(arg.slice('--generated-meta='.length));
         else if (arg.startsWith('--out=')) cfg.out = path.resolve(arg.slice('--out='.length));
@@ -72,8 +78,10 @@ const FE_API_CLIENT_NO_METADATA_SEVERITY = 'error';
 const FE_API_CLIENT_STALE_SEVERITY = 'error';
 const FE_API_PAGEABLE_WIRE_SHAPE_SEVERITY = 'error';
 const FE_API_PATCH_WIRE_SHAPE_SEVERITY = 'error';
+const FE_E2E_LIVE_LOCATION_SEVERITY = 'error';
+const FE_LIVE_MOCK_IMPORT_SEVERITY = 'error';
 // FE generated client가 base OpenAPI hash를 기록해 두는 파일 경로(표시용).
-const FE_GENERATED_HASH_RELATIVE = repoRelative(path.join(frontEndRoot, 'src', 'api', 'generated', '.openapi-source.sha256'));
+const FE_GENERATED_HASH_RELATIVE = repoRelative(path.join(workspaceFrontEndRoot, 'src', 'api', 'generated', '.openapi-source.sha256'));
 
 const ISSUE_TO_RULE = {
     DYNAMIC_TEST_ANNOTATION:  { ruleId: 'FE-TEST-DYN',           remediation: REMEDIATION_TESTING },
@@ -93,6 +101,24 @@ const REQUIRED_STORY_STATES = {
 
 function readJson(p) {
     return JSON.parse(fs.readFileSync(p, 'utf8'));
+}
+
+function safeReadJson(p, fallback) {
+    if (!fs.existsSync(p)) return fallback;
+    try {
+        return readJson(p);
+    } catch {
+        return fallback;
+    }
+}
+
+function walk(dir, predicate = () => true) {
+    if (!fs.existsSync(dir)) return [];
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) return walk(full, predicate);
+        return predicate(full) ? [full] : [];
+    });
 }
 
 function buildSummary(findings) {
@@ -181,6 +207,128 @@ function findingsForMissingStoryStates(stories) {
             },
             remediation: REMEDIATION_UI
         });
+    }
+    return findings;
+}
+
+// --- FE live E2E 경계 룰 ---
+// 상위 요건의 (E2E) AC는 mock E2E가 아니라 tests/e2e/live/**/*.live.spec.ts가 소유한다.
+// live spec은 실 서버 결합 검증이어야 하므로 API mock helper import를 금지한다.
+
+function normalizePathForRule(file) {
+    return (file ?? '').replace(/\\/g, '/');
+}
+
+function isLiveE2eFile(file) {
+    const normalized = normalizePathForRule(file);
+    const inLiveDir = normalized.startsWith('app/front-end/tests/e2e/live/')
+        || normalized.startsWith('tests/e2e/live/')
+        || normalized.includes('/tests/e2e/live/');
+    return inLiveDir && /\.live\.spec\.[cm]?[tj]sx?$/.test(normalized);
+}
+
+function upperE2eAcceptanceCriteria(card) {
+    if (card?.targetSystem && card.targetSystem !== 'application') return [];
+    if (card?.specRole !== '상위 요건') return [];
+    if ((card?.verificationLevel ?? '').toLowerCase() !== 'e2e') return [];
+    return (card.acceptanceCriteria ?? [])
+        .filter((criterion) => typeof criterion === 'object' && criterion.target === 'E2E')
+        .map((criterion) => criterion.text)
+        .filter(Boolean);
+}
+
+function findingsForTopLevelE2eLiveLocation(frontEndTests, requirementsIndexPath) {
+    const requirementsPayload = safeReadJson(requirementsIndexPath, { entries: [] });
+    const cards = requirementsPayload.entries ?? [];
+    const e2eAcByRequirement = new Map();
+    for (const card of cards) {
+        const e2eAcs = upperE2eAcceptanceCriteria(card);
+        if (card.id && e2eAcs.length > 0) {
+            e2eAcByRequirement.set(card.id, new Set(e2eAcs));
+        }
+    }
+    if (e2eAcByRequirement.size === 0) return [];
+
+    const findings = [];
+    for (const test of frontEndTests ?? []) {
+        const requirements = test.requirements ?? [];
+        const covers = test.covers ?? [];
+        for (const req of requirements) {
+            const topLevelAcs = e2eAcByRequirement.get(req);
+            if (!topLevelAcs) continue;
+            const matchedCovers = covers.filter((cover) => topLevelAcs.has(cover));
+            if (matchedCovers.length === 0 || isLiveE2eFile(test.file)) continue;
+            findings.push({
+                ruleId: 'FE-E2E-LIVE-LOCATION',
+                severity: FE_E2E_LIVE_LOCATION_SEVERITY,
+                strictSeverity: FE_E2E_LIVE_LOCATION_SEVERITY,
+                kind: 'static',
+                message: `상위 요건 ${req}의 E2E AC를 커버하는 FE 테스트는 tests/e2e/live/**/*.live.spec.ts 아래에 있어야 함`,
+                requirements: [req],
+                location: {
+                    file: test.file ?? '',
+                    line: test.line ?? 0,
+                    identity: test.identity ?? test.displayName ?? ''
+                },
+                evidence: {
+                    requirement: req,
+                    covers: matchedCovers,
+                    actualFile: test.file ?? '',
+                    requiredPattern: 'tests/e2e/live/**/*.live.spec.ts'
+                },
+                remediation: REMEDIATION_TESTING
+            });
+        }
+    }
+    return findings;
+}
+
+function lineForOffset(text, offset) {
+    return text.slice(0, offset).split('\n').length;
+}
+
+const IMPORT_SOURCE_RE = /\bfrom\s+['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+
+function forbiddenLiveImportReason(source) {
+    const normalized = normalizePathForRule(source);
+    if (!normalized.includes('_helpers/')) return null;
+    const basename = normalized.split('/').pop() ?? '';
+    if (/^apiRoute(?:\.[cm]?[tj]sx?)?$/.test(basename)) return 'routeApi helper';
+    if (/mocks(?:\.[cm]?[tj]sx?)?$/.test(basename)) return 'API mock helper';
+    return null;
+}
+
+function findingsForLiveMockImports(frontEndRoot) {
+    const liveDir = path.join(frontEndRoot, 'tests', 'e2e', 'live');
+    const files = walk(liveDir, (file) => /\.[cm]?tsx?$/.test(file));
+    const findings = [];
+    for (const file of files) {
+        const content = fs.readFileSync(file, 'utf8');
+        for (const match of content.matchAll(IMPORT_SOURCE_RE)) {
+            const source = match[1] ?? match[2] ?? '';
+            const reason = forbiddenLiveImportReason(source);
+            if (!reason) continue;
+            const relativeFile = repoRelative(file);
+            findings.push({
+                ruleId: 'FE-LIVE-MOCK-IMPORT',
+                severity: FE_LIVE_MOCK_IMPORT_SEVERITY,
+                strictSeverity: FE_LIVE_MOCK_IMPORT_SEVERITY,
+                kind: 'static',
+                message: `live Playwright spec은 ${source} (${reason}) 를 import할 수 없음`,
+                requirements: [],
+                location: {
+                    file: relativeFile,
+                    line: lineForOffset(content, match.index ?? 0),
+                    identity: source
+                },
+                evidence: {
+                    importSource: source,
+                    reason,
+                    liveDirectory: 'tests/e2e/live'
+                },
+                remediation: REMEDIATION_TESTING
+            });
+        }
     }
     return findings;
 }
@@ -600,9 +748,12 @@ function main(argv) {
     const index = readJson(cfg.feSourceIndex);
     const issues = index.issues ?? [];
     const stories = index.stories ?? [];
+    const tests = index.tests ?? [];
     const findings = [
         ...issues.map(findingFromIssue),
         ...findingsForMissingStoryStates(stories),
+        ...findingsForTopLevelE2eLiveLocation(tests, cfg.requirementsIndex),
+        ...findingsForLiveMockImports(cfg.frontEndRoot),
         ...feApiFindings(index, cfg)
     ];
     const payload = writePayload(findings, cfg.out);

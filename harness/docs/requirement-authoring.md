@@ -412,7 +412,9 @@ void pageResponseShapeContainsAllFields() {
 
 시나리오 문서와 Acceptance Test 연결 규칙의 세부는 [`acceptance-test.md`](../standards/acceptance-test.md)에 둔다.
 
-FE 테스트 계층은 [`front-end-testing.md`](../../app/docs/standards/front-end-testing.md)를 따른다. FE BDD 테스트는 Playwright `test.info().annotations.push(...)`에 `Requirement`/`Covers` literal 메타데이터를 남긴다. 하네스는 `npm run app:front-end-source-index`로 이 값을 읽고, 전체 Playwright JSON 결과(`app/front-end/test-results/e2e-results.json`)와 병합해 RED/GREEN/BLUE를 판정한다. 부분 Playwright 실행 결과(`app/front-end/test-results/e2e-results.partial.json`)는 디버깅용이며 하네스 입력이 아니다.
+FE 테스트 계층은 [`front-end-testing.md`](../../app/docs/standards/front-end-testing.md)를 따른다. FE BDD 테스트는 Playwright `test.info().annotations.push(...)`에 `Requirement`/`Covers` literal 메타데이터를 남긴다. 하네스는 `npm run app:front-end-source-index`로 이 값을 읽고, mock Playwright JSON 결과(`app/front-end/test-results/e2e-results.json`)와 live smoke JSON 결과(`app/front-end/test-results/e2e-live-results.json`)를 병합해 RED/GREEN/BLUE를 판정한다. 부분 Playwright 실행 결과(`app/front-end/test-results/e2e-results.partial.json`)는 디버깅용이며 하네스 입력이 아니다.
+
+상위 요건의 `(E2E)` AC는 mock API가 아니라 `tests/e2e/live/**/*.live.spec.ts`의 live Playwright smoke로 커버한다. live smoke는 실 Spring Boot 백엔드와 Vite dev server를 함께 띄우고, FE origin proxy와 브라우저 Cookie 인증 흐름까지 포함해 기능 전체 성과를 확인한다. 세부 화면 상태, 입력 검증, 실패 분기는 하위 원자 요건의 테스트로 내려보낸다.
 
 FE 구현에서 route/page를 추가하거나 변경하면 같은 구현 단위에서 route 기준 page mock story를 작성하거나 갱신한다. page mock story는 실제 page 컴포넌트를 `MemoryRouter`, mock auth provider, mock API provider처럼 필요한 최소 provider로 감싸 route 진입 화면을 Storybook에서 확인할 수 있게 만든다. 공통 UI primitive(`app/front-end/src/components/ui`) 또는 주요 화면 조각을 추가하거나 변경할 때도 Storybook story를 작성하거나 갱신한다. Storybook은 완료 판정의 직접 근거가 아니라 상태 카탈로그와 visual regression 기준 화면이므로, story에는 `parameters.harness.requirements`로 관련 요건을 연결하고 normal/disabled/loading/error/open/empty 같은 사용자가 관찰할 상태를 고정한다. Skeleton 단계에서는 story 목록만 승인받고 실제 `*.stories.tsx` 구현은 승인 후 작성한다.
 

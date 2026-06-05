@@ -9,7 +9,7 @@
 대상 시스템: application
 제품 영역: todo
 품질 속성: none
-검증 수준: acceptance
+검증 수준: e2e
 관련 요건: REQ-022, REQ-023, REQ-024, REQ-027, REQ-025, REQ-026, REQ-004
 대체 요건: 없음
 
@@ -40,7 +40,7 @@
 
 ## 수용 기준
 
-- (API) 로그인 사용자는 API로 자신의 할 일을 생성하고 목록에서 확인한 뒤 수정하고 삭제할 수 있다
+- (E2E) 로그인 사용자는 API로 자신의 할 일을 생성하고 목록에서 확인한 뒤 수정하고 삭제할 수 있다
 
 ## 의사결정 로그
 
@@ -50,6 +50,12 @@
   결정자: REDSTONE
   영향: `REQ-002`는 `대체됨`으로 닫고, 상세 AC는 `REQ-022`~`REQ-026`으로 이동한다.
 
+- 결정일: 2026-06-05
+  결정: 상위 요건의 전체 할 일 생명주기 AC는 실 백엔드와 실 프런트엔드 dev server를 함께 띄운 Playwright 통합 스모크 테스트가 커버한다.
+  이유: 현재 할 일 관리 화면 본문은 범위 밖이지만, 브라우저 세션에서 로그인 Cookie를 받은 뒤 FE origin의 proxy를 통해 `/todos` API를 호출하면 인증 Cookie, Vite proxy, 백엔드 API 결합을 검증할 수 있다.
+  결정자: REDSTONE
+  영향: `REQ-021`의 검증 수준은 `e2e`로 전환한다. 기존 `TodoLifecycleApiAcceptanceTest`는 `@Requirement`/`@Covers`를 제거해 trace에 연결하지 않는 API 생명주기 회귀 테스트로만 유지한다. 생성/목록/수정/삭제의 게이트 기여는 `REQ-022`~`REQ-026` 원자 Acceptance Test와 live Playwright smoke가 소유한다.
+
 ## BDD 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-021-personal-todo-management.feature`
@@ -57,13 +63,13 @@
 ### 요건 Skeleton 승인 이력
 
 - 승인일: 2026-06-02
-  검증 설계: 기능 전체 성과 AC 1개를 API lifecycle 시나리오와 Acceptance Test로 검증한다.
+  검증 설계: 기능 전체 성과 AC 1개를 브라우저 세션 기반 통합 스모크 시나리오와 Playwright live test로 검증한다.
   API Skeleton: 기존 `/todos` 생성/목록/수정/삭제 API 사용.
   DB Skeleton: 기존 `Todo` Entity 사용.
   화면/라우팅 Skeleton: 해당 없음.
   검사기 Skeleton: 해당 없음.
   추적 정책: 상위 요건은 하위 AC를 복사하지 않고 전체 기능 성과 AC만 소유한다.
-  검증: `./gradlew test`, `traceRequirements`.
+  검증: `npm run e2e:live`, `traceRequirements`.
   승인자: REDSTONE
   Skeleton 결과: 승인
 
@@ -76,4 +82,4 @@
 
 ## 열린 질문
 
-- 없음
+- 할 일 관리 화면 본문이 별도 요건으로 들어오면 `REQ-021` live smoke를 `fetch("/todos")` 중심 검증에서 화면 조작 여정으로 승격할지 결정한다.

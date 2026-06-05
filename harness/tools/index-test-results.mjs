@@ -9,7 +9,10 @@ import { backendRoot, currentScope, frontEndRoot, outputRootFor, workspaceRoot }
 
 const scope = currentScope();
 const outputRoot = outputRootFor(scope);
-const frontEndTestResultPath = path.join(frontEndRoot, 'test-results', 'e2e-results.json');
+const frontEndTestResultPaths = [
+    path.join(frontEndRoot, 'test-results', 'e2e-results.json'),
+    path.join(frontEndRoot, 'test-results', 'e2e-live-results.json')
+];
 const outDir = path.join(outputRoot, 'indexes');
 const outFile = path.join(outDir, 'test-results.index.json');
 
@@ -50,7 +53,10 @@ function normalizeRepoPath(filePath) {
     if (normalized.startsWith(`${frontEndRepoPrefix}/`)) {
         return normalized;
     }
-    if (!normalized.includes('/') && /\.spec\.[cm]?[tj]sx?$/.test(normalized)) {
+    if (normalized.startsWith('tests/e2e/')) {
+        return `${frontEndRepoPrefix}/${normalized}`;
+    }
+    if (/\.spec\.[cm]?[tj]sx?$/.test(normalized)) {
         return `${frontEndRepoPrefix}/tests/e2e/${normalized}`;
     }
     return `${frontEndRepoPrefix}/${normalized}`;
@@ -175,17 +181,14 @@ function collectNodeJUnit() {
     return entries;
 }
 
-function collectPlaywright() {
+function collectPlaywrightReport(reportPath) {
     const entries = [];
-    if (scope !== 'application') {
-        return entries;
-    }
-    if (!fs.existsSync(frontEndTestResultPath)) {
+    if (!fs.existsSync(reportPath)) {
         return entries;
     }
     let report;
     try {
-        report = JSON.parse(fs.readFileSync(frontEndTestResultPath, 'utf8'));
+        report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
     } catch {
         return entries;
     }
@@ -227,6 +230,13 @@ function collectPlaywright() {
         walkSuite(suite, []);
     }
     return entries;
+}
+
+function collectPlaywright() {
+    if (scope !== 'application') {
+        return [];
+    }
+    return frontEndTestResultPaths.flatMap((reportPath) => collectPlaywrightReport(reportPath));
 }
 
 function main() {
