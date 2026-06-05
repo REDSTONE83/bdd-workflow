@@ -3,13 +3,24 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "trace": "cd back-end && ./gradlew traceRequirements",
-    "validate": "npm run harness:test && cd back-end && ./gradlew validateHarness",
-    "harness:trace": "node tools/harness/trace-requirements.mjs",
-    "harness:scenario-index": "node tools/harness/scenario-index.mjs",
-    "harness:change-sets": "node tools/harness/index-change-sets.mjs && node tools/harness/render-change-set-report.mjs",
-    "harness:terminology": "node tools/harness/terminology.mjs",
-    "harness:standards": "node tools/harness/validate-back-end-standards.mjs",
-    "harness:test": "node --test tools/harness/__tests__/*.test.mjs"
+    "app:test": "node harness/tools/run.mjs app:test",
+    "app:report": "node harness/tools/run.mjs app:trace",
+    "app:trace": "node harness/tools/run.mjs app:trace",
+    "app:validate": "node harness/tools/run.mjs app:validate",
+    "app:source-index": "node harness/tools/run.mjs app:source-index",
+    "app:front-end-source-index": "node harness/tools/run.mjs app:front-end-source-index",
+    "app:scenario-index": "node harness/tools/run.mjs app:scenario-index",
+    "app:openapi-index": "node harness/tools/run.mjs app:openapi-index",
+    "harness:test": "node harness/tools/run.mjs harness:test",
+    "harness:report": "node harness/tools/run.mjs harness:trace",
+    "harness:validate": "node harness/tools/run.mjs harness:validate",
+    "harness:trace": "node harness/tools/run.mjs harness:trace",
+    "harness:self-test-index": "node harness/tools/run.mjs harness:self-test-index",
+    "harness:change-sets": "node harness/tools/run.mjs harness:change-sets",
+    "harness:terminology": "node harness/tools/run.mjs harness:terminology",
+    "harness:standards": "node harness/tools/run.mjs harness:standards",
+    "harness:tool-test": "node harness/tools/run.mjs harness:tool-test",
+    "harness:self-test": "node harness/tools/run.mjs harness:self-test",
+    "repo:validate": "node harness/tools/run.mjs repo:validate"
   }
 }

@@ -1,0 +1,7 @@
+plugins {
+    id 'java-library'
+}
+
+base {
+    archivesName = 'bdd-workflow-harness-annotations'
+}

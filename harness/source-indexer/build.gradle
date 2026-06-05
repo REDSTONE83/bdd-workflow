@@ -1,0 +1,15 @@
+plugins {
+    id 'application'
+}
+
+base {
+    archivesName = 'bdd-workflow-harness-source-indexer'
+}
+
+dependencies {
+    implementation 'com.github.javaparser:javaparser-core:3.26.4'
+}
+
+application {
+    mainClass = 'com.example.bddworkflow.harness.SourceIndexGenerator'
+}
