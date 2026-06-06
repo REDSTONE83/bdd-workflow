@@ -344,14 +344,7 @@ Feature: 이메일·비밀번호 로그인과 로그아웃
     Then 사용자는 현재 화면에 그대로 머무르고
     And 헤더 바로 아래에 재시도를 안내하는 알림이 한 줄로 노출되며, 사용자가 닫거나 다음 성공 응답을 받으면 사라진다
 
-  # ===== Placeholder 화면 =====
+  # ===== Placeholder 화면 이관 =====
   # /signup 은 REQ-001(이메일 회원 가입 화면)이 실제 화면으로 구현하면서 본 카드의 placeholder
-  # 책임을 이관받았다. 관련 시나리오는 docs/scenarios/REQ-001-email-signup-screen.feature 에 있다.
-
-  Scenario: 인증된 사용자의 /todos 경로는 자신의 이메일이 표시되는 빈 보호 화면 placeholder 를 보여준다
-    Covers:
-      - 인증된 사용자가 `/todos` 경로에 접근하면 자신의 이메일이 표시되는 빈 보호 화면이 보인다
-
-    Given 인증된 사용자가 /todos 경로에 접근한다
-    When 화면이 표시된다
-    Then 공통 헤더에 자신의 이메일이 표시되고 본문은 빈 보호 화면 placeholder 로 표시된다
+  # 책임을 이관받았다. /todos 는 REQ-023(할 일 목록 조회)과 할 일 원자 요건이 실제 화면으로
+  # 구현하면서 본 카드의 placeholder 책임에서 제외되었다.

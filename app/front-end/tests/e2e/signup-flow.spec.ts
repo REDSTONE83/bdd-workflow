@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test"
 
 import { DEFAULT_USER, installAuthRoutes } from "./_helpers/auth-mocks"
+import { installCategoryRoutes } from "./_helpers/category-mocks"
 import { installSignupRoute } from "./_helpers/signup-mocks"
+import { installTodoRoutes } from "./_helpers/todo-mocks"
 
 const VALID = {
   name: "홍길동",
@@ -51,6 +53,8 @@ test.describe("회원 가입 성공 흐름 / 인증 가드", () => {
     )
 
     await installAuthRoutes(page, { authenticated: DEFAULT_USER })
+    await installCategoryRoutes(page, { initial: [] })
+    await installTodoRoutes(page, { initial: [] })
     await page.goto("/signup")
 
     await expect(page).toHaveURL(/\/todos$/)
