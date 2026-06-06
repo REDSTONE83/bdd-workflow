@@ -1,8 +1,6 @@
 package com.example.bddworkflow.todo;
 
 import com.example.bddworkflow.testsupport.ApiAcceptanceTest;
-import com.example.bddworkflow.harness.Covers;
-import com.example.bddworkflow.harness.Requirement;
 import com.example.bddworkflow.todo.repository.TodoRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,7 +23,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ApiAcceptanceTest
-@Requirement("REQ-021")
 class TodoLifecycleApiAcceptanceTest {
 
     private static final UUID USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000064");
@@ -45,7 +42,6 @@ class TodoLifecycleApiAcceptanceTest {
     }
 
     @Test
-    @Covers("로그인 사용자는 API로 자신의 할 일을 생성하고 목록에서 확인한 뒤 수정하고 삭제할 수 있다")
     @DisplayName("로그인 사용자가 할 일을 만들고 확인하고 수정한 뒤 삭제한다")
     void authenticatedUserCanCreateListUpdateAndDeleteOwnTodo() throws Exception {
         String createResponse = mockMvc.perform(post("/todos")

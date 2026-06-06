@@ -60,10 +60,16 @@
   결정자: Product Owner, Tech Lead
   영향: 상세 생성/조회/수정/삭제/기본 시드 검증은 하위 원자 요건에서 관리한다.
 
+- 결정일: 2026-06-05
+  결정: 상위 요건의 `(E2E)` AC는 mock API가 아니라 실 백엔드와 실 프런트엔드를 함께 띄운 Playwright 통합 스모크 테스트가 커버한다.
+  이유: 상위 요건은 개별 화면 상태보다 프런트엔드 라우팅, Vite proxy, HttpOnly Cookie, 백엔드 API가 결합된 사용자 성과를 확인해야 한다.
+  결정자: REDSTONE
+  영향: mock 기반 카테고리 E2E는 보조 회귀 테스트로 남기고, `REQ-015` 커버리지는 `tests/e2e/live`의 live spec이 소유한다.
+
 ## BDD 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-015-category-management.feature`
-- 검증 설계: 카테고리 관리 전체 여정 AC를 Playwright E2E 테스트 한 개와 연결한다.
+- 검증 설계: 카테고리 관리 전체 여정 AC를 실 백엔드 + 실 프런트엔드 Playwright 통합 스모크 테스트 한 개와 연결한다.
 - 결과: 검토중
 
 ## 열린 질문

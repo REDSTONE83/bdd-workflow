@@ -102,6 +102,8 @@ BLUE
 npm run app:validate
 npm run app:trace -- --requirement REQ-011
 npm run app:test
+npm run app:e2e
+npm run app:e2e:live
 npm run app:source-index
 npm run app:front-end-source-index
 npm run app:openapi-index
@@ -133,6 +135,7 @@ npm run test
 npm run build
 npm run build-storybook
 npm run e2e
+npm run e2e:live
 npm run validate
 npm run validate:full
 ```
