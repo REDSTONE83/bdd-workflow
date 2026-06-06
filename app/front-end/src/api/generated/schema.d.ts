@@ -232,25 +232,6 @@ export interface components {
              */
             password: string;
         };
-        /** @description 회원 가입 응답 */
-        SignupResponse: {
-            /**
-             * Format: uuid
-             * @description 생성된 사용자 ID
-             * @example 01900000-0000-7000-8000-000000000000
-             */
-            userId?: string;
-            /**
-             * @description 이메일
-             * @example hong@example.com
-             */
-            email?: string;
-            /**
-             * @description 사용자 이름
-             * @example 홍길동
-             */
-            name?: string;
-        };
         /** @description API 오류 응답 */
         ApiError: {
             /**
@@ -300,6 +281,25 @@ export interface components {
              * @example 이미 등록된 이메일입니다.
              */
             message?: string;
+        };
+        /** @description 회원 가입 응답 */
+        SignupResponse: {
+            /**
+             * Format: uuid
+             * @description 생성된 사용자 ID
+             * @example 01900000-0000-7000-8000-000000000000
+             */
+            userId?: string;
+            /**
+             * @description 이메일
+             * @example hong@example.com
+             */
+            email?: string;
+            /**
+             * @description 사용자 이름
+             * @example 홍길동
+             */
+            name?: string;
         };
         /** @description 할 일 생성 요청. 제목은 trim된 뒤 검증되고 저장된다. completed 필드는 받지 않으며 항상 false로 시작한다. */
         CreateTodoRequest: {

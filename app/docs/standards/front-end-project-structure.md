@@ -156,6 +156,8 @@ Something.stories.tsx # Storybook story
 
 화면, 라우팅, 클라이언트 상태, 데스크톱 시각/접근성 품질은 `(UI)` 또는 `(E2E)` AC와 FE source index 메타데이터로 추적한다.
 
+화면 하나가 여러 업무 기능을 함께 다루면 화면 전용 REQ를 새로 만들지 않고 해당 기능 원자 요건들을 모두 연결한다. 예를 들어 목록 화면에서 생성, 수정, 삭제, 완료 상태 변경까지 조작하면 page/container와 Storybook metadata는 관련 원자 요건을 다중 `@Requirement`로 표시하고, FE BDD 테스트의 각 `Covers`는 실제 AC를 소유한 기능 요건을 가리킨다.
+
 화면/route가 요건에 연결되어야 하는 경우 파일 상단 JSDoc 블록의 태그로 표시한다.
 요건 메타데이터는 JSDoc 단일 방식으로 통일하며, 컴포넌트/훅/유틸 어느 파일에도 별도
 `export const harness = {...}` 객체를 두지 않는다. React Fast Refresh 가 비-컴포넌트

@@ -8,8 +8,8 @@
 명세 역할: 원자 요건
 대상 시스템: application
 제품 영역: todo
-품질 속성: none
-검증 수준: acceptance
+품질 속성: usability
+검증 수준: mixed
 관련 요건: REQ-021, REQ-024, REQ-004
 대체 요건: 없음
 
@@ -23,6 +23,7 @@
 - `completed`는 명시적 `null`을 허용하지 않는다.
 - 자원 존재 여부, 소유자 격리, 누락 필드 유지 판단은 같은 PATCH 경로의 공통 수정 정책인 `REQ-024`를 따른다.
 - 별도 완료 전용 endpoint는 두지 않는다.
+- 화면에서는 목록 항목의 체크박스로 완료 상태를 즉시 바꾼다.
 
 ## 표준 용어
 
@@ -47,6 +48,7 @@
 - (API) 수정 시 완료 상태를 명시적으로 비우려고 하면 수정이 거절된다
 - (API) 수정 시 완료로 표시하면 할 일이 완료 상태로 바뀐다
 - (API) 수정 시 미완료로 되돌리면 할 일이 미완료 상태로 되돌아간다
+- (UI) 할 일 목록의 완료 체크를 바꾸면 목록의 완료 상태 표시가 바뀐다
 
 ## 의사결정 로그
 
@@ -62,6 +64,12 @@
   결정자: REDSTONE
   영향: `REQ-024`는 일반 부분 수정 AC만 소유하고, `REQ-027`은 `completed` 상태 변경 AC와 테스트를 소유한다.
 
+- 결정일: 2026-06-06
+  결정: 완료 상태 변경 UI는 별도 화면 카드가 아니라 본 완료 상태 원자 요건이 소유한다.
+  이유: 사용자가 목록에서 체크박스로 완료 상태를 바꾸는 흐름은 완료 상태 변경 기능의 사용자 완료 조건이다.
+  결정자: REDSTONE
+  영향: 목록 체크박스 토글 UI AC와 FE BDD 커버리지를 본 카드로 이동한다.
+
 ## BDD 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-027-todo-completion-status.feature`
@@ -69,10 +77,10 @@
 ### 요건 Skeleton 승인 이력
 
 - 승인일: 2026-06-02
-  검증 설계: 완료 상태 null 거절, 완료 처리, 미완료 되돌리기 시나리오가 모든 AC를 커버한다.
+  검증 설계: 완료 상태 null 거절, 완료 처리, 미완료 되돌리기 시나리오가 모든 API AC를 커버한다.
   API Skeleton: 기존 `PATCH /todos/{todoId}`, `UpdateTodoRequest`, `TodoResponse`.
   DB Skeleton: 기존 `Todo` Entity.
-  화면/라우팅 Skeleton: 해당 없음.
+  화면/라우팅 Skeleton: 2026-06-06 화면 도입 후 `/todos` 목록 항목의 체크박스가 본 카드 UI AC를 커버한다.
   검사기 Skeleton: 해당 없음.
   추적 정책: 기존 `REQ-024` 완료 상태 변경 AC와 테스트를 `REQ-027`로 이동한다.
   검증: `./gradlew test`, `traceRequirements`.
@@ -85,6 +93,11 @@
   리뷰자: REDSTONE
   확인: 모든 완료 상태 변경 AC가 `TodoCompletionStatusApiAcceptanceTest`와 시나리오 `Covers:`로 연결된다.
   결과: 승인
+
+- 리뷰일: 2026-06-06
+  리뷰자: REDSTONE
+  확인: 완료 상태 변경 UI AC가 Playwright FE BDD 테스트의 `Requirement: REQ-027`와 `.feature` `Covers:` 블록에 연결된다.
+  결과: 검토중
 
 ## 열린 질문
 

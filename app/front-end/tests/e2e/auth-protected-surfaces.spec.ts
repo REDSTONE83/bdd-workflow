@@ -2,9 +2,11 @@ import { expect, test } from "@playwright/test"
 
 import { routeApi } from "./_helpers/apiRoute"
 import { DEFAULT_USER, installAuthRoutes } from "./_helpers/auth-mocks"
+import { installCategoryRoutes } from "./_helpers/category-mocks"
+import { installTodoRoutes } from "./_helpers/todo-mocks"
 
-// REQ-011 FE: 보호 화면 스켈레톤, 공통 헤더, 사용자 메뉴, 로그아웃 성공/실패, placeholder.
-test.describe("보호 화면 / 헤더 / 로그아웃 / placeholder", () => {
+// REQ-011 FE: 보호 화면 스켈레톤, 공통 헤더, 사용자 메뉴, 로그아웃 성공/실패.
+test.describe("보호 화면 / 헤더 / 로그아웃", () => {
   test("보호 화면 진입 시 인증 확인 전에는 스켈레톤이 표시된다", async ({
     page,
   }, testInfo) => {
@@ -35,6 +37,8 @@ test.describe("보호 화면 / 헤더 / 로그아웃 / placeholder", () => {
     await routeApi(page, "**/auth/login", async (route) => {
       await route.fulfill({ status: 204, body: "" })
     })
+    await installCategoryRoutes(page, { initial: [] })
+    await installTodoRoutes(page, { initial: [] })
 
     await page.goto("/todos")
     await expect(page.getByTestId("auth-skeleton")).toBeVisible()
@@ -49,13 +53,11 @@ test.describe("보호 화면 / 헤더 / 로그아웃 / placeholder", () => {
         description:
           "보호 화면에는 공통 상단 헤더가 있고, 헤더 우측에 현재 사용자의 이메일이 표시된다",
       },
-      {
-        type: "Covers",
-        description: "인증된 사용자가 `/todos` 경로에 접근하면 자신의 이메일이 표시되는 빈 보호 화면이 보인다",
-      },
     )
 
     await installAuthRoutes(page, { authenticated: DEFAULT_USER })
+    await installCategoryRoutes(page, { initial: [] })
+    await installTodoRoutes(page, { initial: [] })
     await page.goto("/todos")
     await expect(page.getByText(DEFAULT_USER.email)).toBeVisible()
   })
@@ -73,6 +75,8 @@ test.describe("보호 화면 / 헤더 / 로그아웃 / placeholder", () => {
     )
 
     await installAuthRoutes(page, { authenticated: DEFAULT_USER })
+    await installCategoryRoutes(page, { initial: [] })
+    await installTodoRoutes(page, { initial: [] })
     await page.goto("/todos")
     await page.getByRole("button", { name: /사용자 메뉴 열기/ }).click()
     await expect(page.getByRole("menuitem", { name: "로그아웃" })).toBeVisible()
@@ -91,6 +95,8 @@ test.describe("보호 화면 / 헤더 / 로그아웃 / placeholder", () => {
     )
 
     await installAuthRoutes(page, { authenticated: DEFAULT_USER, logoutStatus: 204 })
+    await installCategoryRoutes(page, { initial: [] })
+    await installTodoRoutes(page, { initial: [] })
     await page.goto("/todos")
     await page.getByRole("button", { name: /사용자 메뉴 열기/ }).click()
     await page.getByRole("menuitem", { name: "로그아웃" }).click()
@@ -111,6 +117,8 @@ test.describe("보호 화면 / 헤더 / 로그아웃 / placeholder", () => {
     )
 
     await installAuthRoutes(page, { authenticated: DEFAULT_USER, logoutStatus: 500 })
+    await installCategoryRoutes(page, { initial: [] })
+    await installTodoRoutes(page, { initial: [] })
     await page.goto("/todos")
     await page.getByRole("button", { name: /사용자 메뉴 열기/ }).click()
     await page.getByRole("menuitem", { name: "로그아웃" }).click()

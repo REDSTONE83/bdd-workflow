@@ -2,35 +2,6 @@ import { expect, type Page, test } from "@playwright/test"
 
 const PASSWORD = "Password123!"
 
-type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue }
-
-type ApiResult<T> = {
-  status: number
-  body: T
-}
-
-type PageResponse<T> = {
-  content: T[]
-  totalElements: number
-}
-
-type TodoResponse = {
-  todoId: string
-  title: string
-  completed: boolean
-}
-
-type ApiOptions = {
-  method?: string
-  body?: JsonValue
-}
-
 function uniqueEmail(prefix: string) {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   return `${prefix}-${suffix}@example.com`
@@ -55,31 +26,6 @@ async function signupAndLogin(page: Page, prefix: string) {
   await expect(page).toHaveURL(/\/todos$/)
   await expect(page.getByText(email)).toBeVisible()
   return email
-}
-
-async function browserApi<T>(
-  page: Page,
-  path: string,
-  options: ApiOptions = {},
-): Promise<ApiResult<T>> {
-  return page.evaluate(
-    async ({ path, options }) => {
-      const response = await fetch(path, {
-        method: options.method ?? "GET",
-        credentials: "include",
-        headers:
-          options.body === undefined
-            ? undefined
-            : { "Content-Type": "application/json" },
-        body:
-          options.body === undefined ? undefined : JSON.stringify(options.body),
-      })
-      const text = await response.text()
-      const body = text ? JSON.parse(text) : null
-      return { status: response.status, body }
-    },
-    { path, options },
-  ) as Promise<ApiResult<T>>
 }
 
 test.describe("상위 요건 통합 스모크", () => {
@@ -129,7 +75,7 @@ test.describe("상위 요건 통합 스모크", () => {
     await expect(page.getByRole("heading", { name: "카테고리" })).toBeVisible()
   })
 
-  test("브라우저 세션에서 실서버 할 일 API 생명주기가 동작한다", async ({
+  test("실서버 할 일 관리 화면 여정이 동작한다", async ({
     page,
   }, testInfo) => {
     testInfo.annotations.push(
@@ -137,52 +83,43 @@ test.describe("상위 요건 통합 스모크", () => {
       {
         type: "Covers",
         description:
-          "로그인 사용자는 API로 자신의 할 일을 생성하고 목록에서 확인한 뒤 수정하고 삭제할 수 있다",
+          "로그인 사용자는 할 일 화면에서 자신의 할 일을 확인하고 새 할 일을 만든 뒤 수정하고 완료 상태를 바꾸고 삭제할 수 있다",
       },
     )
 
     await signupAndLogin(page, "todo-smoke")
+    await expect(page.getByRole("heading", { name: "할 일" })).toBeVisible()
+    await expect(page.getByRole("button", { name: "새 할 일" })).toBeVisible()
 
     const title = `통합 할 일 ${Date.now()}`
     const updatedTitle = `${title} 수정`
 
-    const created = await browserApi<TodoResponse>(page, "/todos", {
-      method: "POST",
-      body: { title, priority: "HIGH" },
-    })
-    expect(created.status).toBe(201)
-    expect(created.body.title).toBe(title)
+    await page.getByRole("button", { name: "새 할 일" }).click()
+    await page.getByLabel("제목", { exact: true }).fill(title)
+    await page.getByLabel("우선순위", { exact: true }).selectOption("HIGH")
+    await page.getByRole("button", { name: "만들기" }).click()
 
-    const listed = await browserApi<PageResponse<TodoResponse>>(page, "/todos")
-    expect(listed.status).toBe(200)
-    expect(listed.body.content.some((todo) => todo.todoId === created.body.todoId)).toBe(
-      true,
-    )
+    const created = page.getByRole("listitem").filter({ hasText: title })
+    await expect(created).toBeVisible()
+    await expect(created).toContainText("미완료")
 
-    const updated = await browserApi<TodoResponse>(
-      page,
-      `/todos/${created.body.todoId}`,
-      {
-        method: "PATCH",
-        body: { title: updatedTitle, completed: true },
-      },
-    )
-    expect(updated.status).toBe(200)
-    expect(updated.body.title).toBe(updatedTitle)
-    expect(updated.body.completed).toBe(true)
+    await page.getByRole("button", { name: `${title} 수정` }).click()
+    await page.getByLabel("제목", { exact: true }).fill(updatedTitle)
+    await page.getByRole("button", { name: "저장" }).click()
+    const updated = page.getByRole("listitem").filter({ hasText: updatedTitle })
+    await expect(updated).toBeVisible()
 
-    const deleted = await browserApi<null>(page, `/todos/${created.body.todoId}`, {
-      method: "DELETE",
-    })
-    expect(deleted.status).toBe(204)
+    const checkbox = page.getByRole("checkbox", { name: `${updatedTitle} 완료` })
+    await expect(checkbox).not.toBeChecked()
+    await checkbox.click()
+    await expect(checkbox).toBeChecked()
+    await expect(updated).toContainText("완료")
 
-    const afterDelete = await browserApi<PageResponse<TodoResponse>>(
-      page,
-      "/todos",
-    )
-    expect(afterDelete.status).toBe(200)
-    expect(
-      afterDelete.body.content.some((todo) => todo.todoId === created.body.todoId),
-    ).toBe(false)
+    await page.getByRole("button", { name: `${updatedTitle} 삭제` }).click()
+    await expect(page.getByText(`‘${updatedTitle}’ 할 일을 삭제할까요?`)).toBeVisible()
+    await page.getByRole("button", { name: "삭제", exact: true }).click()
+    await expect(
+      page.getByRole("listitem").filter({ hasText: updatedTitle }),
+    ).toHaveCount(0)
   })
 })

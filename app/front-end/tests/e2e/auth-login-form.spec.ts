@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test"
 
 import { routeApi } from "./_helpers/apiRoute"
 import { DEFAULT_USER, installAuthRoutes } from "./_helpers/auth-mocks"
+import { installCategoryRoutes } from "./_helpers/category-mocks"
+import { installTodoRoutes } from "./_helpers/todo-mocks"
 
 // REQ-011 FE: 로그인 화면 폼의 구성/포커스/마스킹/토글/검증/Enter/대기/실패 처리.
 test.describe("로그인 화면 폼", () => {
@@ -145,6 +147,8 @@ test.describe("로그인 화면 폼", () => {
     )
 
     await installAuthRoutes(page, { authenticated: null, loginStatus: 204 })
+    await installCategoryRoutes(page, { initial: [] })
+    await installTodoRoutes(page, { initial: [] })
     await page.goto("/login")
     await page.getByLabel("이메일").fill(DEFAULT_USER.email)
     await page.getByLabel("비밀번호", { exact: true }).fill("password123")
