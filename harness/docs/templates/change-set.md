@@ -1,4 +1,4 @@
-# Change Set: 작업 제목
+# Change Set: YYYY-MM-DD 작업 제목
 
 상태: 계획 | 진행중 | 완료 | 보류
 요청일: YYYY-MM-DD

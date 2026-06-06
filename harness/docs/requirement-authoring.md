@@ -28,7 +28,7 @@
 ## 진행 용어
 
 - 검증 설계: 수용 기준과 `.feature` 시나리오로 무엇을 검증할지 정한 것. 요건 Skeleton보다 먼저 작성한다.
-- Change Set: 사용자 요청을 처리하기 위해 함께 바꾸는 REQ 집합. 영구 명세 원천이 아니라 작업 범위이며, 별도 사람이 관리하는 ID 없이 `app/docs/change-sets/*.md` 또는 `harness/docs/change-sets/*.md` 파일 경로를 identity로 쓴다.
+- Change Set: 사용자 요청을 처리하기 위해 함께 바꾸는 REQ 집합. 영구 명세 원천이 아니라 작업 범위이며, 별도 사람이 관리하는 ID 없이 `app/docs/change-sets/YYYY-MM-DD-slug.md` 또는 `harness/docs/change-sets/YYYY-MM-DD-slug.md` 파일 경로를 identity로 쓴다. 첫 줄 제목도 `# Change Set: YYYY-MM-DD 작업 제목` 형식으로 날짜를 포함한다.
 - 요건 Skeleton: API/DB/Service 계약 골격. 업무 로직은 없고 동작 설계는 내부 코멘트로만 둔다.
 - 화면/라우팅 Skeleton: 화면 이름, 업무 진입점, 예상 route 초안, 접근 권한, 주요 표시 정보. 실제 컴포넌트 구현이나 DOM 구조는 만들지 않는다.
 - 실행 테스트: 승인된 검증 설계를 JUnit Acceptance Test 또는 FE BDD 테스트로 옮긴 코드. 요건 Skeleton 승인 후 작성한다.
