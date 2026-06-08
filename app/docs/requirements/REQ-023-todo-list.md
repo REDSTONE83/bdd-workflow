@@ -3,7 +3,7 @@
 요건 ID: REQ-023
 제목: 할 일 목록 조회
 우선순위: 높음
-상태: 검토중
+상태: 승인
 요건 종류: 기능
 명세 역할: 원자 요건
 대상 시스템: application
@@ -81,6 +81,35 @@
 - (UI) 데스크톱 화면에서 할 일 목록과 입력 영역의 주요 요소가 화면 밖으로 넘치지 않는다
 - (UI) 할 일 화면은 자동 접근성 검사에서 위반이 없어야 한다
 
+## 검증 대상
+
+- API: 필요
+- DB: 필요
+- UI: 필요
+- Storybook: 필요
+- E2E: 필요
+- STATIC: 불필요
+
+## API Skeleton
+
+- `GET /todos`: 인증 사용자 기준 `PageResponse<TodoResponse>`를 반환하고 기본 `page=0`, `size=20`을 사용한다.
+- 목록 응답 DTO는 할 일 기본 필드와 연결된 카테고리의 이름/색상 정보를 포함한다.
+- sort query는 허용된 sort key만 받고, 지정하지 않으면 미완료, 우선순위, 생성 순서 기준 기본 정렬을 적용한다.
+- FE API client는 `/todos` GET을 할 일 화면 mount와 추가 묶음 로드 시 generated client 경유로 호출한다.
+
+## DB Skeleton
+
+- `Todo` entity/table은 사용자 소유권 격리를 위해 `user_id`를 가진다.
+- 목록 조회는 `user_id`로 격리하고 기본 정렬과 페이지 크기 제한을 적용한다.
+- 카테고리 표시를 위해 nullable `category_id`와 카테고리 표시 정보를 응답 모델로 조합한다.
+
+## UI Skeleton
+
+- Page: `TodosPage`, route `/todos`, 보호 화면 앱 셸 안에서 렌더링한다.
+- Component: `TodoList`, 제목, 설명, 마감일, 우선순위, 완료 상태, 카테고리 표시, 빈 상태, 로딩, 오류, 추가 묶음 로드를 제공한다.
+- Route guard: 비인증 사용자는 로그인 화면으로 이동하고 로그인 후 `/todos`로 돌아온다.
+- Accessibility: 데스크톱 viewport overflow와 자동 접근성 검사를 FE BDD 테스트로 확인한다.
+
 ## Storybook 계약
 
 - Routes/TodosPage: RouteTodos, Empty, ManyItems
@@ -139,7 +168,21 @@
 - 리뷰일: 2026-06-06
   리뷰자: REDSTONE
   확인: 목록 화면, 보호 라우트, 데스크톱/접근성 UI AC가 Playwright FE BDD 테스트의 `Requirement: REQ-023`와 `.feature` `Covers:` 블록에 연결된다.
-  결과: 검토중
+  결과: 승인
+
+### 구현 검증 리뷰
+
+- 리뷰일: 2026-06-08
+  리뷰자: REDSTONE
+  확인: `npm run app:validate`가 Storybook build, back-end test, FE mock E2E, FE live E2E, trace `--check`를 모두 통과했고 본 카드의 구현 연결, AC Covers, 검증 대상 계약이 GREEN으로 유지된다.
+  결과: 승인
+
+### 최종 승인 리뷰
+
+- 승인일: 2026-06-08
+  승인자: REDSTONE
+  확인: 열린 질문이 없고 `npm run app:validate` 기준 RED가 없으며 API/DB/UI/Storybook/E2E 검증 대상이 모두 PASS 상태로 추적된다.
+  결과: 승인
 
 ## 열린 질문
 

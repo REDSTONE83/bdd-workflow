@@ -21,6 +21,10 @@ const longName: CategoryInput = {
   color: null,
   description: null,
 }
+const blankEditValue: CategoryInput = {
+  ...editValue,
+  name: "   ",
+}
 const longDescription: CategoryInput = {
   name: "유효한 이름",
   color: null,
@@ -68,7 +72,7 @@ export const Create: Story = {
   parameters: {
     docs: {
       description: {
-        story: "새 카테고리 만들기 모달. 이름은 필수, 색상·설명은 비울 수 있다.",
+        story: "새 카테고리 만들기 폼 대화상자. 이름은 필수, 색상·설명은 비울 수 있다.",
       },
     },
   },
@@ -79,7 +83,7 @@ export const Edit: Story = {
   parameters: {
     docs: {
       description: {
-        story: "기존 카테고리 수정 모달. 현재 값이 입력 영역에 채워진다.",
+        story: "기존 카테고리 수정 폼 대화상자. 현재 값이 입력 영역에 채워진다.",
       },
     },
   },
@@ -150,9 +154,84 @@ export const DuplicateNameRejection: Story = {
   parameters: {
     docs: {
       description: {
-        story: "서버가 이미 사용 중인 이름으로 거절했을 때 같은 모달에 중복 이름 안내가 표시되는 상태.",
+        story: "서버가 이미 사용 중인 이름으로 거절했을 때 같은 폼 대화상자에 중복 이름 안내가 표시되는 상태.",
       },
     },
   },
   play: submit("만들기"),
+}
+
+export const EditNameRequiredError: Story = {
+  args: { mode: "edit", initialValue: blankEditValue },
+  parameters: {
+    docs: {
+      description: {
+        story: "수정 폼 대화상자에서 이름을 비운 채 저장을 눌러 이름 입력 아래에 안내가 표시되는 상태.",
+      },
+    },
+  },
+  play: submit("저장"),
+}
+
+export const EditNameTooLongError: Story = {
+  args: { mode: "edit", initialValue: { ...editValue, name: longName.name } },
+  parameters: {
+    docs: {
+      description: {
+        story: "수정 폼 대화상자에서 이름이 50자를 초과해 이름이 너무 길다는 안내가 표시되는 상태.",
+      },
+    },
+  },
+  play: submit("저장"),
+}
+
+export const EditDescriptionTooLongError: Story = {
+  args: {
+    mode: "edit",
+    initialValue: { ...editValue, description: longDescription.description },
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: "수정 폼 대화상자에서 설명이 500자를 초과해 설명이 너무 길다는 안내가 표시되는 상태.",
+      },
+    },
+  },
+  play: submit("저장"),
+}
+
+export const EditColorFormatError: Story = {
+  args: { mode: "edit", initialValue: { ...editValue, color: badColor.color } },
+  parameters: {
+    docs: {
+      description: {
+        story: "수정 폼 대화상자에서 색상 형식이 맞지 않아 색상 입력 아래에 형식 안내가 표시되는 상태.",
+      },
+    },
+  },
+  play: submit("저장"),
+}
+
+export const EditSubmitting: Story = {
+  args: { mode: "edit", initialValue: editValue, onSubmit: hangingSubmit },
+  parameters: {
+    docs: {
+      description: {
+        story: "수정 폼 대화상자에서 저장 요청을 기다리는 동안 저장 버튼이 비활성화되는 상태.",
+      },
+    },
+  },
+  play: submit("저장"),
+}
+
+export const EditDuplicateNameRejection: Story = {
+  args: { mode: "edit", initialValue: editValue, onSubmit: duplicateSubmit },
+  parameters: {
+    docs: {
+      description: {
+        story: "수정 폼 대화상자에서 서버가 이미 사용 중인 이름으로 거절했을 때 중복 이름 안내가 표시되는 상태.",
+      },
+    },
+  },
+  play: submit("저장"),
 }

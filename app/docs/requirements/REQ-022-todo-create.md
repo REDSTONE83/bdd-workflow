@@ -3,7 +3,7 @@
 요건 ID: REQ-022
 제목: 할 일 생성
 우선순위: 높음
-상태: 검토중
+상태: 승인
 요건 종류: 기능
 명세 역할: 원자 요건
 대상 시스템: application
@@ -78,6 +78,32 @@
 - (UI) 새 할 일을 만들면 목록에 미완료 할 일로 보인다
 - (UI) 할 일 생성 요청이 실패하면 실패 안내가 보이고 사용자가 다시 시도할 수 있다
 
+## 검증 대상
+
+- API: 필요
+- DB: 필요
+- UI: 필요
+- Storybook: 필요
+- E2E: 불필요
+- STATIC: 불필요
+
+## API Skeleton
+
+- `POST /todos`: 인증 사용자 기준 `CreateTodoRequest`를 받아 새 할 일을 만들고 `TodoResponse`를 반환한다.
+- 요청 DTO는 제목, 설명, 마감일, 우선순위, 카테고리 ID를 받고 제목/설명/마감일/우선순위/카테고리 소유권 검증을 수행한다.
+- FE API client는 `/todos` POST를 새 할 일 만들기 폼 대화상자 submit 시 generated client 경유로 호출한다.
+
+## DB Skeleton
+
+- `Todo` entity/table은 `id`, `user_id`, `title`, `description`, `due_date`, `priority`, `completed`, `category_id`, `created_at`, `updated_at`를 가진다.
+- 생성 시 `completed=false`, 기본 우선순위 `MEDIUM`, nullable 선택 필드와 사용자 소유 카테고리 연결을 저장한다.
+
+## UI Skeleton
+
+- Component: `TodoFormDialog` create mode, 제목/설명/마감일/우선순위/카테고리 입력과 만들기 버튼을 제공한다.
+- Validation: 제목 필수, 설명 길이 제한, 저장 중 비활성, 저장 실패 재시도 상태를 표시한다.
+- Page integration: `TodosPage`는 생성 성공 후 새 미완료 할 일을 목록에 반영한다.
+
 ## Storybook 계약
 
 - Todos/TodoFormDialog: Create, TitleRequiredError, DescriptionTooLongError, Submitting, SaveFailure
@@ -135,7 +161,21 @@
 - 리뷰일: 2026-06-06
   리뷰자: REDSTONE
   확인: 생성 UI AC가 Playwright FE BDD 테스트의 `Requirement: REQ-022`와 `.feature` `Covers:` 블록에 연결된다.
-  결과: 검토중
+  결과: 승인
+
+### 구현 검증 리뷰
+
+- 리뷰일: 2026-06-08
+  리뷰자: REDSTONE
+  확인: `npm run app:validate`가 Storybook build, back-end test, FE mock E2E, FE live E2E, trace `--check`를 모두 통과했고 본 카드의 구현 연결, AC Covers, 검증 대상 계약이 GREEN으로 유지된다.
+  결과: 승인
+
+### 최종 승인 리뷰
+
+- 승인일: 2026-06-08
+  승인자: REDSTONE
+  확인: 열린 질문이 없고 `npm run app:validate` 기준 RED가 없으며 API/DB/UI/Storybook/E2E 검증 대상이 모두 PASS 상태로 추적된다.
+  결과: 승인
 
 ## 열린 질문
 

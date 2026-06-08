@@ -3,7 +3,7 @@
 요건 ID: REQ-019
 제목: 카테고리 삭제
 우선순위: 중간
-상태: 검토중
+상태: 승인
 요건 종류: 기능
 명세 역할: 원자 요건
 대상 시스템: application
@@ -49,6 +49,40 @@
 - (UI) 삭제를 확인하면 그 카테고리가 목록에서 사라진다
 - (UI) 카테고리를 삭제하는 요청을 기다리는 동안 삭제 버튼은 다시 누를 수 없는 상태로 표시된다
 
+## 검증 대상
+
+- API: 필요
+- DB: 필요
+- UI: 필요
+- Storybook: 필요
+- E2E: 불필요
+- STATIC: 불필요
+
+## API Skeleton
+
+- `DELETE /categories/{categoryId}`: 인증 사용자 기준 자신의 카테고리를 삭제하고 성공 시 `204 No Content`를 반환한다.
+- 존재하지 않거나 타인 소유인 카테고리는 동일하게 `404 Not Found`로 응답한다.
+- 삭제 서비스는 카테고리 삭제 전에 해당 카테고리에 연결된 할 일의 카테고리 연결 해제를 호출한다.
+- FE API client는 `/categories/{categoryId}` DELETE를 generated client 경유로 호출하고 실패 시 공통 쓰기 오류로 매핑한다.
+
+## DB Skeleton
+
+- `Category` entity/table `category`: 삭제 대상은 `findByIdAndUserId`로 사용자 소유 카테고리만 조회한다.
+- 삭제 시 `todo.category_id`는 일괄 update로 `null` 처리하고 할 일 row 자체는 유지한다.
+- 카테고리 row는 연결 해제 후 삭제한다.
+
+## UI Skeleton
+
+- Dialog: `CategoryDeleteDialog`는 카테고리 이름과 삭제 확인 안내를 보여준다.
+- Impact copy: 삭제 확인 대화상자는 묶였던 할 일이 미분류로 바뀐다는 설명을 보여주고 영향 건수는 표시하지 않는다.
+- Submission: 삭제 요청 중 삭제 버튼을 비활성화하고, 삭제 실패는 같은 확인 대화상자 안에 재시도 안내로 표시한다.
+- Page integration: `CategoriesPage`는 삭제 성공 후 카테고리 목록을 갱신해 삭제된 카테고리를 제거한다.
+
+## Storybook 계약
+
+- `Categories/CategoryDeleteDialog`: Default, Submitting, DeleteFailure
+- `Routes/CategoriesPage`: RouteCategories
+
 ## 의사결정 로그
 
 - 결정일: 2026-05-21
@@ -73,7 +107,21 @@
 
 - 시나리오 문서: `docs/scenarios/REQ-019-category-delete.feature`
 - 검증 설계: API 삭제 AC와 UI 삭제 확인/중복 제출 방지 AC를 기존 Acceptance Test와 Playwright FE BDD 테스트로 연결한다.
-- 결과: 검토중
+- 결과: 승인
+
+### 구현 검증 리뷰
+
+- 리뷰일: 2026-06-08
+  리뷰자: REDSTONE
+  확인: `npm run app:validate`가 Storybook build, back-end test, FE mock E2E, FE live E2E, trace `--check`를 모두 통과했고 본 카드의 구현 연결, AC Covers, 검증 대상 계약이 GREEN으로 유지된다.
+  결과: 승인
+
+### 최종 승인 리뷰
+
+- 승인일: 2026-06-08
+  승인자: REDSTONE
+  확인: 열린 질문이 없고 `npm run app:validate` 기준 RED가 없으며 API/DB/UI/Storybook/E2E 검증 대상이 모두 PASS 상태로 추적된다.
+  결과: 승인
 
 ## 열린 질문
 

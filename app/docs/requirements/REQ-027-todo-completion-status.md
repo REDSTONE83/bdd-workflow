@@ -3,7 +3,7 @@
 요건 ID: REQ-027
 제목: 할 일 완료 상태 변경
 우선순위: 높음
-상태: 검토중
+상태: 승인
 요건 종류: 기능
 명세 역할: 원자 요건
 대상 시스템: application
@@ -50,6 +50,31 @@
 - (API) 수정 시 미완료로 되돌리면 할 일이 미완료 상태로 되돌아간다
 - (UI) 할 일 목록의 완료 체크를 바꾸면 목록의 완료 상태 표시가 바뀐다
 
+## 검증 대상
+
+- API: 필요
+- DB: 필요
+- UI: 필요
+- Storybook: 필요
+- E2E: 불필요
+- STATIC: 불필요
+
+## API Skeleton
+
+- `PATCH /todos/{todoId}`: 인증 사용자 기준 `completed` 필드를 명시적으로 받아 완료 또는 미완료 상태로 바꾼다.
+- `completed`의 명시적 `null`은 거절하고, 자원 부재와 소유권 격리는 `REQ-024`와 같은 PATCH 경로 정책을 따른다.
+- FE API client는 목록 항목 체크박스 변경 시 `/todos/{todoId}` PATCH를 generated client 경유로 호출한다.
+
+## DB Skeleton
+
+- `Todo.completed`는 boolean 필드이며 완료와 미완료 상태를 모두 저장할 수 있다.
+- 완료 상태 변경은 같은 `Todo` row의 `completed` 값만 바꾸고 다른 필드는 유지한다.
+
+## UI Skeleton
+
+- Component: `TodoList`, 목록 항목의 완료 체크박스와 완료 상태 표시를 제공한다.
+- Page integration: `TodosPage`는 체크박스 변경 성공 후 목록의 완료 상태 표시를 갱신한다.
+
 ## Storybook 계약
 
 - Todos/TodoList: Default, ManyItemsLoadingMore
@@ -81,7 +106,7 @@
 ### 요건 Skeleton 승인 이력
 
 - 승인일: 2026-06-02
-  검증 설계: 완료 상태 null 거절, 완료 처리, 미완료 되돌리기 시나리오가 모든 API AC를 커버한다.
+  검증 설계: 완료 상태 null 거절, 완료 처리, 완료 해제 시나리오가 모든 API AC를 커버한다.
   API Skeleton: 기존 `PATCH /todos/{todoId}`, `UpdateTodoRequest`, `TodoResponse`.
   DB Skeleton: 기존 `Todo` Entity.
   화면/라우팅 Skeleton: 2026-06-06 화면 도입 후 `/todos` 목록 항목의 체크박스가 본 카드 UI AC를 커버한다.
@@ -101,7 +126,21 @@
 - 리뷰일: 2026-06-06
   리뷰자: REDSTONE
   확인: 완료 상태 변경 UI AC가 Playwright FE BDD 테스트의 `Requirement: REQ-027`와 `.feature` `Covers:` 블록에 연결된다.
-  결과: 검토중
+  결과: 승인
+
+### 구현 검증 리뷰
+
+- 리뷰일: 2026-06-08
+  리뷰자: REDSTONE
+  확인: `npm run app:validate`가 Storybook build, back-end test, FE mock E2E, FE live E2E, trace `--check`를 모두 통과했고 본 카드의 구현 연결, AC Covers, 검증 대상 계약이 GREEN으로 유지된다.
+  결과: 승인
+
+### 최종 승인 리뷰
+
+- 승인일: 2026-06-08
+  승인자: REDSTONE
+  확인: 열린 질문이 없고 `npm run app:validate` 기준 RED가 없으며 API/DB/UI/Storybook/E2E 검증 대상이 모두 PASS 상태로 추적된다.
+  결과: 승인
 
 ## 열린 질문
 

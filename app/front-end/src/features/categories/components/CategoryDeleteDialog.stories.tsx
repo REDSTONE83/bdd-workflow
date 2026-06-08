@@ -6,6 +6,9 @@ import { CategoryDeleteDialog } from "./CategoryDeleteDialog"
 const noop = () => {}
 const okConfirm = async (): Promise<void> => {}
 const hangingConfirm = (): Promise<void> => new Promise(() => {})
+const failingConfirm = async (): Promise<void> => {
+  throw new Error("delete failed")
+}
 
 const meta = {
   title: "Categories/CategoryDeleteDialog",
@@ -34,7 +37,7 @@ export const Default: Story = {
     docs: {
       description: {
         story:
-          "삭제 확인 모달. 묶였던 할 일이 미분류로 바뀐다는 설명을 함께 보여준다. 영향 건수는 표시하지 않는다.",
+          "삭제 확인 대화상자. 묶였던 할 일이 미분류로 바뀐다는 설명을 함께 보여준다. 영향 건수는 표시하지 않는다.",
       },
     },
   },
@@ -46,6 +49,21 @@ export const Submitting: Story = {
     docs: {
       description: {
         story: "삭제를 확정한 뒤 응답을 기다리는 동안 삭제 버튼이 비활성화되는 상태.",
+      },
+    },
+  },
+  play: async () => {
+    const body = within(document.body)
+    await userEvent.click(body.getByRole("button", { name: "삭제" }))
+  },
+}
+
+export const DeleteFailure: Story = {
+  args: { onConfirm: failingConfirm },
+  parameters: {
+    docs: {
+      description: {
+        story: "삭제 요청이 실패했을 때 같은 확인 대화상자 안에 재시도 안내가 표시되는 상태.",
       },
     },
   },
