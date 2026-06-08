@@ -489,11 +489,13 @@ function validateCard(card, allCards, terminologyIndex) {
         }
         if (card.bddReviewIncomplete) {
             findings.push(findingForCard(card, 'CARD-APPROVAL-BDD-INCOMPLETE',
-                '상태=승인이지만 BDD 테스트 리뷰에 "미완료" 표기 있음'));
+                '상태=승인이지만 BDD 테스트 리뷰의 최신 "결과:" 라인이 "미완료"임',
+                { bddReviewResult: card.bddReviewResult ?? null }));
         }
         if (!card.bddReviewApproved) {
             findings.push(findingForCard(card, 'CARD-APPROVAL-BDD-NO-APPROVAL',
-                '상태=승인이지만 BDD 테스트 리뷰에 "결과: 승인" 줄이 없음'));
+                '상태=승인이지만 BDD 테스트 리뷰의 최신 "결과:" 라인이 "승인"이 아님',
+                { bddReviewResult: card.bddReviewResult ?? null }));
         }
     }
 

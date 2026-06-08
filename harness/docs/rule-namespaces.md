@@ -103,8 +103,8 @@ CARD-TERM-UNREGISTERED          카드가 미등록 표준 용어를 참조
 CARD-TERM-DUPLICATE             같은 표준 용어가 중복 나열
 CARD-TERM-INDEX-MISSING         terminology.index.json 부재 (운영 precondition)
 CARD-APPROVAL-OPEN-QUESTIONS    상태=승인인데 열린 질문 남음
-CARD-APPROVAL-BDD-INCOMPLETE    상태=승인인데 BDD 리뷰 "미완료" 표기
-CARD-APPROVAL-BDD-NO-APPROVAL   상태=승인인데 BDD 리뷰 "결과: 승인" 줄 없음
+CARD-APPROVAL-BDD-INCOMPLETE    상태=승인인데 BDD 리뷰 최신 "결과:" 라인이 "미완료"
+CARD-APPROVAL-BDD-NO-APPROVAL   상태=승인인데 BDD 리뷰 최신 "결과:" 라인이 "승인" 아님
 
 CHANGE-SET-HEADER-MISSING       Change Set 필수 헤더 누락
 CHANGE-SET-STATUS-INVALID       Change Set 상태 값이 허용 목록 외
