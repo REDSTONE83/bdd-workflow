@@ -3,7 +3,7 @@
 요건 ID: REQ-028
 제목: 단계 인식 TDD 요건 워크플로우
 우선순위: 높음
-상태: 검증중
+상태: 승인
 요건 종류: 하네스
 명세 역할: 원자 요건
 대상 시스템: harness
@@ -107,6 +107,13 @@
 - 리뷰일: 2026-06-08
   리뷰자: REDSTONE
   확인: 승인 카드의 BDD 테스트 리뷰 상태가 자유 텍스트가 아니라 최신 `결과:` 라인으로 계산되는지 parser tool-test와 validator self-test로 확인한다.
+  결과: 승인
+
+### 최종 승인 리뷰
+
+- 승인일: 2026-06-08
+  승인자: REDSTONE
+  확인: `npm run harness:validate`와 `npm run harness:trace -- --requirement REQ-028` 기준 RED가 없고, 최신 BDD 테스트 리뷰 결과가 승인 상태다.
   결과: 승인
 
 ## 열린 질문
