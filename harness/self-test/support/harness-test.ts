@@ -212,7 +212,7 @@ export function addTerminologyFinding(
     });
 }
 
-export function stateWithCards(cards: Array<{ id: string; state: string }>) {
+export function stateWithCards(cards: Array<{ id: string; state: string; status?: string; redReasons?: any[] }>) {
     const summary = {
         total: cards.length,
         red: cards.filter((card) => card.state === 'RED').length,
@@ -226,7 +226,12 @@ export function stateWithCards(cards: Array<{ id: string; state: string }>) {
         flags: {},
         filter: null,
         summary,
-        requirements: cards.map((card) => ({ id: card.id, state: card.state }))
+        requirements: cards.map((card) => ({
+            id: card.id,
+            state: card.state,
+            status: card.status,
+            redReasons: card.redReasons ?? []
+        }))
     };
 }
 

@@ -20,7 +20,7 @@ function apiEntry(method, apiPath) {
     };
 }
 
-function runValidator({ apiUsages = [], apiCalls = [], issues = [], tests = [], cards = [], frontEndFiles = {} }) {
+function runValidator({ stories = [], apiUsages = [], apiCalls = [], issues = [], tests = [], cards = [], frontEndFiles = {} }) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fe-api-usage-'));
     const frontEndRoot = path.join(dir, 'front-end');
     const feSourceIndex = path.join(dir, 'front-end.source-index.json');
@@ -36,7 +36,7 @@ function runValidator({ apiUsages = [], apiCalls = [], issues = [], tests = [], 
     }
 
     fs.writeFileSync(feSourceIndex, JSON.stringify({
-        stories: [],
+        stories,
         tests,
         apiUsages,
         apiCalls,
@@ -377,5 +377,57 @@ describe('validate-front-end-standards — @UsesApi contract', () => {
         });
 
         assert.deepEqual(ruleIds(payload), ['FE-LIVE-MOCK-IMPORT']);
+    });
+});
+
+describe('validate-front-end-standards — Storybook contract', () => {
+    const card = {
+        id: 'REQ-001',
+        status: 'Skeleton 승인',
+        location: { file: 'app/docs/requirements/REQ-001-demo.md', line: 1, identity: 'REQ-001' },
+        storybookContract: [
+            { title: 'Todos/TodoFormDialog', states: ['Create', 'Submitting'] }
+        ]
+    };
+
+    it('passes when declared Storybook states exist and carry the requirement metadata', () => {
+        const payload = runValidator({
+            cards: [card],
+            stories: [
+                { title: 'Todos/TodoFormDialog', story: 'Create', requirements: ['REQ-001'], file: 'app/front-end/src/TodoFormDialog.stories.tsx', line: 10 },
+                { title: 'Todos/TodoFormDialog', story: 'Submitting', requirements: ['REQ-001'], file: 'app/front-end/src/TodoFormDialog.stories.tsx', line: 20 }
+            ]
+        });
+
+        assert.deepEqual(ruleIds(payload), []);
+    });
+
+    it('reports a missing Storybook surface from the requirement contract', () => {
+        const payload = runValidator({ cards: [card] });
+
+        assert.deepEqual(ruleIds(payload), ['FE-STORY-MISSING-SURFACE']);
+    });
+
+    it('reports missing named story states from the requirement contract', () => {
+        const payload = runValidator({
+            cards: [card],
+            stories: [
+                { title: 'Todos/TodoFormDialog', story: 'Create', requirements: ['REQ-001'], file: 'app/front-end/src/TodoFormDialog.stories.tsx', line: 10 }
+            ]
+        });
+
+        assert.deepEqual(ruleIds(payload), ['FE-STORY-MISSING-STATE']);
+    });
+
+    it('reports story states that are not connected to the declaring requirement', () => {
+        const payload = runValidator({
+            cards: [card],
+            stories: [
+                { title: 'Todos/TodoFormDialog', story: 'Create', requirements: [], file: 'app/front-end/src/TodoFormDialog.stories.tsx', line: 10 },
+                { title: 'Todos/TodoFormDialog', story: 'Submitting', requirements: ['REQ-001'], file: 'app/front-end/src/TodoFormDialog.stories.tsx', line: 20 }
+            ]
+        });
+
+        assert.deepEqual(ruleIds(payload), ['FE-STORY-REQ-MISMATCH']);
     });
 });

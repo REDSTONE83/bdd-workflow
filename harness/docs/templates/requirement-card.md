@@ -54,6 +54,33 @@
 
 마커는 필수이며 `@Covers`, FE `Covers`, `.feature` `Covers:`에는 마커를 포함하지 않는다.
 
+## 검증 대상
+
+- API: 불필요
+- DB: 불필요
+- UI: 불필요
+- Storybook: 불필요
+- E2E: 불필요
+- STATIC: 불필요
+
+`Skeleton 승인` 이후 단계에서는 필요한 검증 표면을 `필요`로 바꾸고 아래 Skeleton/Storybook 계약 섹션을 채운다.
+
+## API Skeleton
+
+- 해당 없음
+
+## DB Skeleton
+
+- 해당 없음
+
+## UI Skeleton
+
+- 해당 없음
+
+## Storybook 계약
+
+- 해당 없음
+
 ## 의사결정 로그
 
 - 결정일: YYYY-MM-DD

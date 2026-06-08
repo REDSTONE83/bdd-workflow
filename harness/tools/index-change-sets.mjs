@@ -23,7 +23,7 @@ const REQUIRED_SECTIONS = [
 ];
 const REQUIRED_HEADERS = ['상태', '요청일', '변경 유형', '영향 요건', '논의 상태'];
 const ALLOWED_STATUSES = ['계획', '진행중', '완료', '보류'];
-const ALLOWED_CHANGE_TYPES = ['신규', '수정', '분리', '병합', '대체', '폐기', '마이그레이션', '하네스 개선'];
+const ALLOWED_CHANGE_TYPES = ['신규', '수정', '분리', '병합', '대체', '폐기', '마이그레이션', '하네스 개선', '표준 개정'];
 
 function walk(dir, predicate = () => true) {
     if (!fs.existsSync(dir)) return [];

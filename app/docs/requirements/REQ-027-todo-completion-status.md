@@ -50,6 +50,10 @@
 - (API) 수정 시 미완료로 되돌리면 할 일이 미완료 상태로 되돌아간다
 - (UI) 할 일 목록의 완료 체크를 바꾸면 목록의 완료 상태 표시가 바뀐다
 
+## Storybook 계약
+
+- Todos/TodoList: Default, ManyItemsLoadingMore
+
 ## 의사결정 로그
 
 - 결정일: 2026-05-21

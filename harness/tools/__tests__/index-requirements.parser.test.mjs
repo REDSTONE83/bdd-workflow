@@ -5,7 +5,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptanceCriterionItems } from '../index-requirements.mjs';
+import {
+    acceptanceCriterionItems,
+    storybookContractItems,
+    verificationTargetItems
+} from '../index-requirements.mjs';
 
 function parseOne(line) {
     return acceptanceCriterionItems(`- ${line}\n`)[0];
@@ -88,5 +92,39 @@ describe('acceptanceCriterionItems — multi-bullet behavior', () => {
         assert.equal(out[4].target, null);
         assert.equal(out[4].invalidMarker, undefined);
         assert.equal(out[5].invalidMarker, 'BE');
+    });
+});
+
+describe('verificationTargetItems', () => {
+    it('parses required and not-required verification targets', () => {
+        assert.deepEqual(verificationTargetItems([
+            '- API: 필요',
+            '- DB: 불필요',
+            '- Storybook: required'
+        ].join('\n')), {
+            API: { required: true, raw: '필요' },
+            DB: { required: false, raw: '불필요' },
+            Storybook: { required: true, raw: 'required' }
+        });
+    });
+});
+
+describe('storybookContractItems', () => {
+    it('parses Storybook title and named export states', () => {
+        assert.deepEqual(storybookContractItems([
+            '- Routes/TodosPage: RouteTodos, Empty, ManyItems',
+            '- `Todos/TodoFormDialog`: `Create`, `Submitting`'
+        ].join('\n')), [
+            {
+                title: 'Routes/TodosPage',
+                states: ['RouteTodos', 'Empty', 'ManyItems'],
+                raw: 'Routes/TodosPage: RouteTodos, Empty, ManyItems'
+            },
+            {
+                title: 'Todos/TodoFormDialog',
+                states: ['Create', 'Submitting'],
+                raw: '`Todos/TodoFormDialog`: `Create`, `Submitting`'
+            }
+        ]);
     });
 });

@@ -81,6 +81,11 @@
 - (UI) 데스크톱 화면에서 할 일 목록과 입력 영역의 주요 요소가 화면 밖으로 넘치지 않는다
 - (UI) 할 일 화면은 자동 접근성 검사에서 위반이 없어야 한다
 
+## Storybook 계약
+
+- Routes/TodosPage: RouteTodos, Empty, ManyItems
+- Todos/TodoList: Default, Empty, Loading, ManyItemsLoadingMore
+
 ## 의사결정 로그
 
 - 결정일: 2026-05-22

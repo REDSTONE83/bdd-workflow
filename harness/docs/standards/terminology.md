@@ -39,13 +39,15 @@ trace 리포트는 terminology finding을 카드별로 표시/집계만 한다. 
 
 ## 카드 `## 표준 용어` 섹션에 무엇을 넣는가
 
-요건 카드의 `## 표준 용어` 섹션은 해당 카드의 **비즈니스 의미**에 핵심적인 용어만 등록한다. 도메인-무관 공통 용어는 등록하지 않는다.
+요건 카드의 `## 표준 용어` 섹션은 해당 카드의 **비즈니스 의미**에 핵심적인 용어만 등록한다. 도메인-무관 공통 용어는 등록하지 않는다. UI 컴포넌트/위젯 원자는 추적용 표준 용어가 아니라 문서 작성용 [UI 어휘 표준](ui-vocabulary.md)에서 정규 명칭으로 관리한다.
 
 | 분류 | 카드 표준 용어에 넣는가 |
 | --- | --- |
 | `<카드 도메인>.*` (예: REQ-002의 `todo.*`, REQ-003의 `category.*`) | O |
 | 카드가 참조하는 인접 도메인 (예: REQ-002의 `category.id`, `user.id`) | O |
 | `common.*` (audit 컬럼, ApiError 부속, PageResponse 부속 등 도메인-무관 공통 인프라) | **X — 등록하지 않는다** |
+| `ui.button`·`ui.checkbox`·`ui.dialog`·`ui.formDialog` 등 UI 컴포넌트/위젯 원자 | **X — `CARD-TERM-UI-PRIMITIVE`로 차단. [UI 어휘 표준](ui-vocabulary.md) 정규 명칭으로 본문에 표현** |
+| `ui.appShell`·`ui.desktopViewport`·`ui.accessibilityCheck` (화면 품질·플랫폼 의미 등록 용어) | O |
 
 근거:
 - `common.*` 용어는 모든 카드가 자동으로 의존하므로 카드별 표준 용어 섹션에 반복 나열하면 잡음이 늘고 카드 리뷰 시 의미 있는 도메인 용어와 섞여 우선순위를 잃는다.

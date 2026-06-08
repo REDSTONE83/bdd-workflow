@@ -5,7 +5,7 @@
 ## 상태 분류
 
 ```text
-local UI state      폼 입력, 토글, 모달, focused/selected, field error
+local UI state      폼 입력, 토글, 대화상자, focused/selected, field error
 URL query state     목록의 page, size, sort, filter, 검색어처럼 딥링크가 필요한 값
 auth state          현재 로그인 사용자, 인증 확인 중/인증됨/미인증 상태
 server state        API에서 가져오고 서버가 소유하며 재조회/캐시/무효화가 필요한 데이터

@@ -72,7 +72,7 @@ desktop: 1440 x 900
 
 - 기준 데스크톱 화면에서 주요 업무 진입점이 첫 화면에 보이는가
 - 버튼과 입력이 기준 화면 밖으로 나가지 않는가
-- 테이블, 모달, drawer가 기준 화면 안에서 조작 가능한가
+- 테이블, 대화상자, drawer가 기준 화면 안에서 조작 가능한가
 - 텍스트와 컨트롤이 겹치거나 잘리지 않는가
 
 ## 텍스트와 밀도
@@ -278,6 +278,8 @@ not found
 ## Storybook
 
 공통 컴포넌트는 Storybook story를 둔다. route/page를 추가하거나 변경하면 실제 page 컴포넌트를 `MemoryRouter`와 필요한 mock provider로 감싼 route 기준 page mock story를 둔다. Story는 두 분류로 나눈다.
+
+Storybook은 UI가 있는 요건의 Skeleton 단계 공식 검토 표면이다. 요건 카드의 `Storybook 계약`에 선언된 Page/Component/Dialog/List title과 named export 상태는 Skeleton 승인 전에 실제 story로 작성되어야 하며, `parameters.harness.requirements`로 해당 요건에 연결되어야 한다. `npm run build-storybook`은 이 검토 표면이 빌드 가능한지 확인하는 필수 Skeleton 게이트다.
 
 ### Router/provider 데코레이터는 하나만 둔다
 

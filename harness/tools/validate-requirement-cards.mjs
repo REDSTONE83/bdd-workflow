@@ -11,13 +11,31 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { outputRootFor, workspaceRoot } from './workspace-config.mjs';
 
+// 단위 테스트가 fixture 경로를 주입할 수 있도록 CLI override를 허용한다.
+// 기본값은 build/{scope} 산출물 경로다.
+function parseCliOptions(argv) {
+    const opts = {};
+    for (const arg of argv) {
+        const match = arg.match(/^--([^=]+)=(.*)$/);
+        if (match) opts[match[1]] = match[2];
+    }
+    return opts;
+}
+
+const cliOptions = parseCliOptions(process.argv.slice(2));
 const repoRoot = workspaceRoot;
 const outputDir = outputRootFor();
 const indexesDir = path.join(outputDir, 'indexes');
 const findingsDir = path.join(outputDir, 'findings');
-const requirementsIndexPath = path.join(indexesDir, 'requirements.index.json');
-const terminologyIndexPath = path.join(indexesDir, 'terminology.index.json');
-const outFile = path.join(findingsDir, 'requirement-cards.findings.json');
+const requirementsIndexPath = cliOptions['requirements-index']
+    ? path.resolve(cliOptions['requirements-index'])
+    : path.join(indexesDir, 'requirements.index.json');
+const terminologyIndexPath = cliOptions['terminology-index']
+    ? path.resolve(cliOptions['terminology-index'])
+    : path.join(indexesDir, 'terminology.index.json');
+const outFile = cliOptions['out']
+    ? path.resolve(cliOptions['out'])
+    : path.join(findingsDir, 'requirement-cards.findings.json');
 
 const REQUIRED_SECTIONS = [
     '사용자/목적',
@@ -29,7 +47,20 @@ const REQUIRED_SECTIONS = [
     'BDD 테스트 리뷰',
     '열린 질문'
 ];
-const ALLOWED_STATUSES = ['초안', '검토중', '승인', '대체됨', '폐기'];
+const ALLOWED_STATUSES = [
+    '초안',
+    'Skeleton 검토중',
+    'Skeleton 승인',
+    '테스트 작성중',
+    '테스트 승인',
+    '구현중',
+    '검증중',
+    '승인',
+    '대체됨',
+    '폐기',
+    // legacy migration status. New cards should use the staged workflow states above.
+    '검토중'
+];
 const ALLOWED_PRIORITIES = ['높음', '중간', '낮음'];
 const ALLOWED_REQUIREMENT_TYPES = ['기능', '비기능', '통합', '정책', '하네스'];
 const ALLOWED_SPEC_ROLES = ['원자 요건', '상위 요건', '구현 슬라이스'];
@@ -42,6 +73,37 @@ const REQUIREMENT_FILENAME_PATTERN = /^(REQ-\d{3,})-[^/]+\.md$/;
 const TERM_KEY_PATTERN = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){1,2}$/;
 const REMEDIATION_CARD = 'harness/docs/standards/requirement-card.md';
 const REMEDIATION_TERM = 'harness/docs/standards/terminology.md';
+const REMEDIATION_UI_VOCABULARY = 'harness/docs/standards/ui-vocabulary.md';
+
+const STATUSES_REQUIRING_VERIFICATION_TARGETS = new Set([
+    'Skeleton 승인',
+    '테스트 작성중',
+    '테스트 승인',
+    '구현중',
+    '검증중'
+]);
+const STATUSES_VALIDATING_DECLARED_TARGETS = new Set([
+    ...STATUSES_REQUIRING_VERIFICATION_TARGETS,
+    '승인'
+]);
+
+// 카드 `## 표준 용어`에 둘 수 없는 UI 컴포넌트/위젯 원자 키.
+// 이 목록이 CARD-TERM-UI-PRIMITIVE 판정의 단일 소스(SSOT)다. 표준 문서는 이 목록을 설명·링크만 한다.
+// UI 원자는 추적용 표준 용어로 등록하지 않고 문서 작성용 UI 어휘 표준의 정규 명칭으로 본문에 표현한다.
+// 새 UI 컴포넌트가 생기면 이 목록에 증분 추가한다.
+const UI_PRIMITIVE_DENY_LIST = new Set([
+    'ui.button',
+    'ui.input',
+    'ui.checkbox',
+    'ui.dialog',
+    'ui.formDialog',
+    'ui.confirmDialog',
+    'ui.tooltip',
+    'ui.modal',
+    'ui.dropdown',
+    'ui.tab',
+    'ui.toggle'
+]);
 const scenariosDir = path.join(repoRoot, 'docs', 'scenarios');
 // 카드의 "시나리오 문서:" 줄이 아직 작성 예정으로 남아 있는지 판단하는 표기.
 const SCENARIO_STALE_MARKERS = /작성\s*예정|\(예정\)|미작성|\bTBD\b/;
@@ -161,6 +223,45 @@ function verificationLevelTargetFinding(card) {
     }
 
     return null;
+}
+
+function targetRequired(card, key) {
+    return card.verificationTargets?.[key]?.required === true;
+}
+
+function hasAnyVerificationTarget(card) {
+    return Object.keys(card.verificationTargets ?? {}).length > 0;
+}
+
+function verificationContractFindings(card) {
+    const findings = [];
+    const mustHaveTargets = STATUSES_REQUIRING_VERIFICATION_TARGETS.has(card.status);
+    const shouldValidateDeclaredTargets = STATUSES_VALIDATING_DECLARED_TARGETS.has(card.status);
+    if (!shouldValidateDeclaredTargets) return findings;
+
+    if (mustHaveTargets && !hasAnyVerificationTarget(card)) {
+        findings.push(findingForCard(card, 'CARD-VERIFICATION-TARGETS-MISSING',
+            `${card.status} 상태는 ## 검증 대상 섹션이 필요함`));
+        return findings;
+    }
+
+    if (targetRequired(card, 'API') && (card.apiSkeleton ?? []).length === 0) {
+        findings.push(findingForCard(card, 'CARD-API-SKELETON-MISSING',
+            '검증 대상 API=필요이지만 ## API Skeleton 섹션 항목이 없음'));
+    }
+    if (targetRequired(card, 'DB') && (card.dbSkeleton ?? []).length === 0) {
+        findings.push(findingForCard(card, 'CARD-DB-SKELETON-MISSING',
+            '검증 대상 DB=필요이지만 ## DB Skeleton 섹션 항목이 없음'));
+    }
+    if (targetRequired(card, 'UI') && (card.uiSkeleton ?? []).length === 0) {
+        findings.push(findingForCard(card, 'CARD-UI-SKELETON-MISSING',
+            '검증 대상 UI=필요이지만 ## UI Skeleton 또는 ## 화면/라우팅 Skeleton 섹션 항목이 없음'));
+    }
+    if (targetRequired(card, 'Storybook') && (card.storybookContract ?? []).length === 0) {
+        findings.push(findingForCard(card, 'CARD-STORYBOOK-CONTRACT-MISSING',
+            '검증 대상 Storybook=필요이지만 ## Storybook 계약 섹션 항목이 없음'));
+    }
+    return findings;
 }
 
 function validateCard(card, allCards, terminologyIndex) {
@@ -334,6 +435,7 @@ function validateCard(card, allCards, terminologyIndex) {
     }
     const verificationFinding = verificationLevelTargetFinding(card);
     if (verificationFinding) findings.push(verificationFinding);
+    findings.push(...verificationContractFindings(card));
 
     for (const term of card.terms ?? []) {
         if (!TERM_KEY_PATTERN.test(term)) {
@@ -343,9 +445,22 @@ function validateCard(card, allCards, terminologyIndex) {
             });
             continue;
         }
+        // UI 컴포넌트/위젯 원자는 등록 누락이 아니라 잘못된 레이어에 둔 용어다.
+        // CARD-TERM-UNREGISTERED보다 먼저 판정해, 용어집 등록이 아니라 UI 어휘 표준으로 안내한다.
+        if (UI_PRIMITIVE_DENY_LIST.has(term)) {
+            findings.push({
+                ...findingForCard(card, 'CARD-TERM-UI-PRIMITIVE',
+                    `UI 컴포넌트/위젯 원자 용어는 카드 표준 용어에 둘 수 없음: "${term}". 용어집에 등록하지 말고 UI 어휘 표준의 정규 명칭으로 본문/수용 기준/시나리오에 표현한다.`,
+                    { term }),
+                remediation: REMEDIATION_UI_VOCABULARY
+            });
+            continue;
+        }
         if (terminologyIndex && !hasRegisteredTerm(terminologyIndex, term)) {
             findings.push({
-                ...findingForCard(card, 'CARD-TERM-UNREGISTERED', `표준 용어가 등록되어 있지 않음: "${term}"`, { term }),
+                ...findingForCard(card, 'CARD-TERM-UNREGISTERED',
+                    `표준 용어가 등록되어 있지 않음: "${term}". 업무/정책/품질 의미 용어이면 용어집에 draft 또는 approved로 등록하고, UI 원자나 구현 세부사항이면 카드 표준 용어에서 제거하고 UI 어휘 표준의 정규 명칭으로 본문/수용 기준/시나리오에 표현한다.`,
+                    { term }),
                 remediation: REMEDIATION_TERM
             });
         }
@@ -444,7 +559,7 @@ function main() {
         findings
     };
 
-    fs.mkdirSync(findingsDir, { recursive: true });
+    fs.mkdirSync(path.dirname(outFile), { recursive: true });
     fs.writeFileSync(outFile, JSON.stringify(payload, null, 2) + '\n');
 
     console.log(`requirement-cards.findings.json: ${findings.length} finding(s) (error=${payload.summary.error}, warning=${payload.summary.warning})`);

@@ -16,6 +16,7 @@ build/harness  하네스 검증 산출물
 - 애플리케이션 요건 카드는 `app/docs/requirements`에 둔다.
 - 하네스 요건 카드는 `harness/docs/requirements`에 둔다.
 - 애플리케이션 Change Set은 `app/docs/change-sets`, 하네스 Change Set은 `harness/docs/change-sets`에 둔다. 혼합 작업은 두 Change Set으로 나누고 서로 링크한다.
+- Change Set 파일명은 `YYYY-MM-DD-slug.md`, 첫 줄 제목은 `# Change Set: YYYY-MM-DD 작업 제목` 형식으로 쓰며, 파일명 날짜와 `요청일`은 일치시킨다.
 - 애플리케이션 BDD 시나리오는 `app/docs/scenarios`, 하네스 BDD 시나리오는 `harness/docs/scenarios`에 둔다.
 - 애플리케이션 소스는 `app/back-end`와 `app/front-end`에 둔다.
 - 하네스 self-test는 `harness/self-test`에 둔다. 하네스 self-test는 앱 테스트 결과나 앱 생성 파일을 직접 갱신하지 않는다.
