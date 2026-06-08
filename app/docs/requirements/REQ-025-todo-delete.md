@@ -3,7 +3,7 @@
 요건 ID: REQ-025
 제목: 할 일 삭제
 우선순위: 높음
-상태: 검토중
+상태: 승인
 요건 종류: 기능
 명세 역할: 원자 요건
 대상 시스템: application
@@ -46,6 +46,31 @@
 - (UI) 할 일을 삭제하려고 하면 삭제 확인 안내가 보인다
 - (UI) 삭제를 확인하면 그 할 일은 목록에서 사라진다
 - (UI) 할 일 삭제 요청이 실패하면 실패 안내가 보이고 사용자가 다시 시도할 수 있다
+
+## 검증 대상
+
+- API: 필요
+- DB: 필요
+- UI: 필요
+- Storybook: 필요
+- E2E: 불필요
+- STATIC: 불필요
+
+## API Skeleton
+
+- `DELETE /todos/{todoId}`: 인증 사용자 기준 본인 할 일을 삭제하고 성공 응답을 반환한다.
+- 존재하지 않거나 다른 사용자의 할 일은 같은 거절 응답으로 처리해 자원 존재 여부를 노출하지 않는다.
+- FE API client는 `/todos/{todoId}` DELETE를 삭제 확인 대화상자 confirm 시 generated client 경유로 호출한다.
+
+## DB Skeleton
+
+- `Todo` entity/table은 soft delete 컬럼 없이 hard delete로 제거된다.
+- 삭제는 `user_id`와 `todoId`로 사용자 소유권을 격리한다.
+
+## UI Skeleton
+
+- Component: `TodoDeleteDialog`, 삭제 확인 문구, 삭제 중 비활성, 삭제 실패 재시도 상태를 제공한다.
+- Page integration: `TodosPage`는 삭제 성공 후 해당 할 일을 목록에서 제거한다.
 
 ## Storybook 계약
 
@@ -98,7 +123,21 @@
 - 리뷰일: 2026-06-06
   리뷰자: REDSTONE
   확인: 삭제 UI AC가 Playwright FE BDD 테스트의 `Requirement: REQ-025`와 `.feature` `Covers:` 블록에 연결된다.
-  결과: 검토중
+  결과: 승인
+
+### 구현 검증 리뷰
+
+- 리뷰일: 2026-06-08
+  리뷰자: REDSTONE
+  확인: `npm run app:validate`가 Storybook build, back-end test, FE mock E2E, FE live E2E, trace `--check`를 모두 통과했고 본 카드의 구현 연결, AC Covers, 검증 대상 계약이 GREEN으로 유지된다.
+  결과: 승인
+
+### 최종 승인 리뷰
+
+- 승인일: 2026-06-08
+  승인자: REDSTONE
+  확인: 열린 질문이 없고 `npm run app:validate` 기준 RED가 없으며 API/DB/UI/Storybook/E2E 검증 대상이 모두 PASS 상태로 추적된다.
+  결과: 승인
 
 ## 열린 질문
 

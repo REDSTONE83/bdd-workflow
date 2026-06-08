@@ -3,7 +3,7 @@
 요건 ID: REQ-026
 제목: 카테고리 삭제 시 할 일 연결 해제
 우선순위: 중간
-상태: 검토중
+상태: 승인
 요건 종류: 기능
 명세 역할: 원자 요건
 대상 시스템: application
@@ -41,6 +41,25 @@
 
 - (API) 연결된 카테고리가 삭제되면 본인의 할 일은 유지되고 카테고리 연결만 해제된다
 
+## 검증 대상
+
+- API: 필요
+- DB: 필요
+- UI: 불필요
+- Storybook: 불필요
+- E2E: 불필요
+- STATIC: 불필요
+
+## API Skeleton
+
+- `DELETE /categories/{categoryId}` 성공 흐름에서 삭제 대상 카테고리에 연결된 본인 할 일의 카테고리 연결을 해제한다.
+- 카테고리 삭제 API의 권한, 부재, 타인 자원 검증은 `REQ-019`가 소유하고 본 카드는 삭제 후 할 일 유지 결과만 검증한다.
+
+## DB Skeleton
+
+- `Todo.categoryId`는 nullable이며, 연결된 카테고리가 삭제되면 같은 사용자 할 일의 `category_id`만 `null`로 바꾼다.
+- 할 일 row와 제목, 설명, 마감일, 우선순위, 완료 상태는 유지한다.
+
 ## 의사결정 로그
 
 - 결정일: 2026-05-21
@@ -71,6 +90,20 @@
 - 리뷰일: 2026-06-02
   리뷰자: REDSTONE
   확인: 카테고리 삭제 영향 AC가 `TodoCategoryCascadeApiAcceptanceTest`와 시나리오 `Covers:`로 연결된다.
+  결과: 승인
+
+### 구현 검증 리뷰
+
+- 리뷰일: 2026-06-08
+  리뷰자: REDSTONE
+  확인: `npm run app:validate`가 Storybook build, back-end test, FE mock E2E, FE live E2E, trace `--check`를 모두 통과했고 본 카드의 구현 연결, AC Covers, 검증 대상 계약이 GREEN으로 유지된다.
+  결과: 승인
+
+### 최종 승인 리뷰
+
+- 승인일: 2026-06-08
+  승인자: REDSTONE
+  확인: 열린 질문이 없고 `npm run app:validate` 기준 RED가 없으며 API/DB/UI/Storybook/E2E 검증 대상이 모두 PASS 상태로 추적된다.
   결과: 승인
 
 ## 열린 질문

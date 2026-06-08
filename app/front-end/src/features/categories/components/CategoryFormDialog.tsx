@@ -1,12 +1,12 @@
 /**
  * @Requirement REQ-017, REQ-018
  *
- * 카테고리 생성/수정 모달 폼. 이름·색상·설명 입력, 클라이언트 검증 안내,
+ * 카테고리 생성/수정 폼 대화상자. 이름·색상·설명 입력, 클라이언트 검증 안내,
  * 제출 중(submitting) 비활성, 서버 중복 이름 거절 안내, 성공 시 닫힘 상태를 가진다.
  * 외부 API 호출은 onSubmit 콜백으로만 받는다(Skeleton 단계). 구현 단계에서
  * onSubmit 을 카테고리 생성/수정 API + TanStack Query mutation 으로 연결한다.
  *
- * 폼 입력 상태는 내부 CategoryForm 에 두고, 모달이 열릴 때 Base UI 가 본문을 새로 마운트해
+ * 폼 입력 상태는 내부 CategoryForm 에 두고, 대화상자가 열릴 때 Base UI 가 본문을 새로 마운트해
  * 초기값으로 리셋한다(useEffect 동기화 없음).
  */
 import { AlertCircle } from "lucide-react"

@@ -3,7 +3,7 @@
 요건 ID: REQ-021
 제목: 개인별 할 일 관리
 우선순위: 높음
-상태: 검토중
+상태: 승인
 요건 종류: 기능
 명세 역할: 상위 요건
 대상 시스템: application
@@ -42,6 +42,15 @@
 
 - (E2E) 로그인 사용자는 할 일 화면에서 자신의 할 일을 확인하고 새 할 일을 만든 뒤 수정하고 완료 상태를 바꾸고 삭제할 수 있다
 
+## 검증 대상
+
+- API: 불필요
+- DB: 불필요
+- UI: 불필요
+- Storybook: 불필요
+- E2E: 필요
+- STATIC: 불필요
+
 ## 의사결정 로그
 
 - 결정일: 2026-06-02
@@ -65,6 +74,8 @@
 ## BDD 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-021-personal-todo-management.feature`
+- 검증 설계: 개인별 할 일 관리 전체 여정 AC를 실 백엔드 + 실 프런트엔드 Playwright 통합 스모크 테스트 한 개와 연결한다.
+- Skeleton 계약: 본 카드는 하위 원자 요건 `REQ-022`~`REQ-027`의 API/DB/UI/Storybook 계약을 직접 복사하지 않고, `/todos` 화면에서 생성, 조회, 수정, 완료 상태 변경, 삭제가 결합되는 E2E 사용자 성과만 검토한다.
 
 ### 요건 Skeleton 승인 이력
 
@@ -89,7 +100,21 @@
 - 리뷰일: 2026-06-06
   리뷰자: REDSTONE
   확인: 화면 도입 후 전체 lifecycle AC가 실 백엔드 + 실 프런트엔드 Playwright live smoke의 화면 조작 여정으로 연결된다.
-  결과: 검토중
+  결과: 승인
+
+### 구현 검증 리뷰
+
+- 리뷰일: 2026-06-08
+  리뷰자: REDSTONE
+  확인: `npm run app:validate`가 Storybook build, back-end test, FE mock E2E, FE live E2E, trace `--check`를 모두 통과했고 본 카드의 구현 연결, AC Covers, 검증 대상 계약이 GREEN으로 유지된다.
+  결과: 승인
+
+### 최종 승인 리뷰
+
+- 승인일: 2026-06-08
+  승인자: REDSTONE
+  확인: 열린 질문이 없고 `npm run app:validate` 기준 RED가 없으며 API/DB/UI/Storybook/E2E 검증 대상이 모두 PASS 상태로 추적된다.
+  결과: 승인
 
 ## 열린 질문
 

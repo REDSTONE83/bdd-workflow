@@ -3,7 +3,7 @@
 요건 ID: REQ-001
 제목: 이메일 회원 가입
 우선순위: 높음
-상태: 검토중
+상태: 승인
 요건 종류: 기능
 명세 역할: 원자 요건
 대상 시스템: application
@@ -77,6 +77,39 @@
 - (E2E) 이미 인증된 사용자가 회원 가입 화면에 접근하면 자신의 할 일 목록 화면으로 이동한다
 - (UI) 데스크톱 화면에서 회원 가입 카드의 주요 입력과 버튼이 화면 밖으로 넘치지 않는다
 - (UI) 회원 가입 화면은 자동 접근성 검사에서 위반이 없어야 한다
+
+## 검증 대상
+
+- API: 필요
+- DB: 필요
+- UI: 필요
+- Storybook: 필요
+- E2E: 필요
+- STATIC: 불필요
+
+## API Skeleton
+
+- `POST /users/signup`: 사용자 이름, 이메일, 비밀번호를 받아 계정을 생성하고 `SignupResponse`를 반환한다.
+- 요청 DTO는 이름 필수/길이, 이메일 형식/중복, 비밀번호 길이와 ASCII 출력 가능 문자 정책을 검증한다.
+- 성공 응답은 생성된 사용자 식별자와 이메일을 포함하고, 실패 응답은 중복 이메일과 입력 검증 실패를 구분한다.
+- FE API client는 `/users/signup` POST를 회원 가입 화면 submit 시 generated client 경유로 호출한다.
+
+## DB Skeleton
+
+- `UserAccount` entity/table `user_account`: `id`, `name`, `email`, `password_hash`, `created_at`, `updated_at`를 가진다.
+- 이메일은 계정 식별에 쓰이는 고유 값이며, 저장 비밀번호는 평문이 아니라 BCrypt hash로 저장한다.
+
+## UI Skeleton
+
+- Page: `SignupPage`, route `/signup`, 비인증 단일 카드 레이아웃으로 렌더링한다.
+- Component state: 초기 입력, 필드 오류, 제출 중 비활성, 중복 이메일 서버 거절, 성공 후 이동 상태를 제공한다.
+- Route behavior: 가입 성공 후 `/login?signupCompleted=1`로 이동하고, 이미 인증된 사용자는 `/todos`로 이동한다.
+- Accessibility: 데스크톱 viewport overflow와 자동 접근성 검사를 FE BDD 테스트로 확인한다.
+
+## Storybook 계약
+
+- Routes/SignupPage: RouteSignup, Initial, FieldErrors, Submitting, ServerRejectionDuplicateEmail, Success
+- Routes/LoginPage: SignupCompletedNotice
 
 ## 의사결정 로그
 
@@ -183,8 +216,27 @@
 
 - 리뷰일: 2026-06-02
   리뷰자: Product Owner, Tech Lead
-  확인: `REQ-013` 병합으로 API/화면 수용 기준과 Scenario/Test/metadata를 `REQ-001` 기준으로 재연결하는 중이다.
-  결과: 미완료
+  확인: `REQ-013` 병합으로 API/화면 수용 기준과 Scenario/Test/metadata를 `REQ-001` 기준으로 재연결할 대상이 식별되었다.
+  결과: 2026-06-08 후속 리뷰에서 해소
+
+- 리뷰일: 2026-06-08
+  리뷰자: REDSTONE
+  확인: `REQ-001` API/화면 수용 기준과 Scenario/Test/Storybook metadata가 본 카드 기준으로 연결된 상태를 Skeleton 검토 표면으로 정리한다.
+  결과: 승인
+
+### 구현 검증 리뷰
+
+- 리뷰일: 2026-06-08
+  리뷰자: REDSTONE
+  확인: `npm run app:validate`가 Storybook build, back-end test, FE mock E2E, FE live E2E, trace `--check`를 모두 통과했고 본 카드의 구현 연결, AC Covers, 검증 대상 계약이 GREEN으로 유지된다.
+  결과: 승인
+
+### 최종 승인 리뷰
+
+- 승인일: 2026-06-08
+  승인자: REDSTONE
+  확인: 열린 질문이 없고 `npm run app:validate` 기준 RED가 없으며 API/DB/UI/Storybook/E2E 검증 대상이 모두 PASS 상태로 추적된다.
+  결과: 승인
 
 ## 열린 질문
 

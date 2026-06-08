@@ -3,7 +3,7 @@
 요건 ID: REQ-018
 제목: 카테고리 수정
 우선순위: 중간
-상태: 검토중
+상태: 승인
 요건 종류: 기능
 명세 역할: 원자 요건
 대상 시스템: application
@@ -67,6 +67,41 @@
 - (UI) 카테고리를 수정할 때 이미 사용 중인 다른 이름으로 바꾸려고 하면 중복 이름 안내가 보인다
 - (UI) 카테고리를 수정하는 요청을 기다리는 동안 저장 버튼은 다시 누를 수 없는 상태로 표시된다
 
+## 검증 대상
+
+- API: 필요
+- DB: 필요
+- UI: 필요
+- Storybook: 필요
+- E2E: 불필요
+- STATIC: 불필요
+
+## API Skeleton
+
+- `PATCH /categories/{categoryId}`: 인증 사용자 기준 자신의 카테고리를 부분 수정하고 성공 시 `200 OK`와 `CategoryResponse`를 반환한다.
+- `UpdateCategoryRequest`: `name`, `color`, `description`, `displayOrder`를 `JsonNullable` 필드로 받으며 누락 필드는 기존 값을 유지한다.
+- `color`와 `description`은 명시적 `null`로 값을 지울 수 있고, `displayOrder`의 명시적 `null`은 거절한다.
+- 값 검증 실패는 `400 Bad Request`, 부재 또는 타인 자원은 `404 Not Found`, 중복 이름은 `409 Conflict`로 응답한다.
+- FE API client는 `/categories/{categoryId}` PATCH를 generated client 경유로 호출하고 `nullablePatchBody`로 값·null·누락을 구분한다.
+
+## DB Skeleton
+
+- `Category` entity/table `category`: 수정 시 같은 `id`와 `user_id`를 유지하고 입력된 `name`, `color`, `description`, `display_order`만 갱신한다.
+- `findByIdAndUserId`로 사용자 소유 카테고리만 조회해 타인 자원 존재 여부를 노출하지 않는다.
+- 같은 사용자 안의 이름 유일성은 `user_id + name` unique constraint와 수정 서비스의 중복 검사로 보장한다.
+
+## UI Skeleton
+
+- Dialog: `CategoryFormDialog` edit mode는 현재 이름, 색상, 설명을 초기값으로 채우고 저장 버튼을 제공한다.
+- Validation: 이름 필수·50자 제한, 설명 500자 제한, 색상 형식 오류를 입력 아래 안내로 표시한다.
+- Submission: 수정 요청 중 저장 버튼을 비활성화하고, 중복 이름 거절은 같은 폼 대화상자 안에 안내한다.
+- Page integration: `CategoriesPage`는 수정 성공 후 카테고리 목록을 갱신하고, 색상·설명 명시적 비우기를 화면에 반영한다.
+
+## Storybook 계약
+
+- `Categories/CategoryFormDialog`: Edit, EditNameRequiredError, EditNameTooLongError, EditDescriptionTooLongError, EditColorFormatError, EditSubmitting, EditDuplicateNameRejection
+- `Routes/CategoriesPage`: RouteCategories
+
 ## 의사결정 로그
 
 - 결정일: 2026-05-21
@@ -91,7 +126,21 @@
 
 - 시나리오 문서: `docs/scenarios/REQ-018-category-update.feature`
 - 검증 설계: API 수정 AC와 UI 수정 폼 대화상자/검증/중복 제출 방지 AC를 기존 Acceptance Test와 Playwright FE BDD 테스트로 연결한다.
-- 결과: 검토중
+- 결과: 승인
+
+### 구현 검증 리뷰
+
+- 리뷰일: 2026-06-08
+  리뷰자: REDSTONE
+  확인: `npm run app:validate`가 Storybook build, back-end test, FE mock E2E, FE live E2E, trace `--check`를 모두 통과했고 본 카드의 구현 연결, AC Covers, 검증 대상 계약이 GREEN으로 유지된다.
+  결과: 승인
+
+### 최종 승인 리뷰
+
+- 승인일: 2026-06-08
+  승인자: REDSTONE
+  확인: 열린 질문이 없고 `npm run app:validate` 기준 RED가 없으며 API/DB/UI/Storybook/E2E 검증 대상이 모두 PASS 상태로 추적된다.
+  결과: 승인
 
 ## 열린 질문
 
