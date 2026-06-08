@@ -213,6 +213,10 @@ function frontEndLiveE2e() {
     frontEndNpm('front-end:e2e:live', 'e2e:live');
 }
 
+function frontEndBuildStorybook() {
+    frontEndNpm('front-end:build-storybook', 'build-storybook');
+}
+
 function selfTest() {
     const files = selfTestFiles();
     if (files.length === 0) {
@@ -243,6 +247,7 @@ function appTrace(args) {
 
 function appValidate(args) {
     collectAppStaticInputs();
+    frontEndBuildStorybook();
     backEndTest();
     frontEndE2e();
     frontEndLiveE2e();

@@ -101,6 +101,56 @@ function requirementRefs(raw) {
     return [...new Set(raw.match(/\bREQ-\d{3,}\b/g) ?? [])];
 }
 
+function normalizeRequiredFlag(raw) {
+    const value = raw.trim().toLowerCase();
+    if (['필요', 'required', 'yes', 'true'].includes(value)) return true;
+    if (['불필요', '해당 없음', '없음', 'not required', 'no', 'false'].includes(value)) return false;
+    return null;
+}
+
+function verificationTargetItems(markdown) {
+    const targets = {};
+    for (const item of bulletItems(markdown)) {
+        const match = item.match(/^([^:：]+)[:：]\s*(.+)$/);
+        if (!match) continue;
+        const key = match[1].trim();
+        const required = normalizeRequiredFlag(match[2]);
+        targets[key] = {
+            required,
+            raw: match[2].trim()
+        };
+    }
+    return targets;
+}
+
+function stripCodeTicks(value) {
+    return value.trim().replace(/^`|`$/g, '');
+}
+
+function storybookContractItems(markdown) {
+    return bulletItems(markdown)
+        .map((item) => {
+            const match = item.match(/^([^:：]+)[:：]\s*(.+)$/);
+            if (!match) return null;
+            const title = stripCodeTicks(match[1]);
+            const states = match[2]
+                .split(/[,，]/)
+                .map(stripCodeTicks)
+                .filter(Boolean);
+            if (!title || states.length === 0) return null;
+            return { title, states, raw: item };
+        })
+        .filter(Boolean);
+}
+
+function firstNonEmptySection(content, headings) {
+    for (const heading of headings) {
+        const value = section(content, heading).trim();
+        if (value) return value;
+    }
+    return '';
+}
+
 function parseCard(file) {
     const content = fs.readFileSync(file, 'utf8');
     const idRaw = headerValue(content, '요건 ID');
@@ -120,6 +170,15 @@ function parseCard(file) {
     const openQuestions = bulletItems(section(content, '열린 질문'))
         .filter((item) => !/^없음$/.test(item.trim()));
     const terms = bulletItems(section(content, '표준 용어'));
+    const verificationTargets = verificationTargetItems(section(content, '검증 대상'));
+    const apiSkeleton = bulletItems(section(content, 'API Skeleton'));
+    const dbSkeleton = bulletItems(section(content, 'DB Skeleton'));
+    const uiSkeleton = bulletItems(firstNonEmptySection(content, ['UI Skeleton', '화면/라우팅 Skeleton']));
+    const storybookContract = storybookContractItems(firstNonEmptySection(content, [
+        'Storybook 계약',
+        'UI / Storybook 계약',
+        'UI Storybook 계약'
+    ]));
     const bddReview = section(content, 'BDD 테스트 리뷰');
     const bddReviewIncomplete = /미완료/.test(bddReview);
     const bddReviewApproved = /^[ \t]*결과:[ \t]*승인\s*$/m.test(bddReview);
@@ -148,6 +207,11 @@ function parseCard(file) {
         acceptanceCriteria,
         openQuestions,
         terms,
+        verificationTargets,
+        apiSkeleton,
+        dbSkeleton,
+        uiSkeleton,
+        storybookContract,
         sectionPresent,
         bddReviewIncomplete,
         bddReviewApproved,
@@ -181,6 +245,11 @@ function toEntry(card) {
         acceptanceCriteria: card.acceptanceCriteria,
         openQuestions: card.openQuestions,
         terms: card.terms,
+        verificationTargets: card.verificationTargets,
+        apiSkeleton: card.apiSkeleton,
+        dbSkeleton: card.dbSkeleton,
+        uiSkeleton: card.uiSkeleton,
+        storybookContract: card.storybookContract,
         sectionPresent: card.sectionPresent,
         bddReviewIncomplete: card.bddReviewIncomplete,
         bddReviewApproved: card.bddReviewApproved,
@@ -204,7 +273,14 @@ function main() {
     console.log(`requirements.index.json: ${entries.length} card(s)`);
 }
 
-export { acceptanceCriterionItems, AC_TARGET_TOKENS, AC_MARKER_VALID_PATTERN, AC_MARKER_LOOSE_PATTERN };
+export {
+    acceptanceCriterionItems,
+    verificationTargetItems,
+    storybookContractItems,
+    AC_TARGET_TOKENS,
+    AC_MARKER_VALID_PATTERN,
+    AC_MARKER_LOOSE_PATTERN
+};
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
     main();

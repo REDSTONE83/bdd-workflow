@@ -465,9 +465,6 @@ function collectStories(sourceFile, filePath, metadata) {
       ? declaration.initializer
       : null
     const requirements = storyRequirements(defaultObject, storyObject, metadata)
-    if (requirements.length === 0) {
-      continue
-    }
     stories.push({
       source: "front-end",
       requirements,

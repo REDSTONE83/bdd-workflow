@@ -12,7 +12,9 @@
 //   FE-TEST-REQ-NO-COVERS    Requirement 메타데이터는 있으나 Covers 메타데이터 없음
 //   FE-E2E-LIVE-LOCATION     상위 요건 E2E AC를 커버하는 Playwright 테스트가 live 디렉터리 밖에 있음
 //   FE-LIVE-MOCK-IMPORT      live Playwright spec이 API mock helper를 import함
-//   FE-STORY-MISSING-STATE   공통 UI primitive의 stories 파일에 표준 정의 필수 상태가 누락
+//   FE-STORY-MISSING-SURFACE 요건 Storybook 계약의 story surface가 누락
+//   FE-STORY-MISSING-STATE   공통 UI primitive 또는 요건 Storybook 계약의 필수 상태가 누락
+//   FE-STORY-REQ-MISMATCH    Storybook 상태가 선언 요건 metadata와 연결되지 않음
 //   FE-API-CONTRACT-MISSING  OpenAPI 계약 산출물 부재
 //   FE-API-UNKNOWN-OPERATION FE actual API 호출이 OpenAPI 계약의 method+path에 없음
 //   FE-API-USAGE-UNKNOWN-OPERATION FE @UsesApi 선언이 OpenAPI 계약의 method+path에 없음
@@ -98,6 +100,16 @@ const ISSUE_TO_RULE = {
 const REQUIRED_STORY_STATES = {
     Button: ['Default', 'Disabled', 'Loading']
 };
+
+const STORYBOOK_CONTRACT_STATUSES = new Set([
+    'Skeleton 검토중',
+    'Skeleton 승인',
+    '테스트 작성중',
+    '테스트 승인',
+    '구현중',
+    '검증중',
+    '승인'
+]);
 
 function readJson(p) {
     return JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -207,6 +219,112 @@ function findingsForMissingStoryStates(stories) {
             },
             remediation: REMEDIATION_UI
         });
+    }
+    return findings;
+}
+
+function cardHasStorybookContract(card) {
+    return Array.isArray(card.storybookContract) && card.storybookContract.length > 0;
+}
+
+function shouldValidateStorybookContract(card) {
+    return cardHasStorybookContract(card)
+        && (STORYBOOK_CONTRACT_STATUSES.has(card.status) || card.status === '검토중');
+}
+
+function storyIdentity(story) {
+    return [story.title, story.story].filter(Boolean).join(' / ');
+}
+
+function findingsForStorybookContracts(stories, requirementCards) {
+    const findings = [];
+    const storiesByTitle = new Map();
+    for (const story of stories ?? []) {
+        if (!story.title) continue;
+        if (!storiesByTitle.has(story.title)) storiesByTitle.set(story.title, []);
+        storiesByTitle.get(story.title).push(story);
+    }
+
+    for (const card of requirementCards ?? []) {
+        if (!card.id || !shouldValidateStorybookContract(card)) continue;
+        for (const contract of card.storybookContract ?? []) {
+            const titleStories = storiesByTitle.get(contract.title) ?? [];
+            if (titleStories.length === 0) {
+                findings.push({
+                    ruleId: 'FE-STORY-MISSING-SURFACE',
+                    severity: 'error',
+                    strictSeverity: 'error',
+                    kind: 'static',
+                    message: `Storybook 계약 ${card.id}: "${contract.title}" story surface가 없음`,
+                    requirements: [card.id],
+                    location: {
+                        file: card.location?.file ?? '',
+                        line: card.location?.line ?? 0,
+                        identity: contract.title
+                    },
+                    evidence: { requirementId: card.id, contract },
+                    remediation: REMEDIATION_UI
+                });
+                continue;
+            }
+
+            const presentStates = new Set(titleStories.map((story) => story.story));
+            const missingStates = (contract.states ?? []).filter((state) => !presentStates.has(state));
+            if (missingStates.length > 0) {
+                findings.push({
+                    ruleId: 'FE-STORY-MISSING-STATE',
+                    severity: 'error',
+                    strictSeverity: 'error',
+                    kind: 'static',
+                    message: `Storybook 계약 ${card.id}: "${contract.title}" 상태 누락 — ${missingStates.join(', ')}`,
+                    requirements: [card.id],
+                    location: {
+                        file: titleStories[0]?.file ?? card.location?.file ?? '',
+                        line: titleStories[0]?.line ?? card.location?.line ?? 0,
+                        identity: contract.title
+                    },
+                    evidence: {
+                        requirementId: card.id,
+                        title: contract.title,
+                        required: contract.states ?? [],
+                        present: [...presentStates],
+                        missing: missingStates
+                    },
+                    remediation: REMEDIATION_UI
+                });
+            }
+
+            const requiredStateSet = new Set(contract.states ?? []);
+            const mismatched = titleStories
+                .filter((story) => requiredStateSet.has(story.story))
+                .filter((story) => !(story.requirements ?? []).includes(card.id));
+            if (mismatched.length > 0) {
+                findings.push({
+                    ruleId: 'FE-STORY-REQ-MISMATCH',
+                    severity: 'error',
+                    strictSeverity: 'error',
+                    kind: 'static',
+                    message: `Storybook 계약 ${card.id}: "${contract.title}" 상태가 REQ metadata와 연결되지 않음 — ${mismatched.map((story) => story.story).join(', ')}`,
+                    requirements: [card.id],
+                    location: {
+                        file: mismatched[0]?.file ?? card.location?.file ?? '',
+                        line: mismatched[0]?.line ?? card.location?.line ?? 0,
+                        identity: storyIdentity(mismatched[0] ?? { title: contract.title })
+                    },
+                    evidence: {
+                        requirementId: card.id,
+                        title: contract.title,
+                        states: mismatched.map((story) => ({
+                            story: story.story,
+                            file: story.file,
+                            line: story.line,
+                            requirements: story.requirements ?? []
+                        }))
+                    },
+                    remediation: REMEDIATION_UI
+                });
+            }
+        }
     }
     return findings;
 }
@@ -749,9 +867,11 @@ function main(argv) {
     const issues = index.issues ?? [];
     const stories = index.stories ?? [];
     const tests = index.tests ?? [];
+    const requirementsIndex = safeReadJson(cfg.requirementsIndex, { entries: [] });
     const findings = [
         ...issues.map(findingFromIssue),
         ...findingsForMissingStoryStates(stories),
+        ...findingsForStorybookContracts(stories, requirementsIndex.entries ?? []),
         ...findingsForTopLevelE2eLiveLocation(tests, cfg.requirementsIndex),
         ...findingsForLiveMockImports(cfg.frontEndRoot),
         ...feApiFindings(index, cfg)

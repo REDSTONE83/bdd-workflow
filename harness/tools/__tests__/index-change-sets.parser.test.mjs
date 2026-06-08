@@ -19,7 +19,7 @@ describe('index-change-sets parser', () => {
 
 상태: 진행중
 요청일: 2026-06-01
-변경 유형: 하네스 개선, 마이그레이션
+변경 유형: 하네스 개선, 마이그레이션, 표준 개정
 영향 요건: REQ-001, REQ-002
 논의 상태: REQ 단위 논의 필요
 
@@ -58,7 +58,7 @@ describe('index-change-sets parser', () => {
         assert.equal(parsed.title, '샘플 작업');
         assert.equal(parsed.status, '진행중');
         assert.equal(parsed.requestedDate, '2026-06-01');
-        assert.deepEqual(parsed.changeTypes, ['하네스 개선', '마이그레이션']);
+        assert.deepEqual(parsed.changeTypes, ['하네스 개선', '마이그레이션', '표준 개정']);
         assert.deepEqual(parsed.affectedRequirementIds, ['REQ-001', 'REQ-002']);
         assert.deepEqual(parsed.requirements, ['REQ-001', 'REQ-002']);
         assert.equal(parsed.discussionStatus, 'REQ 단위 논의 필요');
@@ -76,6 +76,43 @@ describe('index-change-sets parser', () => {
     it('splits comma-separated metadata and drops 없음', () => {
         assert.deepEqual(splitList('하네스 개선, 마이그레이션'), ['하네스 개선', '마이그레이션']);
         assert.deepEqual(splitList('없음'), []);
+    });
+
+    it('allows standard revision as a recurring change type', () => {
+        const file = fixtureFile(`# Change Set: 표준 변경
+
+상태: 완료
+요청일: 2026-06-08
+변경 유형: 표준 개정
+영향 요건: REQ-028
+논의 상태: 없음
+
+## 요청 요약
+- 표준을 개정한다.
+
+## 작업 범위
+- 표준 문서를 바꾼다.
+
+## 제외 범위
+- 없음
+
+## 완료 조건
+- 완료
+
+## 검증 명령
+- \`npm run harness:tool-test\`
+
+## 결정 로그
+- 2026-06-08: 표준 개정 유형을 사용한다.
+
+## 열린 논의
+- 없음
+`);
+
+        const parsed = parseChangeSet(file);
+
+        assert.deepEqual(parsed.changeTypes, ['표준 개정']);
+        assert.deepEqual(parsed.issues, []);
     });
 
     it('emits report-only warnings for invalid metadata and discussion mismatch', () => {

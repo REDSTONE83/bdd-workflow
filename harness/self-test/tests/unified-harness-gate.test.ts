@@ -7,10 +7,84 @@ import {
     allCleanFindings,
     harnessTest,
     readText,
+    runCommand,
     runGateFixture,
     stateWithCards,
+    tempDir,
+    writeJson,
     workspaceRoot
 } from '../support/harness-test.ts';
+
+const REQUIRED_CARD_SECTIONS = [
+    '사용자/목적',
+    '범위',
+    '표준 용어',
+    '제외 범위',
+    '수용 기준',
+    '의사결정 로그',
+    'BDD 테스트 리뷰',
+    '열린 질문'
+];
+
+function sectionPresence() {
+    return Object.fromEntries(REQUIRED_CARD_SECTIONS.map((section) => [section, true]));
+}
+
+function requirementCardFixture(overrides: Record<string, any> = {}) {
+    const id = overrides.id ?? 'REQ-900';
+    return {
+        id,
+        idRaw: id,
+        title: 'fixture requirement',
+        priority: '중간',
+        status: '초안',
+        requirementType: '하네스',
+        specRole: '원자 요건',
+        targetSystem: 'harness',
+        productArea: 'harness',
+        qualityAttributes: ['usability'],
+        verificationLevel: 'static',
+        relatedRequirementIds: [],
+        replacedByRequirementIds: [],
+        acceptanceCriteria: [{ text: 'fixture AC', target: 'STATIC' }],
+        terms: [],
+        openQuestions: [],
+        approved: false,
+        bddReviewIncomplete: false,
+        bddReviewApproved: false,
+        sectionPresent: sectionPresence(),
+        referencedRequirementIds: [id],
+        location: {
+            file: `harness/docs/requirements/${id}-fixture.md`,
+            line: 1,
+            identity: id
+        },
+        ...overrides
+    };
+}
+
+function runRequirementCardValidatorFixture(cards: any[]) {
+    const dir = tempDir('stage-aware-card-');
+    const requirementsIndex = path.join(dir, 'requirements.index.json');
+    const terminologyIndex = path.join(dir, 'terminology.index.json');
+    const out = path.join(dir, 'requirement-cards.findings.json');
+
+    writeJson(requirementsIndex, { entries: cards });
+    writeJson(terminologyIndex, { terms: {} });
+
+    runCommand(process.execPath, [
+        path.join(workspaceRoot, 'harness', 'tools', 'validate-requirement-cards.mjs'),
+        `--requirements-index=${requirementsIndex}`,
+        `--terminology-index=${terminologyIndex}`,
+        `--out=${out}`
+    ], { cwd: workspaceRoot });
+
+    return JSON.parse(fs.readFileSync(out, 'utf8'));
+}
+
+function redReason(ruleId: string, status: string) {
+    return [{ ruleId, evidence: { status } }];
+}
 
 harnessTest({
     requirement: 'REQ-010',
@@ -124,6 +198,225 @@ harnessTest({
     assert.equal(requireBlue.status, 1);
     assert.ok(requireBlue.output.includes('[TRACE]'));
     assert.ok(requireBlue.output.includes('green=1'));
+});
+
+harnessTest({
+    requirement: 'REQ-028',
+    name: '요건 카드 상태 enum은 단계 인식 TDD 상태를 허용한다',
+    covers: ['요건 카드 상태는 `초안`, `Skeleton 검토중`, `Skeleton 승인`, `테스트 작성중`, `테스트 승인`, `구현중`, `검증중`, `승인`, `대체됨`을 지원한다']
+}, () => {
+    const statuses = [
+        '초안',
+        'Skeleton 검토중',
+        'Skeleton 승인',
+        '테스트 작성중',
+        '테스트 승인',
+        '구현중',
+        '검증중',
+        '승인',
+        '대체됨'
+    ];
+    const cards = statuses.map((status, index) => {
+        const id = `REQ-${900 + index}`;
+        return requirementCardFixture({
+            id,
+            status,
+            replacedByRequirementIds: status === '대체됨' ? ['REQ-900'] : [],
+            verificationTargets: { STATIC: { required: true, raw: '필요' } }
+        });
+    });
+
+    const payload = runRequirementCardValidatorFixture(cards);
+
+    assert.equal(payload.findings.length, 0, JSON.stringify(payload.findings, null, 2));
+});
+
+harnessTest({
+    requirement: 'REQ-028',
+    name: 'Skeleton 승인 이후 검증 대상별 계약 누락을 카드 finding으로 보고한다',
+    covers: ['`Skeleton 승인` 이후 단계의 요건은 선언한 검증 대상에 맞는 API/DB/UI/Storybook 계약을 카드에 가져야 한다']
+}, () => {
+    const reviewing = runRequirementCardValidatorFixture([
+        requirementCardFixture({
+            status: 'Skeleton 검토중',
+            verificationTargets: {
+                API: { required: true, raw: '필요' },
+                Storybook: { required: true, raw: '필요' }
+            }
+        })
+    ]);
+    assert.equal(reviewing.findings.length, 0, JSON.stringify(reviewing.findings, null, 2));
+
+    const missing = runRequirementCardValidatorFixture([
+        requirementCardFixture({
+            status: 'Skeleton 승인',
+            verificationTargets: {
+                API: { required: true, raw: '필요' },
+                DB: { required: true, raw: '필요' },
+                UI: { required: true, raw: '필요' },
+                Storybook: { required: true, raw: '필요' }
+            }
+        })
+    ]);
+    const missingRules = missing.findings.map((finding: { ruleId: string }) => finding.ruleId).sort();
+    assert.deepEqual(missingRules, [
+        'CARD-API-SKELETON-MISSING',
+        'CARD-DB-SKELETON-MISSING',
+        'CARD-STORYBOOK-CONTRACT-MISSING',
+        'CARD-UI-SKELETON-MISSING'
+    ]);
+
+    const complete = runRequirementCardValidatorFixture([
+        requirementCardFixture({
+            status: 'Skeleton 승인',
+            verificationTargets: {
+                API: { required: true, raw: '필요' },
+                DB: { required: true, raw: '필요' },
+                UI: { required: true, raw: '필요' },
+                Storybook: { required: true, raw: '필요' }
+            },
+            apiSkeleton: ['GET /fixture'],
+            dbSkeleton: ['fixture_table'],
+            uiSkeleton: ['FixturePage /fixtures'],
+            storybookContract: [{ title: 'Fixture/Page', states: ['Default'], raw: 'Fixture/Page: Default' }]
+        })
+    ]);
+    assert.equal(complete.findings.length, 0, JSON.stringify(complete.findings, null, 2));
+});
+
+harnessTest({
+    requirement: 'REQ-028',
+    name: '테스트 승인 단계는 누락 테스트를 차단하고 실행된 실패는 허용한다',
+    covers: ['테스트 승인 단계는 AC별 실행 테스트 연결을 요구하지만 구현 전 테스트 실패 자체는 통합 게이트 차단 사유로 보지 않는다']
+}, () => {
+    const missingState = stateWithCards([{
+        id: 'REQ-028',
+        state: 'RED',
+        status: '테스트 승인',
+        redReasons: redReason('TRACE-AC-MISSING', 'MISSING')
+    }]);
+    const missingRun = runGateFixture(missingState, allCleanFindings(), ['--check']);
+    assert.equal(missingRun.status, 1);
+    assert.ok(missingRun.output.includes('[TRACE]'));
+    assert.ok(missingRun.output.includes('red=1'));
+
+    const failingState = stateWithCards([{
+        id: 'REQ-028',
+        state: 'RED',
+        status: '테스트 승인',
+        redReasons: redReason('TRACE-AC-FAIL', 'FAIL')
+    }]);
+    const failingRun = runGateFixture(failingState, allCleanFindings(), ['--check']);
+    assert.equal(failingRun.status, 0);
+    assert.ok(failingRun.output.includes('gate: pass'));
+});
+
+harnessTest({
+    requirement: 'REQ-028',
+    name: '검증중 또는 승인 RED는 TRACE 실패로 차단한다',
+    covers: ['`gate.mjs --check`는 `검증중` 또는 `승인` 카드의 RED를 TRACE 실패로 차단한다']
+}, () => {
+    const draftState = stateWithCards([{
+        id: 'REQ-028',
+        state: 'RED',
+        status: 'Skeleton 승인',
+        redReasons: redReason('TRACE-AC-MISSING', 'MISSING')
+    }]);
+    const draftRun = runGateFixture(draftState, allCleanFindings(), ['--check']);
+    assert.equal(draftRun.status, 0);
+    assert.ok(draftRun.output.includes('gate: pass'));
+
+    const verificationState = stateWithCards([{
+        id: 'REQ-028',
+        state: 'RED',
+        status: '검증중',
+        redReasons: redReason('TRACE-AC-FAIL', 'FAIL')
+    }]);
+    const verificationRun = runGateFixture(verificationState, allCleanFindings(), ['--check']);
+    assert.equal(verificationRun.status, 1);
+    assert.ok(verificationRun.output.includes('[TRACE]'));
+    assert.ok(verificationRun.output.includes('red=1'));
+
+    const approvedState = stateWithCards([{
+        id: 'REQ-028',
+        state: 'RED',
+        status: '승인',
+        redReasons: redReason('TRACE-AC-FAIL', 'FAIL')
+    }]);
+    const approvedRun = runGateFixture(approvedState, allCleanFindings(), ['--check']);
+    assert.equal(approvedRun.status, 1);
+    assert.ok(approvedRun.output.includes('[TRACE]'));
+    assert.ok(approvedRun.output.includes('red=1'));
+});
+
+harnessTest({
+    requirement: 'REQ-028',
+    name: 'app validate는 Storybook build를 실행한다',
+    covers: ['`npm run app:validate`는 Storybook build를 실행해 Skeleton UI 검토 표면이 빌드 가능한지 확인한다']
+}, () => {
+    const runner = readText(path.join(workspaceRoot, 'harness', 'tools', 'run.mjs'));
+    assert.ok(runner.includes('function frontEndBuildStorybook()'));
+    assert.ok(runner.includes("frontEndNpm('front-end:build-storybook', 'build-storybook')"));
+    assert.ok(runner.includes('frontEndBuildStorybook();'));
+});
+
+harnessTest({
+    requirement: 'REQ-028',
+    name: 'Storybook 계약 누락은 FE finding으로 보고된다',
+    covers: ['UI Storybook 계약이 있는 요건은 선언한 Storybook surface와 named export 상태가 실제 Storybook source index에 있고 해당 요건 metadata와 연결되어야 한다']
+}, () => {
+    const dir = tempDir('stage-aware-storybook-');
+    const feSourceIndex = path.join(dir, 'front-end.source-index.json');
+    const requirementsIndex = path.join(dir, 'requirements.index.json');
+    const openApiIndex = path.join(dir, 'openapi.index.json');
+    const generatedMeta = path.join(dir, '.openapi-source.sha256');
+    const out = path.join(dir, 'front-end-standards.findings.json');
+
+    writeJson(feSourceIndex, {
+        stories: [
+            {
+                title: 'Todos/TodoFormDialog',
+                story: 'Create',
+                requirements: [],
+                file: 'app/front-end/src/TodoFormDialog.stories.tsx',
+                line: 10
+            }
+        ],
+        tests: [],
+        apiUsages: [],
+        apiCalls: [],
+        issues: []
+    });
+    writeJson(requirementsIndex, {
+        entries: [{
+            id: 'REQ-028',
+            status: 'Skeleton 승인',
+            location: { file: 'harness/docs/requirements/REQ-028-stage-aware-tdd-workflow.md', line: 1, identity: 'REQ-028' },
+            storybookContract: [
+                { title: 'Todos/TodoFormDialog', states: ['Create', 'Submitting'] }
+            ]
+        }]
+    });
+    writeJson(openApiIndex, {
+        sha256: 'fixture-hash',
+        entries: [],
+        rawOpenApi: { paths: {}, components: { schemas: {} } }
+    });
+    fs.writeFileSync(generatedMeta, 'fixture-hash');
+
+    runCommand(process.execPath, [
+        path.join(workspaceRoot, 'harness', 'tools', 'validate-front-end-standards.mjs'),
+        `--front-end-root=${dir}`,
+        `--fe-source-index=${feSourceIndex}`,
+        `--requirements-index=${requirementsIndex}`,
+        `--openapi-index=${openApiIndex}`,
+        `--generated-meta=${generatedMeta}`,
+        `--out=${out}`
+    ], { cwd: workspaceRoot });
+
+    const payload = JSON.parse(fs.readFileSync(out, 'utf8'));
+    const ruleIds = payload.findings.map((finding: { ruleId: string }) => finding.ruleId).sort();
+    assert.deepEqual(ruleIds, ['FE-STORY-MISSING-STATE', 'FE-STORY-REQ-MISMATCH']);
 });
 
 harnessTest({

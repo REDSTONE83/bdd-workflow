@@ -146,8 +146,8 @@ function evaluateTrace(state, selectedIds, flags) {
         ? requirements.filter((r) => selectedIds.has(r.id))
         : requirements;
     const total = filtered.length;
-    const red = filtered.filter((r) => r.state === 'RED').length;
-    const green = filtered.filter((r) => r.state === 'GREEN').length;
+    const red = filtered.filter((r) => r.state === 'RED' && traceRedIsBlocking(r)).length;
+    const green = filtered.filter((r) => r.state === 'GREEN' && traceGreenIsBlockingForBlue(r)).length;
     const reasons = [];
     if (flags.checkMode || flags.requireBlue) {
         if (total === 0) reasons.push('no requirements');
@@ -155,6 +155,32 @@ function evaluateTrace(state, selectedIds, flags) {
     }
     if (flags.requireBlue && green > 0) reasons.push(`green=${green}`);
     return reasons;
+}
+
+function traceRedIsBlocking(requirement) {
+    // Older fixture/state payloads did not include the requirement card workflow status.
+    // Preserve the historical behavior for those inputs.
+    if (!requirement.status) return true;
+    if (['테스트 승인', '구현중'].includes(requirement.status)) {
+        return hasBlockingTestReadinessReason(requirement);
+    }
+    return ['검증중', '승인'].includes(requirement.status);
+}
+
+function hasBlockingTestReadinessReason(requirement) {
+    const reasons = Array.isArray(requirement.redReasons) ? requirement.redReasons : [];
+    if (reasons.length === 0) return true;
+    return reasons.some((reason) => {
+        const status = reason?.evidence?.status;
+        return reason?.ruleId === 'TRACE-AC-EMPTY'
+            || reason?.ruleId === 'TRACE-AC-MISSING'
+            || ['MISSING', 'NOT_RUN', 'SKIP'].includes(status);
+    });
+}
+
+function traceGreenIsBlockingForBlue(requirement) {
+    if (!requirement.status) return true;
+    return ['승인'].includes(requirement.status);
 }
 
 function categoryReasonLine(category, bucket) {
