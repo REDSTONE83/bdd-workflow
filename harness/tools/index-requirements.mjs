@@ -143,6 +143,38 @@ function storybookContractItems(markdown) {
         .filter(Boolean);
 }
 
+const BDD_REVIEW_RESULT_LINE_PATTERN = /^[ \t]*(?:-\s*)?결과[ \t]*[:：][ \t]*(.+?)\s*$/;
+
+function normalizeBddReviewResultStatus(status) {
+    return status.trim().replace(/[.。]+$/u, '').toLowerCase();
+}
+
+function bddReviewResultItems(markdown) {
+    return markdown
+        .split('\n')
+        .map((line, index) => {
+            const match = line.match(BDD_REVIEW_RESULT_LINE_PATTERN);
+            if (!match) return null;
+            const status = match[1].trim();
+            return {
+                line: index + 1,
+                status,
+                normalizedStatus: normalizeBddReviewResultStatus(status)
+            };
+        })
+        .filter(Boolean);
+}
+
+function bddReviewResultSummary(markdown) {
+    const results = bddReviewResultItems(markdown);
+    const latest = results.at(-1) ?? null;
+    return {
+        latest,
+        incomplete: latest?.normalizedStatus === '미완료',
+        approved: ['승인', 'approved', 'blue'].includes(latest?.normalizedStatus ?? '')
+    };
+}
+
 function firstNonEmptySection(content, headings) {
     for (const heading of headings) {
         const value = section(content, heading).trim();
@@ -180,8 +212,9 @@ function parseCard(file) {
         'UI Storybook 계약'
     ]));
     const bddReview = section(content, 'BDD 테스트 리뷰');
-    const bddReviewIncomplete = /미완료/.test(bddReview);
-    const bddReviewApproved = /^[ \t]*결과:[ \t]*승인\s*$/m.test(bddReview);
+    const bddReviewResult = bddReviewResultSummary(bddReview);
+    const bddReviewIncomplete = bddReviewResult.incomplete;
+    const bddReviewApproved = bddReviewResult.approved;
     const sectionPresent = {};
     for (const sec of REQUIRED_SECTIONS) {
         sectionPresent[sec] = new RegExp(`^## ${escapeRegExp(sec)}\\s*$`, 'm').test(content);
@@ -213,6 +246,7 @@ function parseCard(file) {
         uiSkeleton,
         storybookContract,
         sectionPresent,
+        bddReviewResult: bddReviewResult.latest,
         bddReviewIncomplete,
         bddReviewApproved,
         referencedRequirementIds
@@ -251,6 +285,7 @@ function toEntry(card) {
         uiSkeleton: card.uiSkeleton,
         storybookContract: card.storybookContract,
         sectionPresent: card.sectionPresent,
+        bddReviewResult: card.bddReviewResult,
         bddReviewIncomplete: card.bddReviewIncomplete,
         bddReviewApproved: card.bddReviewApproved,
         referencedRequirementIds: card.referencedRequirementIds
@@ -275,6 +310,8 @@ function main() {
 
 export {
     acceptanceCriterionItems,
+    bddReviewResultItems,
+    bddReviewResultSummary,
     verificationTargetItems,
     storybookContractItems,
     AC_TARGET_TOKENS,

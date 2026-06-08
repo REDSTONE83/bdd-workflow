@@ -44,6 +44,7 @@
 - (STATIC) `npm run app:validate`는 Storybook build를 실행해 Skeleton UI 검토 표면이 빌드 가능한지 확인한다
 - (STATIC) 테스트 승인 단계는 AC별 실행 테스트 연결을 요구하지만 구현 전 테스트 실패 자체는 통합 게이트 차단 사유로 보지 않는다
 - (STATIC) `gate.mjs --check`는 `검증중` 또는 `승인` 카드의 RED를 TRACE 실패로 차단한다
+- (STATIC) 승인 카드의 BDD 테스트 리뷰 검사는 자유 텍스트가 아니라 최신 `결과:` 라인을 기준으로 `승인` 또는 `미완료` 상태를 판정한다
 
 ## 검증 대상
 
@@ -86,7 +87,7 @@
 ### 요건 Skeleton 승인 이력
 
 - 승인일: 2026-06-08
-  검증 설계: 단계별 상태 enum, Skeleton 계약, Storybook 계약, app validate Storybook build, 단계별 RED 차단 정책을 STATIC AC로 검증한다.
+  검증 설계: 단계별 상태 enum, Skeleton 계약, Storybook 계약, app validate Storybook build, 단계별 RED 차단 정책, BDD 테스트 리뷰 결과 라인 파싱을 STATIC AC로 검증한다.
   API Skeleton: 해당 없음.
   DB Skeleton: 해당 없음.
   화면/라우팅 Skeleton: 해당 없음.
@@ -100,8 +101,13 @@
 
 - 리뷰일: 2026-06-08
   리뷰자: REDSTONE
-  확인: 단계 상태 enum, Skeleton 계약, Storybook 계약, app validate Storybook build, 테스트 승인 게이트, 검증 단계 RED 차단 정책을 self-test로 확인한다.
-  결과: 완료
+  확인: 단계 상태 enum, Skeleton 계약, Storybook 계약, app validate Storybook build, 테스트 승인 게이트, 검증 단계 RED 차단 정책을 self-test로 확인했다.
+  결과: 승인
+
+- 리뷰일: 2026-06-08
+  리뷰자: REDSTONE
+  확인: 승인 카드의 BDD 테스트 리뷰 상태가 자유 텍스트가 아니라 최신 `결과:` 라인으로 계산되는지 parser tool-test와 validator self-test로 확인한다.
+  결과: 승인
 
 ## 열린 질문
 

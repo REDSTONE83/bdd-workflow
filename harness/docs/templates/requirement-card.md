@@ -113,7 +113,7 @@
 - 리뷰일: YYYY-MM-DD
   리뷰자: Product Owner, Tech Lead, QA
   확인: 모든 수용 기준이 `@Covers` 또는 FE `Covers`로 커버되고, 같은 요건의 `.feature` 시나리오 `Covers:`와 연결됨. 정상/예외/경계 조건과 API/UI/E2E/STATIC 채널별 검증이 충분함.
-  결과: 미완료, 승인, 또는 수정 필요.
+  결과: 미완료 | 승인 | 수정 필요
 
 ## 열린 질문
 

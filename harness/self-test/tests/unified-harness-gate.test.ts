@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { bddReviewResultSummary } from '../../tools/index-requirements.mjs';
 import {
     addFinding,
     addTerminologyFinding,
@@ -282,6 +283,50 @@ harnessTest({
         })
     ]);
     assert.equal(complete.findings.length, 0, JSON.stringify(complete.findings, null, 2));
+});
+
+harnessTest({
+    requirement: 'REQ-028',
+    name: '승인 BDD 리뷰 상태는 최신 결과 라인 기준으로 판정한다',
+    covers: ['승인 카드의 BDD 테스트 리뷰 검사는 자유 텍스트가 아니라 최신 `결과:` 라인을 기준으로 `승인` 또는 `미완료` 상태를 판정한다']
+}, () => {
+    const approvedSummary = bddReviewResultSummary([
+        '### 요건 Skeleton 승인 이력',
+        '- 승인일: 2026-06-08',
+        '  확인: 할 일을 미완료로 되돌리는 도메인 문장은 리뷰 상태가 아니다.',
+        '  Skeleton 결과: 미완료',
+        '### 테스트 리뷰',
+        '- 리뷰일: 2026-06-08',
+        '  결과: 승인'
+    ].join('\n'));
+    const approved = runRequirementCardValidatorFixture([
+        requirementCardFixture({
+            status: '승인',
+            approved: true,
+            bddReviewResult: approvedSummary.latest,
+            bddReviewIncomplete: approvedSummary.incomplete,
+            bddReviewApproved: approvedSummary.approved
+        })
+    ]);
+    assert.equal(approved.findings.length, 0, JSON.stringify(approved.findings, null, 2));
+
+    const incompleteSummary = bddReviewResultSummary([
+        '- 리뷰일: 2026-06-07',
+        '  결과: 승인',
+        '- 리뷰일: 2026-06-08',
+        '  결과: 미완료'
+    ].join('\n'));
+    const incomplete = runRequirementCardValidatorFixture([
+        requirementCardFixture({
+            status: '승인',
+            approved: true,
+            bddReviewResult: incompleteSummary.latest,
+            bddReviewIncomplete: incompleteSummary.incomplete,
+            bddReviewApproved: incompleteSummary.approved
+        })
+    ]);
+    const ruleIds = incomplete.findings.map((finding: { ruleId: string }) => finding.ruleId);
+    assert.ok(ruleIds.includes('CARD-APPROVAL-BDD-INCOMPLETE'), JSON.stringify(incomplete.findings, null, 2));
 });
 
 harnessTest({

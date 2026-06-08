@@ -7,6 +7,8 @@ import assert from 'node:assert/strict';
 
 import {
     acceptanceCriterionItems,
+    bddReviewResultItems,
+    bddReviewResultSummary,
     storybookContractItems,
     verificationTargetItems
 } from '../index-requirements.mjs';
@@ -124,6 +126,62 @@ describe('storybookContractItems', () => {
                 title: 'Todos/TodoFormDialog',
                 states: ['Create', 'Submitting'],
                 raw: '`Todos/TodoFormDialog`: `Create`, `Submitting`'
+            }
+        ]);
+    });
+});
+
+describe('bddReviewResultSummary', () => {
+    it('uses only BDD review result lines and ignores domain text containing 미완료', () => {
+        const summary = bddReviewResultSummary([
+            '- 시나리오 문서: `docs/scenarios/REQ-999.feature`',
+            '',
+            '### 요건 Skeleton 승인 이력',
+            '',
+            '- 승인일: 2026-06-08',
+            '  확인: 할 일을 미완료로 되돌리는 도메인 문장은 상태 표기가 아니다.',
+            '  Skeleton 결과: 미완료',
+            '',
+            '### 테스트 리뷰',
+            '',
+            '- 리뷰일: 2026-06-08',
+            '  확인: 검토 완료.',
+            '  결과: 승인'
+        ].join('\n'));
+
+        assert.equal(summary.incomplete, false);
+        assert.equal(summary.approved, true);
+        assert.deepEqual(summary.latest, {
+            line: 13,
+            status: '승인',
+            normalizedStatus: '승인'
+        });
+    });
+
+    it('treats the latest result line as authoritative', () => {
+        const summary = bddReviewResultSummary([
+            '- 리뷰일: 2026-06-07',
+            '  결과: 승인',
+            '- 리뷰일: 2026-06-08',
+            '  결과: 미완료'
+        ].join('\n'));
+
+        assert.equal(summary.incomplete, true);
+        assert.equal(summary.approved, false);
+        assert.equal(summary.latest.status, '미완료');
+    });
+});
+
+describe('bddReviewResultItems', () => {
+    it('does not parse Skeleton 결과 lines as test review results', () => {
+        assert.deepEqual(bddReviewResultItems([
+            '  Skeleton 결과: 승인',
+            '  결과: 승인'
+        ].join('\n')), [
+            {
+                line: 2,
+                status: '승인',
+                normalizedStatus: '승인'
             }
         ]);
     });
