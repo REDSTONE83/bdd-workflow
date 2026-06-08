@@ -14,7 +14,7 @@
 요건 ID: REQ-XXX
 제목: 요건 제목
 우선순위: 높음 | 중간 | 낮음
-상태: 초안 | 검토중 | 승인 | 대체됨 | 폐기
+상태: 초안 | Skeleton 검토중 | Skeleton 승인 | 테스트 작성중 | 테스트 승인 | 구현중 | 검증중 | 승인 | 대체됨 | 폐기
 요건 종류: 기능 | 비기능 | 통합 | 정책 | 하네스
 명세 역할: 원자 요건 | 상위 요건 | 구현 슬라이스
 대상 시스템: application | harness
@@ -28,6 +28,53 @@
 `제품 영역`의 `auth | todo | category | platform | harness`는 현재 사용하는 예시 키다. 닫힌 enum이 아니며, 새 영역이 필요하면 소문자/숫자/하이픈으로 된 안정적인 키를 쓴다.
 
 `품질 속성`은 쉼표로 여러 개를 적을 수 있다. `none`은 다른 품질 속성과 함께 쓰지 않는다. `관련 요건`과 `대체 요건`은 존재하는 `REQ-XXX`만 적는다.
+
+## 상태와 단계
+
+카드 상태 하나가 요건의 워크플로우 단계를 표현한다. 별도 `검토 단계` 필드는 두지 않는다.
+
+```text
+초안
+  사용자 목표, 범위, AC, Scenario를 반복 구체화한다.
+  하네스는 카드 구조, 용어, AC 마커, Scenario Covers 정합성을 리뷰한다.
+  API/DB/UI Skeleton, Storybook, Test Code, 구현 누락은 실패로 보지 않는다.
+
+Skeleton 검토중
+  API/DB/UI/Storybook 계약을 설계하고 리뷰한다.
+  UI가 있으면 Storybook으로 검토할 Page/Component/Dialog/List 상태를 정한다.
+
+Skeleton 승인
+  구현 전 계약 검토가 완료된 상태다.
+  선언한 검증 대상에 맞는 API/DB/UI/Storybook 계약이 카드에 있어야 한다.
+  UI Storybook 계약이 있으면 실제 story와 named export 상태가 존재하고 build-storybook이 통과해야 한다.
+
+테스트 작성중
+  승인된 AC와 Scenario를 실행 테스트 코드로 옮긴다.
+  실제 업무 동작 구현은 아직 완료하지 않아도 된다.
+
+테스트 승인
+  모든 AC가 실행 테스트 코드와 연결되었음을 리뷰한 상태다.
+  통합 게이트는 테스트 누락, 미실행, 스킵, Covers 불일치 RED를 차단한다.
+  실행된 테스트 실패는 구현 전까지 허용한다.
+
+구현중
+  테스트와 Storybook 계약을 기준으로 실제 구현을 진행한다.
+  테스트 누락, 미실행, 스킵은 계속 차단 대상이다.
+  실행된 테스트 실패는 RED로 남을 수 있으나 검증중 전까지 통합 게이트의 TRACE 차단 대상은 아니다.
+
+검증중
+  완료 후보 상태다.
+  모든 요구 채널의 AC가 PASS해야 하며 RED는 통합 게이트에서 차단된다.
+
+승인
+  사람이 최종 승인한 현재 명세 버전이다.
+  GREEN이고 열린 질문이 없으면 BLUE가 된다. RED는 통합 게이트에서 차단된다.
+
+대체됨 / 폐기
+  완료 판정 대상에서 빠진다. 대체됨은 대체 요건을 가져야 한다.
+```
+
+승인된 카드라도 범위, AC, 검증 수준, API/DB/UI/Storybook 계약, Scenario Covers가 의미 있게 바뀌면 승인 상태를 유지하지 않는다. 명세 의미가 바뀌면 `초안` 또는 `Skeleton 검토중`으로, 계약만 바뀌면 `Skeleton 검토중`으로, 명세/계약은 그대로이고 구현만 바꾸면 `구현중`으로 되돌린다.
 
 ## 제목
 
@@ -145,9 +192,9 @@ REQ-017 할 일 목록 조회
 
 구현 순서 때문에 갈라진 카드는 canonical REQ로 병합한다. API 카드와 화면 카드처럼 제품 능력은 하나인데 구현 표면만 다른 경우가 여기에 해당한다. 병합된 카드는 `상태: 대체됨`, `대체 요건: REQ-XXX`로 닫는다. `대체 요건`은 canonical entry point 하나만 가리킨다. 병합 카드의 상세 AC, 시나리오, 의사결정 로그, 테스트 연결은 필요하면 여러 하위 원자 요건으로 나누어 옮길 수 있다.
 
-원자 기능 카드가 API와 화면을 모두 가지면 `검증 수준: mixed`로 두고 `(API)`와 `(UI)` AC를 같은 카드에 함께 둔다. 생성/목록/수정/삭제/상태 변경처럼 업무 동사가 분명한 기능은 화면 모달, 목록 표시, 실패 재시도, 접근성 검증도 해당 기능 카드가 소유한다. 화면 전용 카드는 공통 route shell, 앱 셸, 내비, 보호 화면 조합처럼 특정 업무 동사 하나로 귀속되지 않는 조합 책임에만 사용한다.
+원자 기능 카드가 API와 화면을 모두 가지면 `검증 수준: mixed`로 두고 `(API)`와 `(UI)` AC를 같은 카드에 함께 둔다. 생성/목록/수정/삭제/상태 변경처럼 업무 동사가 분명한 기능은 화면 대화상자, 목록 표시, 실패 재시도, 접근성 검증도 해당 기능 카드가 소유한다. 화면 전용 카드는 공통 route shell, 앱 셸, 내비, 보호 화면 조합처럼 특정 업무 동사 하나로 귀속되지 않는 조합 책임에만 사용한다.
 
-분리 또는 병합으로 범위나 AC가 바뀐 카드는 기존 `승인`을 유지하지 않는다. 신규 상위/원자 카드와 병합 대상 canonical 카드는 `검토중`으로 시작하거나 되돌리고, AC/Scenario/Test/Report 정합성이 확인된 뒤 다시 `승인`으로 올린다. `대체됨` 또는 `폐기` 카드는 완료 판정 대상에서는 빠지지만 카드 구조 검증은 계속 받는다.
+분리 또는 병합으로 범위나 AC가 바뀐 카드는 기존 `승인`을 유지하지 않는다. 신규 상위/원자 카드와 병합 대상 canonical 카드는 변경 수준에 따라 `초안`, `Skeleton 검토중`, `구현중` 중 적절한 단계로 시작하거나 되돌리고, AC/Scenario/Test/Report 정합성이 확인된 뒤 다시 `승인`으로 올린다. `대체됨` 또는 `폐기` 카드는 완료 판정 대상에서는 빠지지만 카드 구조 검증은 계속 받는다.
 
 기존 카드의 상세 AC, Scenario, Test, 코드 annotation을 새 원자 요건으로 옮길 때는 원자 요건 하나씩 진행한다. 한 원자 REQ의 카드, `.feature`, 실행 테스트, 코드/FE metadata 참조를 함께 옮긴 뒤 단일 카드 trace로 확인하고 다음 원자 요건으로 넘어간다.
 
@@ -228,12 +275,16 @@ AC는 사용자/PO/QA가 승인할 수 있는 관계자 언어로 적는다. 구
 
 초안 단계에서는 `미완료`로 둘 수 있다. Skeleton 단계에서는 검증 설계와 계약 골격 승인 결과를 남긴다. 수용 기준과 실행 테스트가 리뷰되기 전에는 요건 카드 상태를 `승인`으로 바꾸지 않는다.
 
-Skeleton 승인 이력은 필요 항목만 남긴다.
+Skeleton 승인 이력은 필요 항목만 남긴다. 새 단계 상태를 쓰는 카드는 별도 `## 검증 대상`과 필요한 Skeleton/Storybook 계약 섹션을 함께 둔다.
+
+- `검증 대상`: `API`, `DB`, `UI`, `Storybook`, `E2E`, `STATIC` 중 필요한 검증 표면을 `필요`/`불필요`로 적는다.
+- `Storybook 계약`: `Storybook title: StateA, StateB` 형식으로 사용자가 검토할 story surface와 named export 상태를 적는다.
 
 - `검증 설계`: 카드 AC와 `.feature` Scenario `Covers:` 매핑 요약.
 - `API Skeleton`: API/DTO/Service/Repository 계약 골격.
 - `DB Skeleton`: Entity/컬럼/관계와 `previewSchema` 확인 결과.
 - `화면/라우팅 Skeleton`: 화면 이름, route, 접근 권한, 주요 상태, Storybook story 위치.
+- `Storybook 계약`: Page/Component/Dialog/List 별 Storybook title과 상태 named export.
 - `검사기 Skeleton`: 하네스 collector/validator/reporter/gate 변경.
 - `추적 정책`: AC 마커, RED/GREEN/BLUE 판정, 관련 요건 영향.
 - `검증`: 실행한 명령과 결과.
@@ -246,6 +297,7 @@ Skeleton 승인 이력은 필요 항목만 남긴다.
 - 카드에 API 목록, 테스트 메서드 목록, 화면 목록을 수기로 유지하지 않는다. 자동 리포트에서 확인한다.
 - 사용자 요청 하나를 무조건 새 REQ로 만들지 않는다. 먼저 기존 원자 요건 수정, 통합 요건, 정책 요건, 비기능 요건, 구현 슬라이스 중 무엇인지 판단한다.
 - 기능 변경, 정책 전환, 기술 전환을 `... 도입`, `... 전환`, `... 강화` 같은 별도 REQ로 남기지 않는다. 최종 명세는 canonical REQ에 남기고 작업 이력은 Change Set에 둔다.
+- UI 컴포넌트/위젯 원자(`ui.button`, `ui.dialog`, `ui.formDialog` 등)를 카드 `## 표준 용어`에 등록하지 않는다. 위반은 `CARD-TERM-UI-PRIMITIVE`로 차단된다. UI 어휘는 [UI 컴포넌트 어휘 표준](ui-vocabulary.md)의 정규 명칭으로 본문/수용 기준/시나리오에 표현한다.
 
 ## 자동 검증
 
@@ -259,7 +311,7 @@ Skeleton 승인 이력은 필요 항목만 남긴다.
 - `요건 종류: 통합`인데 `검증 수준`이 `e2e|mixed`가 아니거나 `(E2E)` AC가 없음
 - `검증 수준`과 AC 마커 집합 불일치
 - 수용 기준 비어 있음, 중복, 마커 누락(`CARD-AC-MARKER-MISSING`), 마커 허용값 위반(`CARD-AC-MARKER-INVALID`)
-- 표준 용어 형식/등록/중복
+- 표준 용어 형식/등록/중복, UI 컴포넌트 원자 차단(`CARD-TERM-UI-PRIMITIVE`)
 - 승인 카드의 열린 질문 또는 BDD 테스트 리뷰 미승인
 
 요건 카드 스키마 리포트는 `build/app/reports/requirement-schema-report.md` 또는 `build/harness/reports/requirement-schema-report.md`와 `.json`에 생성된다.

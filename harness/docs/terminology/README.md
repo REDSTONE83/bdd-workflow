@@ -170,6 +170,7 @@ draft.json에만 있음    draft      safe=warning, strict=error
 
 - **포함**: 카드 도메인의 term (예: REQ-002의 `todo.*`), 카드가 참조하는 인접 도메인의 term (예: REQ-002의 `category.id`, `user.id`).
 - **제외**: `common.*`처럼 모든 카드가 자동으로 의존하는 도메인-무관 인프라 용어 (audit 컬럼, ApiError 부속 필드, PageResponse 부속 필드 등). 한 번 `domains/common.json`에 등록되면 `UNREGISTERED_CODE_NAME` 검사를 통과하므로 카드별로 반복 명시하지 않는다.
+- **제외(UI 컴포넌트 원자)**: `ui.button`, `ui.input`, `ui.checkbox`, `ui.dialog`, `ui.formDialog` 같은 UI 컴포넌트/위젯 원자 키. 카드 `## 표준 용어`에 두면 `CARD-TERM-UI-PRIMITIVE` 오류로 차단된다. 이 판정은 `CARD-TERM-UNREGISTERED`보다 **먼저** 수행해, 등록 누락이 아니라 잘못된 레이어임을 안내한다. UI 컴포넌트 원자는 추적용 표준 용어로 등록하지 않고 [UI 컴포넌트 어휘 표준](../standards/ui-vocabulary.md)의 정규 명칭으로 본문에 표현한다. 단 `ui.appShell`·`ui.desktopViewport`·`ui.accessibilityCheck`처럼 화면 품질·플랫폼 의미를 가진 등록 용어는 deny-list에 없으며 카드 표준 용어에 둘 수 있다.
 
 근거: 공통 인프라 용어를 카드마다 나열하면 잡음이 늘고 카드 리뷰 시 의미 있는 도메인 용어와 섞여 우선순위를 잃는다. 카드의 비즈니스 결정이 공통 용어의 의미를 좁히거나 확장할 때만 의사결정 로그에 별도로 남긴다.
 

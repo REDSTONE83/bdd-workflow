@@ -34,11 +34,11 @@
   - `harness/docs/standards/terminology.md`(운영 요약)에 추적용 표준 용어와 문서 작성용 UI 어휘의 차이를 요약한다.
   - `harness/docs/standards/requirement-card.md` 표준 용어 절에 deny-list 차단 기준을 보강한다.
   - `harness/docs/requirement-authoring.md`에 본문/수용 기준/시나리오에서 UI 원자 용어를 쓸 때 UI 어휘 표준의 정규 명칭을 따라야 한다고 명시한다.
-- 하네스 self-test를 신설한다(`harness/self-test/tests/`).
+- 도구 단위 self-test를 신설한다(`harness/tools/__tests__/validate-requirement-cards.ui-primitive.test.mjs`). `CARD-TERM-UI-PRIMITIVE`는 요건 AC로 추적되지 않는 카드 스키마 룰이므로, 요건 추적 self-test(`harness/self-test/tests/`)가 아니라 기존 validator 단위 테스트(`validate-front-end-standards.api-usage.test.mjs`)와 같은 `__tests__` 위치에 둔다. validator는 fixture 경로를 주입할 수 있도록 `--requirements-index`/`--terminology-index`/`--out` override를 받는다.
   - deny-list UI 원자 키가 카드 표준 용어로 들어온 fixture → `CARD-TERM-UI-PRIMITIVE`.
   - 일반 미등록 도메인 용어 fixture → `CARD-TERM-UNREGISTERED`.
-  - 같은 카드에 두 종류가 함께 있을 때 각각 분리 판정되고 UI-PRIMITIVE가 먼저 보고됨을 검증한다.
-  - 본문 별칭(`모달`)이 `BAN_VIOLATION`으로 잡히는지 검증한다. (`harness/self-test/tests/ac-target-marker.test.ts`가 validate 도구를 spawn하는 패턴을 참고한다.)
+  - 같은 카드에 두 종류가 함께 있을 때 각각 분리 판정되고 UI 원자는 `CARD-TERM-UNREGISTERED`로 잡히지 않음을 검증한다.
+  - 본문 별칭(`모달` 등)의 `BAN_VIOLATION` 실제 작동은 `terminology.mjs validate`가 실제 카드를 읽으므로 fixture 단위 테스트 대신 application Change Set의 `app:validate` 통합 검증으로 확인한다.
 
 ## 제외 범위
 
@@ -55,12 +55,12 @@
 - 등록된 `ui.appShell`·`ui.desktopViewport`·`ui.accessibilityCheck`는 카드 표준 용어로 계속 통과한다.
 - 본문에 `다이얼로그`/`모달`/`팝업`/`확인창`이 쓰이면 `BAN_VIOLATION`(`strictSeverity: error`)으로 보고되어 통합 게이트가 차단한다.
 - `harness/docs/terminology/README.md`와 `harness/docs/standards/terminology.md`가 추적용 표준 용어와 문서 작성용 UI 어휘의 구분, UI 컴포넌트 원자 제외를 명시한다.
-- `npm run harness:self-test`가 UI 원자 차단 fixture, 일반 미등록 fixture, 분리/우선순위, 본문 BAN을 모두 검증한다.
+- `npm run harness:test`(도구 단위 테스트 포함)가 UI 원자 차단 fixture, 일반 미등록 fixture, 레이어 분리/우선순위를 검증한다.
 - `npm run harness:validate`가 통과한다.
 
 ## 검증 명령
 
-- `npm run harness:self-test`
+- `npm run harness:test`
 - `npm run harness:validate`
 - `node harness/tools/terminology.mjs validate --strict`
 
