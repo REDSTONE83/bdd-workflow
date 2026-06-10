@@ -15,12 +15,12 @@
 ## 작업 범위
 
 - UI 어휘 표준을 신설한다(`harness/docs/standards/ui-vocabulary.md`). 정규 명칭, 허용 사용 위치, 피해야 할 별칭을 둔다.
-  - 정규 명칭: `대화상자`, `확인 대화상자`, `폼 대화상자`, `체크박스`, `텍스트 입력`, `아이콘 버튼`, `드롭다운`, `탭`, `토글`, `도구 설명`.
+  - 정규 명칭: `대화상자`, `확인 대화상자`, `입력 대화상자`, `체크박스`, `텍스트 입력`, `아이콘 버튼`, `드롭다운`, `탭`, `토글`, `도구 설명`.
   - 피해야 할 별칭: `다이얼로그`, `모달`, `팝업`, `확인창`, `인풋`, `체크 박스`.
   - 정규 명칭 목록은 현재 화면 요건에서 실제 쓰이는 컴포넌트로 한정하고, 새 컴포넌트가 나오면 표준에 증분 추가한다.
   - 정규 명칭은 문서 작성 어휘다. 코드 식별자(shadcn `dialog.tsx`, `modal` prop 등 영문 컴포넌트 API)는 본 표준 대상이 아니다.
 - 재발 방지를 위해 별칭을 terminology 사전 ban으로 등록한다.
-  - 대화상자 의미 term의 `ban`에 `다이얼로그`, `모달`, `팝업`, `확인창`을, `allow`에 정규 명칭(`대화상자`, `확인 대화상자`, `폼 대화상자`)을 둔다. 체크박스 term의 `ban`에 `체크 박스`, 텍스트 입력 term의 `ban`에 `인풋`을 둔다.
+  - 대화상자 의미 term의 `ban`에 `다이얼로그`, `모달`, `팝업`, `확인창`을, `allow`에 정규 명칭(`대화상자`, `확인 대화상자`, `입력 대화상자`)을 둔다. 체크박스 term의 `ban`에 `체크 박스`, 텍스트 입력 term의 `ban`에 `인풋`을 둔다.
   - 이 사전 등록은 **본문 어휘 통제(ban/allow surface)** 용도다. 같은 key를 카드 `## 표준 용어`에 쓰는 것은 아래 deny-list가 막는다.
 - `harness/tools/validate-requirement-cards.mjs`에 `CARD-TERM-UI-PRIMITIVE`를 신설한다.
   - 명시적 deny-list를 SSOT로 둔다: `ui.button`, `ui.input`, `ui.checkbox`, `ui.dialog`, `ui.formDialog`, `ui.confirmDialog`, `ui.tooltip`, `ui.modal`, `ui.dropdown`, `ui.tab`, `ui.toggle`.

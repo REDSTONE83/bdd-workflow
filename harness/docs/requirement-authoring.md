@@ -23,14 +23,14 @@
 -> 상태: 승인 (사람이 최종 승인)
 ```
 
-새 요청이 들어와도 바로 새 REQ를 만들지 않는다. 먼저 기존 원자 요건의 범위/AC를 바꿀지, 여러 REQ를 함께 수정할 Change Set인지, 통합/비기능/정책/구현 슬라이스 카드가 필요한지 판단한다. 기능 변경이나 정책 전환이면 별도 전환 REQ를 만들지 않고 canonical REQ의 최종 범위와 AC를 갱신한다. 변경 전 상태와 작업 순서는 Change Set에 두고, 정책 선택의 근거만 `의사결정 로그`에 남긴다. 수용 기준이 확정되면 시나리오 하나씩 승인받지 않는다. 영향 REQ 집합 단위로 검증 설계와 요건 Skeleton을 세울 수 있지만, 명세와 완료 판정은 각 REQ의 AC 단위로 유지한다. Skeleton 단계는 인터페이스와 계약을 검토하는 단계이므로 업무 로직, 성공 응답 본문, Repository 쿼리 계약, 실행 테스트는 작성하지 않는다. 다만 UI가 있는 요건은 Skeleton 승인 전에 Storybook으로 Page/Component/Dialog/List 상태를 실제 검토할 수 있어야 한다. 동작 내용은 Service/Controller 내부 코멘트와 Storybook mock/fake interaction으로만 설계해 둔다.
+새 요청이 들어와도 바로 새 REQ를 만들지 않는다. 먼저 기존 원자 요건의 범위/AC를 바꿀지, 여러 REQ를 함께 수정할 Change Set인지, 통합/비기능/정책/구현 슬라이스 카드가 필요한지 판단한다. 기능 변경이나 정책 전환이면 별도 전환 REQ를 만들지 않고 canonical REQ의 최종 범위와 AC를 갱신한다. 변경 전 상태와 작업 순서는 Change Set에 두고, 정책 선택의 근거만 `의사결정 로그`에 남긴다. 수용 기준이 확정되면 시나리오 하나씩 승인받지 않는다. 영향 REQ 집합 단위로 검증 설계와 요건 Skeleton을 세울 수 있지만, 명세와 완료 판정은 각 REQ의 AC 단위로 유지한다. Skeleton 단계는 인터페이스와 계약을 검토하는 단계이므로 업무 로직, 성공 응답 본문, Repository 쿼리 계약, 실행 테스트는 작성하지 않는다. 다만 UI가 있는 요건은 Skeleton 승인 전에 Storybook으로 화면/컴포넌트/대화상자/목록 상태를 실제 검토할 수 있어야 한다. 동작 내용은 Service/Controller 내부 코멘트와 Storybook 모의 상호작용으로만 설계해 둔다.
 
 ## 진행 용어
 
 - 검증 설계: 수용 기준과 `.feature` 시나리오로 무엇을 검증할지 정한 것. 요건 Skeleton보다 먼저 작성한다.
 - Change Set: 사용자 요청을 처리하기 위해 함께 바꾸는 REQ 집합. 영구 명세 원천이 아니라 작업 범위이며, 별도 사람이 관리하는 ID 없이 `app/docs/change-sets/YYYY-MM-DD-slug.md` 또는 `harness/docs/change-sets/YYYY-MM-DD-slug.md` 파일 경로를 identity로 쓴다. 첫 줄 제목도 `# Change Set: YYYY-MM-DD 작업 제목` 형식으로 날짜를 포함한다.
 - 요건 Skeleton: API/DB/Service 계약 골격. 업무 로직은 없고 동작 설계는 내부 코멘트로만 둔다.
-- 화면/라우팅 Skeleton: 화면 이름, 업무 진입점, 예상 route 초안, 접근 권한, 주요 표시 정보. UI가 있는 요건은 Storybook mock/fake story로 사용자가 관찰할 상태를 검토할 수 있게 한다.
+- 화면/라우팅 Skeleton: 화면 이름, 업무 진입점, 예상 경로 초안, 접근 권한, 주요 표시 정보. UI가 있는 요건은 Storybook 모의 story로 사용자가 관찰할 상태를 검토할 수 있게 한다.
 - 실행 테스트: 승인된 검증 설계를 JUnit Acceptance Test 또는 FE BDD 테스트로 옮긴 코드. 요건 Skeleton 승인 후, 실제 구현 전에 작성하고 `테스트 승인`을 거친다.
 - 업무 구현: Service 업무 로직, Controller 성공 응답 본문, 실제 FE 컴포넌트/라우팅/API client 연결을 작성하는 단계다.
 - 검증: `npm run app:validate` 또는 `npm run harness:validate`로 scope별 AC, 시나리오, 테스트, API, Entity, 화면 연결과 테스트 결과를 확인하는 단계다. FE 로컬 검증은 `cd app/front-end`에서 별도로 실행한다.
@@ -90,8 +90,8 @@ D. 직접 입력
 - 중복, 유일성: 유일성의 범위는 전체 시스템, 사용자별, 특정 상태별 중 어디인가?
 - 수정 의미론: PUT/PATCH 중 무엇이며, 누락 필드와 명시적 `null`은 각각 어떤 의미인가?
 - 목록 조회: 필터, 정렬, 페이지네이션의 기본 `page`/`size`, 최대 `size`, 범위 초과 페이지 응답은 무엇인가?
-- 화면 상태: loading, empty, error, disabled, submitting, success, permission denied, not found 중 어떤 상태가 사용자가 관찰해야 하는 결과인가?
-- 화면 레이아웃과 카드 구성: 화면이 어떤 레이아웃 단위(전역 헤더 + 사이드바가 있는 보호 화면, 비인증 중앙 단일 카드 등)에 속하고, 그 카드 또는 주요 컨테이너는 어떤 표시 요소(제목, 입력, 버튼, 링크, 안내 영역 등)로 구성되는가? 화면 간 공통 입력 UX(자동 포커스, autocomplete 속성, 비밀번호 show/hide 토글 등)는 본 카드 AC로 둘지, FE 공통 표준에 위임할지 정했는가?
+- 화면 상태: 로딩(loading), 비어 있음(empty), 오류(error), 비활성화(disabled), 제출 중(submitting), 성공(success), 권한 없음(permission denied), 찾을 수 없음(not found) 중 어떤 상태가 사용자가 관찰해야 하는 결과인가?
+- 화면 레이아웃과 카드 구성: 화면이 어떤 레이아웃 단위(전역 헤더 + 사이드바가 있는 보호 화면, 비인증 중앙 단일 카드 등)에 속하고, 그 카드 또는 주요 컨테이너는 어떤 표시 요소(제목, 입력, 버튼, 링크, 안내 영역 등)로 구성되는가? 화면 간 공통 입력 UX(자동 포커스, autocomplete 속성, 비밀번호 보이기/가리기 토글 등)는 본 카드 AC로 둘지, FE 공통 표준에 위임할지 정했는가?
 - 라우팅: 딥링크, 보호 라우트, 뒤로가기/새로고침 후 복원, query state가 요건인지 단순 구현 상세인지 무엇인가?
 - 데스크톱 화면: 기준 해상도에서 테이블/사이드바/대화상자가 화면 안에 들어오는가?
 - 삭제: hard delete, soft delete, 참조 중인 자원 처리, 기본 데이터 보호 여부는 무엇인가?
@@ -159,14 +159,14 @@ D. 직접 입력
 
 작성 순서는 다음과 같다.
 
-1. `질문해야 하는 내용`의 화면 레이아웃·카드 구성 질문을 선택지형으로 사용자에게 던진다. 기본 레이아웃 후보(보호 화면 chrome 사용 / 비인증 중앙 단일 카드 / 화면 가운데 대화상자 / full-bleed 화면 등)와 카드의 주요 표시 요소(제목, 입력, 버튼, 링크, 안내 영역 등) 후보를 함께 제시하고, 같은 도메인의 기존 화면 카드(예: REQ-011 로그인)와 같은 패턴을 권장안으로 둔다.
+1. `질문해야 하는 내용`의 화면 레이아웃·카드 구성 질문을 선택지형으로 사용자에게 던진다. 기본 레이아웃 후보(보호 화면 공통 틀 사용 / 비인증 중앙 단일 카드 / 화면 가운데 대화상자 / 화면 전체 사용 등)와 카드의 주요 표시 요소(제목, 입력, 버튼, 링크, 안내 영역 등) 후보를 함께 제시하고, 같은 도메인의 기존 화면 카드(예: REQ-011 로그인)와 같은 패턴을 권장안으로 둔다.
 2. 사용자가 확정한 레이아웃 단위와 카드 표시 요소를 `범위`에 한두 줄 narrative로 적는다. 예: "회원 가입 화면은 비인증 단일 카드 레이아웃을 사용하고, 카드는 제목, 사용자 이름 입력, 이메일 입력, 비밀번호 입력, 회원 가입 버튼, 로그인 화면 링크로 구성한다."
 3. 같은 구성을 `수용 기준`에 검증 가능한 한 줄로 별도 AC로 둔다. 예: "(UI) 회원 가입 화면은 화면 가운데에 하나의 회원 가입 카드를 표시하고, 카드는 제목, 사용자 이름 입력, 이메일 입력, 비밀번호 입력, 회원 가입 버튼, 로그인 화면으로 돌아가는 링크로 구성된다."
-4. 입력 UX 세부(자동 포커스, autocomplete 속성, 비밀번호 show/hide 토글, 키보드 제출 등)는 본 카드 AC로 둘지 FE 공통 표준([`../standards/front-end-ui.md`](../standards/front-end-ui.md))에 위임할지를 별도 선택지형 질문으로 확정하고, 결정과 근거를 `의사결정 로그`에 남긴다. 본 카드 AC에 두기로 한 항목만 별도 수용 기준으로 적고, 위임한 항목은 카드 AC에 복제하지 않는다.
+4. 입력 UX 세부(자동 포커스, autocomplete 속성, 비밀번호 보이기/가리기 토글, 키보드 제출 등)는 본 카드 AC로 둘지 FE 공통 표준([`../standards/front-end-ui.md`](../standards/front-end-ui.md))에 위임할지를 별도 선택지형 질문으로 확정하고, 결정과 근거를 `의사결정 로그`에 남긴다. 본 카드 AC에 두기로 한 항목만 별도 수용 기준으로 적고, 위임한 항목은 카드 AC에 복제하지 않는다.
 
 `범위`에만 적혀 있고 `수용 기준`에 없는 화면 구성은 FE BDD 테스트로 커버되지 않으므로 사용자가 보는 표시가 의도와 달라져도 RED로 잡히지 않는다. 화면이 범위에 있는 카드는 Skeleton 승인을 요청하기 전에 카드 구성 AC가 한 줄 이상 있는지 다시 확인한다.
 
-화면 구성과 동작을 적을 때 UI 컴포넌트는 UI 컴포넌트 어휘 표준(`harness/docs/standards/ui-vocabulary.md`)의 정규 명칭을 쓴다. `다이얼로그`/`모달`/`팝업`은 `대화상자`(확인·폼 대화상자), `인풋`은 `텍스트 입력`, `체크 박스`는 `체크박스`로 적는다. 이 별칭은 terminology ban으로 본문에서 `BAN_VIOLATION` 차단되고, `ui.button`·`ui.dialog` 같은 컴포넌트 원자 키는 카드 `## 표준 용어`에 등록하지 않는다(`CARD-TERM-UI-PRIMITIVE`).
+화면 구성과 동작을 적을 때 UI 컴포넌트는 UI 컴포넌트 어휘 표준(`harness/docs/standards/ui-vocabulary.md`)의 정규 명칭을 쓴다. `다이얼로그`/`모달`/`팝업`은 `대화상자`(확인·입력 대화상자), `인풋`은 `텍스트 입력`, `체크 박스`는 `체크박스`로 적는다. 이 별칭은 terminology ban으로 본문에서 `BAN_VIOLATION` 차단되고, `ui.button`·`ui.dialog` 같은 컴포넌트 원자 키는 카드 `## 표준 용어`에 등록하지 않는다(`CARD-TERM-UI-PRIMITIVE`).
 
 ### 화면 카드 AC 점검
 
@@ -296,14 +296,14 @@ Skeleton 승인을 요청하기 전에 다음을 한 줄씩 확인한다.
 - Service 공개 메서드가 Skeleton 단계에서도 `transaction.md`의 메서드 레벨 `@Transactional` 정책을 따르는가?
 - Service 내부 코멘트에 정상 흐름, 예외 흐름, 상태 변화, 알림/부수효과, 트랜잭션 경계 설계가 요약되어 있는가
 - 설정 Skeleton이 있다면 프로젝트 소유 `app.*` 키가 typed `@ConfigurationProperties`에 바인딩되고, profile override 정책이 명확한가?
-- `(UI)` 또는 `(E2E)` AC가 있으면 화면 이름, route 초안, 접근 권한, 주요 표시 정보, 사용자가 관찰할 상태(initial / fieldErrors / submitting / serverRejection / success 등)가 요약되어 있는가
+- `(UI)` 또는 `(E2E)` AC가 있으면 화면 이름, 경로 초안, 접근 권한, 주요 표시 정보, 사용자가 관찰할 상태(초기(initial) / 입력 항목 오류(fieldErrors) / 제출 중(submitting) / 서버 거절(serverRejection) / 성공(success) 등)가 요약되어 있는가
 - `(UI)` 또는 `(E2E)` AC가 있으면 화면 레이아웃 단위(보호 화면 / 비인증 단일 카드 등)와 카드 구성(제목·입력·버튼·링크·안내 영역)이 `범위`에 narrative로, `수용 기준`에 검증 가능한 한 줄로 모두 반영되어 있는가
-- `(UI)` 또는 `(E2E)` AC가 있으면 새 화면 컴포넌트가 routes.tsx swap 없이 별도 파일로 작성되어 있고 인터랙션 mockup(폼 입력 반응, 클라이언트 검증 안내, 상태 전환)이 실제로 동작하는가
+- `(UI)` 또는 `(E2E)` AC가 있으면 새 화면 컴포넌트가 `routes.tsx` 교체 없이 별도 파일로 작성되어 있고 상호작용 모의 구현(폼 입력 반응, 브라우저 쪽 검증 안내, 상태 전환)이 실제로 동작하는가
 - `(UI)` 또는 `(E2E)` AC가 있으면 외부 API 호출과 navigate 이동이 컴포넌트 props/콜백으로 mock되어 있고, 화면이 직접 `apiClient.*`을 호출하지 않는가 (실제 결합은 구현 단계)
-- `(UI)` 또는 `(E2E)` AC가 있으면 route 기준 page mock story 1개와 사용자가 관찰할 주요 상태별 story 묶음(initial / fieldErrors / submitting / serverRejection / success 등)이 작성되어 있고, `parameters.harness.requirements`로 본 카드에 연결되어 있는가
+- `(UI)` 또는 `(E2E)` AC가 있으면 경로 화면 모의 story 1개와 사용자가 관찰할 주요 상태별 story 묶음(초기(initial) / 입력 항목 오류(fieldErrors) / 제출 중(submitting) / 서버 거절(serverRejection) / 성공(success) 등)이 작성되어 있고, `parameters.harness.requirements`로 본 카드에 연결되어 있는가
 - `(UI)` 또는 `(E2E)` AC가 있으면 Storybook으로 검토할 상태와 구현 단계의 Playwright FE BDD 테스트가 검증할 사용자 흐름이 구분되어 있는가
-- `(UI)` 또는 `(E2E)` AC가 있으면 다른 카드(예: REQ-011)의 placeholder 정리, routes.tsx swap, FE BDD 테스트, visual snapshot baseline이 구현 단계 작업 목록으로 분리되어 있는가
-- FE 공통 UI primitive나 주요 화면 조각을 새로 만들거나 바꾸는 요건이면 본 카드 Skeleton에서 함께 작성한 Storybook story 위치가 명시되어 있는가
+- `(UI)` 또는 `(E2E)` AC가 있으면 다른 카드(예: REQ-011)의 placeholder 정리, `routes.tsx` 교체, FE BDD 테스트, 시각 스냅샷 기준선이 구현 단계 작업 목록으로 분리되어 있는가
+- FE 공통 기본 UI 컴포넌트나 주요 화면 조각을 새로 만들거나 바꾸는 요건이면 본 카드 Skeleton에서 함께 작성한 Storybook story 위치가 명시되어 있는가
 - `@Covers`가 붙은 JUnit Acceptance Test나 FE BDD `Covers` 메타데이터가 아직 저장소의 추적 대상 경로에 생성되지 않았는가?
 - Skeleton 코드에 실제 업무 로직이나 임시 성공 응답이 들어가지 않았는가
 
@@ -311,7 +311,7 @@ Skeleton 승인을 요청하기 전에 다음을 한 줄씩 확인한다.
 
 Skeleton 승인 전까지는 "인터페이스와 계약"까지만 만든다.
 
-백엔드는 인터페이스와 계약까지만 만든다. 프런트엔드 화면은 사용자가 Storybook에서 사용자 흐름을 검토할 수 있도록 인터랙션 mockup 수준까지 작성한다. 단, 외부 API client 결합과 routes.tsx swap, 다른 카드 placeholder 정리는 구현 단계로 분리해 Skeleton 검토가 placeholder 변동에 흔들리지 않도록 한다.
+백엔드는 인터페이스와 계약까지만 만든다. 프런트엔드 화면은 사용자가 Storybook에서 사용자 흐름을 검토할 수 있도록 상호작용 모의 구현 수준까지 작성한다. 단, 외부 API client 결합과 `routes.tsx` 교체, 다른 카드 placeholder 정리는 구현 단계로 분리해 Skeleton 검토가 placeholder 변동에 흔들리지 않도록 한다.
 
 허용:
 
@@ -322,9 +322,9 @@ Skeleton 승인 전까지는 "인터페이스와 계약"까지만 만든다.
 - Service 인터페이스 또는 클래스의 공개 메서드 시그니처
 - Service/Controller 내부 코멘트: 정상 흐름, 예외 흐름, 상태 변화, 부수효과, 호출해야 할 협력 객체를 구현 없이 설계
 - `previewSchema` 산출물
-- 화면/라우팅 Skeleton: 화면 이름, 업무 진입점, 예상 route 초안, 접근 권한, 주요 표시 정보, 사용자가 관찰할 상태(initial / fieldErrors / submitting / serverRejection / success 등). 카드의 `BDD 테스트 리뷰 > 요건 Skeleton 승인 이력`에 작성 위치와 함께 남긴다.
-- FE 화면 인터랙션 mockup: 새 화면 컴포넌트를 별도 파일로 작성한다. 실제 DOM과 Tailwind 스타일을 사용해 화면이 실제처럼 보이게 하고, 폼 입력 반응, 클라이언트 측 검증 안내, submitting/error/success 등 사용자가 관찰할 상태 전환이 실제로 동작하게 한다. 외부 API 호출과 라우팅 이동은 컴포넌트의 props/콜백(또는 React Router 의존성 주입)으로 받아 Storybook control이 결과를 강제할 수 있게 한다.
-- Storybook story: 화면이 있는 카드는 route 기준 page mock story 1개와 사용자가 관찰할 상태별 story 묶음(initial / fieldErrors / submitting / serverRejection / success 등)을 Skeleton 승인 전에 작성한다. story 파일에 `parameters.harness.requirements`로 본 카드를 연결한다.
+- 화면/라우팅 Skeleton: 화면 이름, 업무 진입점, 예상 경로 초안, 접근 권한, 주요 표시 정보, 사용자가 관찰할 상태(초기(initial) / 입력 항목 오류(fieldErrors) / 제출 중(submitting) / 서버 거절(serverRejection) / 성공(success) 등). 카드의 `BDD 테스트 리뷰 > 요건 Skeleton 승인 이력`에 작성 위치와 함께 남긴다.
+- FE 화면 상호작용 모의 구현: 새 화면 컴포넌트를 별도 파일로 작성한다. 실제 DOM과 Tailwind 스타일을 사용해 화면이 실제처럼 보이게 하고, 폼 입력 반응, 브라우저 쪽 검증 안내, 제출 중/오류/성공 등 사용자가 관찰할 상태 전환이 실제로 동작하게 한다. 외부 API 호출과 라우팅 이동은 컴포넌트의 props/콜백(또는 React Router 의존성 주입)으로 받아 Storybook control이 결과를 강제할 수 있게 한다.
+- Storybook story: 화면이 있는 카드는 경로 화면 모의 story 1개와 사용자가 관찰할 상태별 story 묶음(초기(initial) / 입력 항목 오류(fieldErrors) / 제출 중(submitting) / 서버 거절(serverRejection) / 성공(success) 등)을 Skeleton 승인 전에 작성한다. story 파일에 `parameters.harness.requirements`로 본 카드를 연결하고, `parameters.docs.description.component` 또는 `parameters.docs.description.story`에 화면 목적, 주요 요소, 사용자 흐름, 관찰 포인트를 Markdown 설명으로 남긴다. 설명 문장은 한국어 업무 용어를 우선 사용하고, 코드/API 용어가 필요한 경우에만 백틱으로 남긴다. Storybook Docs 설명에는 범위 섹션을 두지 않는다. 검토 범위는 요건 카드의 `UI Skeleton`과 `Storybook 계약`에서 관리한다.
 
 금지:
 
@@ -336,9 +336,9 @@ Skeleton 승인 전까지는 "인터페이스와 계약"까지만 만든다.
 - Repository 쿼리 메서드 선언 (`findBy...` 등 메서드 시그니처는 본문이 없어도 Spring Data가 조회 계약을 만든다. 단, Entity 연결 확인용 빈 `JpaRepository` extends 선언은 필요 시 허용한다)
 - FE 화면에서 외부 API client 직접 호출 (`apiClient.GET/POST` 등). API 호출은 props/콜백으로 mock하고, 실제 결합은 구현 단계에서 한다.
 - routes.tsx 의 새 화면 swap. 새 화면은 별도 파일로 두고, 기존 placeholder route는 그대로 유지한다.
-- 다른 카드의 placeholder 수용 기준/시나리오/FE BDD 테스트/page mock story 정리. 다른 카드(예: REQ-011)의 placeholder 정리도 구현 단계에서 함께 처리한다.
+- 다른 카드의 placeholder 수용 기준/시나리오/FE BDD 테스트/경로 화면 모의 story 정리. 다른 카드(예: REQ-011)의 placeholder 정리도 구현 단계에서 함께 처리한다.
 - `Covers`가 붙은 FE BDD 테스트 (Playwright)
-- visual snapshot baseline
+- 시각 스냅샷 기준선
 - 라우팅이 AC가 아닌데 시나리오에 구체 URL을 고정하는 것
 
 컴파일이 필요한 경우 다음 정도로 둔다.
@@ -346,7 +346,7 @@ Skeleton 승인 전까지는 "인터페이스와 계약"까지만 만든다.
 - Controller: `@RequestMapping`/`@Operation`/시그니처는 작성하되 본문은 `throw new UnsupportedOperationException(...)` 또는 미구현 상태로 둔다.
 - Service: 인터페이스나 클래스 시그니처만 작성한다. 클래스 본문이 필요하면 내부 코멘트로 흐름을 적고 `throw new UnsupportedOperationException(...)`으로 닫는다. 이때 공개 서비스 메서드는 Skeleton 단계라도 `@Transactional` 또는 `@Transactional(readOnly = true)`를 메서드 레벨에 명시한다.
 - Entity: `previewSchema`를 돌리기 위해 필요한 만큼 완전한 형태로 작성한다.
-- FE: 새 화면 컴포넌트는 별도 파일로 두고 인터랙션 mockup까지 작성한다. 외부 API 호출과 navigate 이동은 props/콜백으로 받아 호출 자체는 구현 단계에서 결합한다. routes.tsx swap, 다른 카드 placeholder 정리, `@Covers` FE BDD 테스트, visual snapshot baseline은 구현 단계로 미룬다.
+- FE: 새 화면 컴포넌트는 별도 파일로 두고 상호작용 모의 구현까지 작성한다. 외부 API 호출과 navigate 이동은 props/콜백으로 받아 호출 자체는 구현 단계에서 결합한다. `routes.tsx` 교체, 다른 카드 placeholder 정리, `@Covers` FE BDD 테스트, 시각 스냅샷 기준선은 구현 단계로 미룬다.
 
 ### 승인 게이트
 
@@ -383,12 +383,12 @@ cd app/front-end
 npm run typecheck
 npm run lint
 npm run source-index
-npm run build-storybook    # 인터랙션 mockup 컴포넌트와 page mock / 상태별 story가 정상 빌드되는지 확인
+npm run build-storybook    # 상호작용 모의 구현 컴포넌트와 경로 화면 모의 story / 상태별 story가 정상 빌드되는지 확인
 ```
 
-리뷰어가 Storybook에서 사용자 흐름을 직접 확인하려면 `npm run storybook` 으로 띄우고 본 카드의 `parameters.harness.requirements` 가 본 요건 ID로 연결된 story 묶음(page mock + 상태별)을 본다.
+리뷰어가 Storybook에서 사용자 흐름을 직접 확인하려면 `npm run storybook` 으로 띄우고 본 카드의 `parameters.harness.requirements` 가 본 요건 ID로 연결된 story 묶음(경로 화면 모의 story + 상태별)을 본다.
 
-`테스트 승인`과 `구현중` 상태에서는 테스트 누락, 미실행, 스킵, Covers 불일치가 통합 게이트 차단 사유다. 구현 전 실행된 테스트 실패는 RED로 남아도 허용된다. 구현이 끝나면 `검증중` 상태로 올리고 scope에 맞게 `npm run app:validate` 또는 `npm run harness:validate`로 모든 RED를 해소한다. Skeleton 단계의 RED는 정상이며, `@Covers` FE BDD 테스트, visual snapshot baseline, routes.tsx swap, 다른 카드 placeholder 정리는 Skeleton 승인 이후 단계에서 진행한다.
+`테스트 승인`과 `구현중` 상태에서는 테스트 누락, 미실행, 스킵, Covers 불일치가 통합 게이트 차단 사유다. 구현 전 실행된 테스트 실패는 RED로 남아도 허용된다. 구현이 끝나면 `검증중` 상태로 올리고 scope에 맞게 `npm run app:validate` 또는 `npm run harness:validate`로 모든 RED를 해소한다. Skeleton 단계의 RED는 정상이며, `@Covers` FE BDD 테스트, 시각 스냅샷 기준선, `routes.tsx` 교체, 다른 카드 placeholder 정리는 Skeleton 승인 이후 단계에서 진행한다.
 
 ## BDD 테스트 코드 작성
 
@@ -426,7 +426,7 @@ FE 테스트 계층은 [`front-end-testing.md`](../../app/docs/standards/front-e
 
 상위 요건의 `(E2E)` AC는 mock API가 아니라 `tests/e2e/live/**/*.live.spec.ts`의 live Playwright smoke로 커버한다. live smoke는 실 Spring Boot 백엔드와 Vite dev server를 함께 띄우고, FE origin proxy와 브라우저 Cookie 인증 흐름까지 포함해 기능 전체 성과를 확인한다. 세부 화면 상태, 입력 검증, 실패 분기는 하위 원자 요건의 테스트로 내려보낸다.
 
-FE 구현에서 route/page를 추가하거나 변경하면 Skeleton 단계에서 route 기준 page mock story를 작성하거나 갱신한다. page mock story는 실제 page 컴포넌트를 `MemoryRouter`, mock auth provider, mock API provider처럼 필요한 최소 provider로 감싸 route 진입 화면을 Storybook에서 확인할 수 있게 만든다. 공통 UI primitive(`app/front-end/src/components/ui`) 또는 주요 화면 조각을 추가하거나 변경할 때도 Storybook story를 작성하거나 갱신한다. Storybook은 완료 판정의 직접 근거가 아니라 상태 카탈로그와 visual regression 기준 화면이므로, story에는 `parameters.harness.requirements`로 관련 요건을 연결하고 normal/disabled/loading/error/open/empty 같은 사용자가 관찰할 상태를 고정한다. Skeleton 승인 전에는 story 목록뿐 아니라 실제 `*.stories.tsx` 구현과 `build-storybook` 통과까지 확인한다.
+FE 구현에서 경로/화면을 추가하거나 변경하면 Skeleton 단계에서 경로 화면 모의 story를 작성하거나 갱신한다. 경로 화면 모의 story는 실제 화면 컴포넌트를 `MemoryRouter`, 모의 인증 provider, 모의 API provider처럼 필요한 최소 provider로 감싸 경로 진입 화면을 Storybook에서 확인할 수 있게 만든다. 공통 기본 UI 컴포넌트(`app/front-end/src/components/ui`) 또는 주요 화면 조각을 추가하거나 변경할 때도 Storybook story를 작성하거나 갱신한다. Storybook은 완료 판정의 직접 근거가 아니라 상태 카탈로그와 시각 회귀 기준 화면이므로, story에는 `parameters.harness.requirements`로 관련 요건을 연결하고 기본(normal) / 비활성화(disabled) / 로딩(loading) / 오류(error) / 열림(open) / 비어 있음(empty) 같은 사용자가 관찰할 상태를 고정한다. Docs 개요는 대표 story와 설명에 집중하고, 하위 상태 story를 모두 캔버스로 펼쳐 렌더링하지 않는다. 상태 설명은 Docs 개요의 텍스트 목록에서 확인하고, 상태별 화면은 좌측 story 목록의 이름 붙은 story로 직접 진입해 확인한다. 열린 대화상자처럼 대표 캔버스가 Docs 본문을 덮는 story는 `parameters.harness.docs.omitPrimaryCanvas = true`와 `parameters.harness.docs.omitComponentProperties = true`로 Docs 개요의 대표 캔버스와 컴포넌트 속성을 생략하고, 실제 화면은 이름 붙은 story에서 확인한다. Docs 설명에는 화면 목적, 주요 표시 요소, 사용자가 클릭할 순서, 조작 뒤 관찰할 상태 변화를 포함하되 범위 섹션은 쓰지 않는다. 설명 문장은 한국어 업무 용어를 우선 사용하고, 코드/API 용어가 필요한 경우에만 백틱으로 남긴다. Storybook Docs 전용 스타일은 Markdown 순서 목록과 글머리표를 보존해야 한다. Skeleton 승인 전에는 story 목록뿐 아니라 실제 `*.stories.tsx` 구현과 `build-storybook` 통과까지 확인한다.
 
 ## 테스트 리뷰 체크리스트
 

@@ -16,7 +16,7 @@
 - `REQ-018` 상태를 `Skeleton 검토중`으로 변경한다.
 - `REQ-018`에 `검증 대상`, `API Skeleton`, `DB Skeleton`, `UI Skeleton`, `Storybook 계약` 섹션을 추가한다.
 - `CategoryFormDialog`에 수정 모드 검토용 Storybook 상태를 추가한다.
-- 카테고리 폼 대화상자 코드 주석의 UI 어휘를 정규 표현으로 맞춘다.
+- 카테고리 입력 대화상자 코드 주석의 UI 어휘를 정규 표현으로 맞춘다.
 - 기존 AC, Scenario Covers, 실행 테스트 문자열은 변경하지 않는다.
 
 ## 제외 범위

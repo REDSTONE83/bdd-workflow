@@ -15,7 +15,7 @@
 
 - `REQ-017` 상태를 `Skeleton 검토중`으로 변경한다.
 - `REQ-017`에 `검증 대상`, `API Skeleton`, `DB Skeleton`, `UI Skeleton`, `Storybook 계약` 섹션을 추가한다.
-- 카테고리 생성 Storybook 설명 문자열의 UI 어휘를 `폼 대화상자`로 맞춘다.
+- 카테고리 생성 Storybook 설명 문자열의 UI 어휘를 `입력 대화상자`로 맞춘다.
 - 기존 AC, Scenario Covers, 실행 테스트 문자열은 변경하지 않는다.
 
 ## 제외 범위
