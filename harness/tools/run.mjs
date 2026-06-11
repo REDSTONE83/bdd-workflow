@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const gradleWrapper = path.join(backendRoot, 'gradlew');
 const harnessRoot = path.join(workspaceRoot, 'harness');
+const harnessUiRoot = path.join(harnessRoot, 'ui');
 const appOutputRoot = outputRootFor('application');
 const harnessOutputRoot = outputRootFor('harness');
 
@@ -122,6 +123,20 @@ function frontEndSourceIndex() {
     ], { scope: 'application' });
 }
 
+function harnessFrontEndSourceIndex() {
+    const sourceIndexTool = path.join(harnessUiRoot, 'tools', 'source-index.mjs');
+    if (!fs.existsSync(sourceIndexTool)) {
+        console.log('[harness:front-end-source-index] harness/ui source indexer not present');
+        return;
+    }
+    run('harness:front-end-source-index', process.execPath, [
+        sourceIndexTool,
+        `--front-end-root=${harnessUiRoot}`,
+        `--repo-root=${workspaceRoot}`,
+        `--out=${path.join(harnessOutputRoot, 'indexes', 'front-end.source-index.json')}`
+    ], { scope: 'harness' });
+}
+
 function scenarioIndex(scope) {
     runNodeTool(scope, `${scope === 'harness' ? 'harness' : 'app'}:scenario-index`, 'scenario-index.mjs');
 }
@@ -157,6 +172,7 @@ function collectHarnessStaticInputs() {
     for (const stale of ['backend.source-index.json', 'front-end.source-index.json', 'openapi.index.json']) {
         fs.rmSync(path.join(indexesDir, stale), { force: true });
     }
+    harnessFrontEndSourceIndex();
     harnessSelfTestIndex();
     scenarioIndex('harness');
     requirementIndex('harness');
@@ -215,6 +231,14 @@ function frontEndLiveE2e() {
 
 function frontEndBuildStorybook() {
     frontEndNpm('front-end:build-storybook', 'build-storybook');
+}
+
+function harnessUiNpm(label, script, args = []) {
+    run(label, 'npm', ['run', script, ...args], { cwd: harnessUiRoot, scope: 'harness' });
+}
+
+function harnessUi() {
+    harnessUiNpm('harness:ui', 'dev');
 }
 
 function selfTest() {
@@ -314,6 +338,8 @@ Commands:
   harness:validate [trace args...]   Run harness tool tests, self-tests, validators, and harness gate.
   harness:trace [trace args...]      Refresh harness indexes/findings/reports and render harness trace.
   harness:test                       Run Node tool tests and harness self-test.
+  harness:front-end-source-index     Generate build/harness/indexes/front-end.source-index.json from harness/ui.
+  harness:ui                         Start the local harness UI dev server.
   harness:change-sets                Render harness change set report.
   harness:terminology [args...]       Run terminology tool in harness scope.
   harness:standards                  Emit harness standards findings.
@@ -380,6 +406,12 @@ switch (command) {
         break;
     case 'harness:self-test-index':
         harnessSelfTestIndex();
+        break;
+    case 'harness:front-end-source-index':
+        harnessFrontEndSourceIndex();
+        break;
+    case 'harness:ui':
+        harnessUi();
         break;
     case 'harness:change-sets':
         changeSetsReport('harness');

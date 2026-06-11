@@ -1,0 +1,24 @@
+.sbdocs :where(ol) {
+  list-style-type: decimal;
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.5rem;
+}
+
+.sbdocs :where(ul) {
+  list-style-type: disc;
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.5rem;
+}
+
+.sbdocs :where(li) {
+  margin-top: 0.25rem;
+  padding-left: 0.25rem;
+}
+
+.sbdocs :where(li)::marker {
+  color: inherit;
+}
+
+.sbdocs :where(li > p) {
+  margin: 0;
+}

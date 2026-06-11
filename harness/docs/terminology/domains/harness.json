@@ -13,6 +13,60 @@
             "en": "acceptance criteria",
             "meaning": "요건 카드의 완료 기준 문장 묶음. 각 문장은 백엔드 Acceptance Test의 @Covers 또는 FE BDD 테스트의 Covers 값과 정확히 일치한다.",
             "allow": ["AC"]
+        },
+        "harness.scenario": {
+            "ko": "BDD 시나리오",
+            "en": "BDD scenario",
+            "meaning": ".feature 파일에 Given/When/Then 구조로 작성하고 Covers로 수용 기준과 연결하는 행위 검증 시나리오.",
+            "allow": ["시나리오", "Scenario", "feature 시나리오"]
+        },
+        "harness.scope": {
+            "ko": "scope",
+            "en": "scope",
+            "meaning": "하네스가 application과 harness 같은 대상 시스템별로 인덱스, findings, 추적 상태, 게이트 결과를 분리하는 작업 범위.",
+            "allow": ["검증 scope", "선택한 scope"]
+        },
+        "harness.validationArtifact": {
+            "ko": "검증 산출물",
+            "en": "validation artifact",
+            "meaning": "scope별 trace 또는 validate 실행으로 build 아래 생성되는 인덱스, 상태, finding, 리포트 같은 조회용 결과물.",
+            "allow": ["검증 결과 산출물", "scope 산출물"]
+        },
+        "harness.validationChannel": {
+            "ko": "검증 채널",
+            "en": "validation channel",
+            "meaning": "수용 기준을 어떤 실행 또는 정적 검증 경로로 판정하는지 나타내는 분류.",
+            "allow": ["테스트 채널", "front-end 테스트 채널"]
+        },
+        "harness.traceState": {
+            "ko": "추적 상태",
+            "en": "trace state",
+            "meaning": "요건의 수용 기준, 연결 산출물, 테스트 결과를 바탕으로 RED/GREEN/BLUE/INACTIVE 중 하나로 표시되는 추적 판정.",
+            "allow": ["추적 판정", "요건 추적 상태"]
+        },
+        "harness.unifiedGate": {
+            "ko": "통합 하네스 게이트",
+            "en": "unified harness gate",
+            "meaning": "scope별 추적 상태와 findings를 읽어 TRACE/CARD/REF/TRC/BE/FE/SCN/TRM 카테고리로 통과 또는 차단을 판정하는 하네스 게이트.",
+            "allow": ["통합 게이트", "하네스 게이트", "scope 게이트", "게이트"]
+        },
+        "harness.finding": {
+            "ko": "검사 결과",
+            "en": "finding",
+            "meaning": "하네스 검사기가 규칙, 심각도, 위치, 메시지와 함께 보고하는 위반 또는 참고 항목.",
+            "allow": ["finding", "findings"]
+        },
+        "harness.changeSet": {
+            "ko": "Change Set",
+            "en": "change set",
+            "meaning": "사용자 요청 단위의 작업 범위, 영향 요건, 완료 조건, 검증 명령, 논의 기록을 묶은 하네스 문서.",
+            "allow": ["Change Set 문서", "Change Set 리포트"]
+        },
+        "harness.validationCommand": {
+            "ko": "검증 명령",
+            "en": "validation command",
+            "meaning": "요건 또는 scope 상태를 검증하기 위해 하네스 러너가 실행하는 허용 목록 기반 명령.",
+            "allow": ["허용된 검증 명령", "권장 검증 명령"]
         }
     }
 }

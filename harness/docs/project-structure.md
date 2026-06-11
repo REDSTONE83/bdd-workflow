@@ -45,6 +45,7 @@ bdd-workflow/
     source-indexer/
     tools/
     self-test/
+    ui/
   build/
     app/
       indexes/
@@ -124,6 +125,7 @@ build/app/
 - `harness/source-indexer`: JavaParser 기반 백엔드 source indexer
 - `harness/tools`: Node 기반 collector, validator, trace, report, gate
 - `harness/self-test`: 하네스 요건을 검증하는 Node/TypeScript self-test
+- `harness/ui`: 하네스 산출물을 조회하고 허용된 검증 명령을 실행하는 로컬 웹 UI
 
 하네스 검증 산출물은 `build/harness` 아래에 생성한다.
 
@@ -142,7 +144,7 @@ build/harness/
   test-results/nodeSelfTest/
 ```
 
-하네스 scope에서는 애플리케이션 `backend.source-index.json`, `front-end.source-index.json`, `openapi.index.json`을 입력으로 요구하지 않는다. 하네스 self-test는 필요한 계약을 fixture로 만든다.
+하네스 scope에서는 애플리케이션 `backend.source-index.json`, `openapi.index.json`을 입력으로 요구하지 않는다. `harness/ui` 도입 이후 `front-end.source-index.json`은 하네스 UI source index 산출물로 사용한다. 하네스 self-test는 필요한 계약을 fixture로 만든다.
 
 ## 작업 단위 예시
 
@@ -164,6 +166,8 @@ harness/docs/requirements/REQ-XXX-harness-rule.md
 harness/docs/scenarios/REQ-XXX-harness-rule.feature
 harness/tools/{collector-or-validator}.mjs
 harness/self-test/tests/{rule}.test.ts
+harness/ui/src/features/{domain}/...
+harness/ui/tests/e2e/{feature}.spec.ts
 ```
 
 혼합 작업은 하나의 Change Set에 앱/하네스 산출물을 섞지 않는다. `app/docs/change-sets`와 `harness/docs/change-sets`에 별도 Change Set을 만들고 서로 참조한다.
@@ -181,4 +185,9 @@ app/front-end/storybook-static/
 app/front-end/playwright-report/
 app/front-end/test-results/
 app/front-end/coverage/
+harness/ui/dist/
+harness/ui/storybook-static/
+harness/ui/playwright-report/
+harness/ui/test-results/
+harness/ui/coverage/
 ```
