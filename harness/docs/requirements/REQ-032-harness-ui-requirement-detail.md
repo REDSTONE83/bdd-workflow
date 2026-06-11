@@ -22,7 +22,7 @@
 - 요건 상세는 요건 ID, 제목, 카드 상태, 우선순위, 대상 시스템, 제품 영역, 검증 수준과 추적 상태를 표시한다.
 - 주요 정보군은 개요, AC, 시나리오, UI, API 계약, Entity, 산출물/소스 탭으로 구분해 표시한다.
 - 수용 기준 원문 목록은 카드 목록으로 표시하고, BDD 시나리오 목록은 Given/When/Then 앞에 자동 번호를 붙이지 않는다.
-- 수용 기준과 BDD 시나리오 각 항목의 파일 위치와 Covers 관계를 확인할 수 있게 한다.
+- 수용 기준은 연결 시나리오를 통해 Covers 관계를 확인할 수 있게 하고, BDD 시나리오는 항목별 파일 위치와 Covers 관계를 확인할 수 있게 한다.
 - 수용 기준마다 검증 채널, 판정 상태, 연결된 테스트와 시나리오를 항목 카드 안에 표시한다.
 - BDD 시나리오마다 Covers 기준으로 연결된 커버리지 판정과 테스트를 항목 안에 표시한다.
 - 추적 산출물의 RED 사유와 BLUE 차단 사유를 그대로 표시한다.
@@ -87,9 +87,9 @@
 
 ## UI Skeleton
 
-- 화면 표면: `harness/ui/src/features/requirements/RequirementDetailPage.tsx`를 `/requirements/:requirementId` route에 둔다.
+- 화면 표면: `harness/ui/src/features/requirements/RequirementDetailPage.tsx`를 `/requirements/:requirementId` route에 둔다. Route wrapper는 source index용 `@Page`/`@Route` 주석을 소유하고, 상세 본문은 `RequirementDetailView.tsx`, 탭별 구현은 `features/requirements/detail/*Tab.tsx`에 둔다.
 - 주요 영역: 요건 메타데이터 머리 영역, 개요 탭, AC 탭, 시나리오 탭, UI 탭, API 계약 탭, Entity 탭, 산출물/소스 탭을 둔다. AC 탭에는 AC 카드 목록과 각 AC의 커버리지 판정, 연결 테스트, 연결 시나리오, RED/BLUE 판정 사유를 둔다. 시나리오 탭에는 BDD 시나리오 목록과 각 시나리오의 Covers/Given/When/Then, Covers 기준 커버리지 판정과 연결 테스트를 둔다. UI 탭에는 UI Storybook 검토 링크와 구현 위치를 둔다. API 계약 탭에는 API 계약 목록형 카드와 Request/Response 펼침 영역, 중첩 객체 참조 펼침 영역을 둔다. Entity 탭에는 Entity 목록형 카드와 속성 목록 펼침 영역을 둔다. 산출물/소스 탭에는 요건 카드와 시나리오 연결 산출물 목록형 카드, 산출물 파일을 제외한 소스코드 위치 목록형 카드를 두고 각 항목의 종류를 뱃지로 구분한다.
-- 표시 필드: 요건 ID, 제목, 카드 상태, 우선순위, 대상 시스템, 제품 영역, 검증 수준, 추적 상태, AC 원문, AC별 검증 채널, AC별 판정 상태, AC별 연결 테스트, AC별 연결 시나리오, AC별 파일 위치, 시나리오 제목, 시나리오 Covers, 시나리오별 커버리지 판정, 시나리오별 연결 테스트, 시나리오 Given/When/Then, feature 파일 위치, finding 규칙과 메시지, API method/path/operationId, Request/Response 이름과 필드 구성, Request/Response 중첩 객체 필드 구성, Entity 이름과 필드 구성, UI surface description, UI route, Storybook title/story, 요건 카드/시나리오 산출물 종류와 파일 위치, API/Request/Response/Entity/UI Page/UI Story 소스코드 종류와 파일 위치를 표시한다.
+- 표시 필드: 요건 ID, 제목, 카드 상태, 우선순위, 대상 시스템, 제품 영역, 검증 수준, 추적 상태, AC 원문, AC별 검증 채널, AC별 판정 상태, AC별 연결 테스트, AC별 연결 시나리오, 시나리오 제목, 시나리오 Covers, 시나리오별 커버리지 판정, 시나리오별 연결 테스트, 시나리오 Given/When/Then, feature 파일 위치, finding 규칙과 메시지, API method/path/operationId, Request/Response 이름과 필드 구성, Request/Response 중첩 객체 필드 구성, Entity 이름과 필드 구성, UI surface description, UI route, Storybook title/story, 요건 카드/시나리오 산출물 종류와 파일 위치, API/Request/Response/Entity/UI Page/UI Story 소스코드 종류와 파일 위치를 표시한다.
 - 상태 목록: 정상 상세, 탭 전환 가능, AC 카드 확인 가능, AC 항목별 테스트 정보 확인 가능, 시나리오 GWT 확인 가능, 시나리오 항목별 테스트 정보 확인 가능, RED 사유 있음, BLUE 차단 있음, 연결 산출물 있음, API 계약 카드 확인 가능, Request/Response 펼침 가능, 중첩 객체 참조 펼침 가능, Entity 목록형 카드 확인 가능, Entity 속성 목록 펼침 가능, API/데이터 계약 있음, Storybook 검토 링크 있음, 위치 확인 불가를 검토 상태로 둔다.
 - 사용자 행위: 카드 원본 문서와 연결 산출물의 로컬 에디터 연결을 연다. UI 표면은 Storybook 링크로 먼저 검토하고 필요하면 구현 위치 링크를 연다. 상세 화면 안에서 카드 본문 수정이나 승인 액션은 제공하지 않는다.
 

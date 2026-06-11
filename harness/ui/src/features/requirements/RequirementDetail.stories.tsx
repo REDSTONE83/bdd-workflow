@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { RequirementDetailView } from "./RequirementDetailPage";
+import { RequirementDetailView } from "./RequirementDetailView";
 import { requirementDetail } from "../../lib/harness-data/fixtures";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { ErrorState } from "../../components/ui/ErrorState";
