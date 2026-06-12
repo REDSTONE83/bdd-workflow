@@ -104,7 +104,7 @@
   UI Skeleton: `/terminology` route는 `src/lib/harness-data`의 terminology browser view model을 받아 표준 용어 목록과 상세를 만든다. React 컴포넌트는 `terminology.index.json` 원형을 직접 순회하지 않는다.
   Storybook 계약: `Harness/Terminology/TerminologyBrowser`의 `AllTerms`, `SearchResults`, `FilteredByDomain`, `FilteredByStatus`, `TermDetail`, `EmptyResult` 상태가 있어야 한다.
   서버 Skeleton: terminology DTO는 선택한 scope의 `build/{scope}/indexes/terminology.index.json`에서 term key, status, sourceFile, meaning, allow, ban, names 값을 보존해 제공한다. 검색/필터는 화면 모델 필드 기준으로 수행한다.
-  추적 정책: `(UI)` AC는 harness/ui Playwright FE BDD 결과로 판정한다. `(STATIC)` AC는 DTO fixture 또는 서버 self-test로 산출물 값 보존을 검증한다.
+  추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다. `(STATIC)` AC는 DTO fixture 또는 서버 self-test로 산출물 값 보존을 검증한다.
   검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-036`로 카드/시나리오/용어 정합성을 확인한다.
   Skeleton 결과: 승인 대기
 

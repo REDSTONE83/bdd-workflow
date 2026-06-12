@@ -1,5 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { userEvent, within } from "storybook/test"
+import { expect, userEvent, waitFor } from "storybook/test"
+
+import {
+  type StoryScope,
+  withinCurrentDialog,
+} from "@/test/storybook-dialog"
 
 import { CategoryFormDialog } from "./CategoryFormDialog"
 import { type CategoryInput, DuplicateCategoryNameError } from "../types"
@@ -72,7 +77,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   args: {
     open: true,
     onOpenChange: noop,
@@ -84,9 +89,35 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-const submit = (name: string) => async () => {
-  const body = within(document.body)
-  await userEvent.click(body.getByRole("button", { name }))
+const expectVisibleText = async (
+  dialog: StoryScope,
+  message: string,
+) => {
+  await waitFor(() => expect(dialog.getByText(message)).toBeVisible())
+}
+
+const assertCreateForm = async () => {
+  const dialog = await withinCurrentDialog("새 카테고리")
+  await waitFor(() => expect(dialog.getByRole("heading", { name: "새 카테고리" })).toBeVisible())
+  await waitFor(() => expect(dialog.getByLabelText("이름")).toBeVisible())
+  await expect(dialog.getByLabelText("색상")).toBeVisible()
+  await expect(dialog.getByLabelText("설명")).toBeVisible()
+  await expect(dialog.getByRole("button", { name: "만들기" })).toBeVisible()
+}
+
+const assertSubmitResult = (
+  submitName: string,
+  expectedMessages: string[],
+  disabledButtonName?: string,
+) => async () => {
+  const dialog = await withinCurrentDialog(submitName === "저장" ? "카테고리 수정" : "새 카테고리")
+  await userEvent.click(dialog.getByRole("button", { name: submitName }))
+  for (const message of expectedMessages) {
+    await expectVisibleText(dialog, message)
+  }
+  if (disabledButtonName) {
+    await waitFor(() => expect(dialog.getByRole("button", { name: disabledButtonName })).toBeDisabled())
+  }
 }
 
 const formStory = (
@@ -110,6 +141,11 @@ ${observation}
 export const Create: Story = {
   args: { mode: "create" },
   parameters: {
+    harness: {
+      covers: [
+        "새 카테고리 만들기를 열면 이름, 색상, 설명을 입력하는 입력 영역과 만들기 버튼이 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -120,6 +156,7 @@ export const Create: Story = {
       },
     },
   },
+  play: assertCreateForm,
 }
 
 export const Edit: Story = {
@@ -140,6 +177,11 @@ export const Edit: Story = {
 export const NameRequiredError: Story = {
   args: { mode: "create" },
   parameters: {
+    harness: {
+      covers: [
+        "카테고리를 만들거나 수정할 때 이름을 비우거나 공백만 입력하면 이름 입력 아래에 입력이 필요하다는 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -150,12 +192,17 @@ export const NameRequiredError: Story = {
       },
     },
   },
-  play: submit("만들기"),
+  play: assertSubmitResult("만들기", ["이름을 입력해 주세요."]),
 }
 
 export const NameTooLongError: Story = {
   args: { mode: "create", initialValue: longName },
   parameters: {
+    harness: {
+      covers: [
+        "카테고리를 만들거나 수정할 때 이름이 50자를 초과하면 이름이 너무 길다는 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -166,12 +213,17 @@ export const NameTooLongError: Story = {
       },
     },
   },
-  play: submit("만들기"),
+  play: assertSubmitResult("만들기", ["이름은 50자를 넘을 수 없습니다."]),
 }
 
 export const DescriptionTooLongError: Story = {
   args: { mode: "create", initialValue: longDescription },
   parameters: {
+    harness: {
+      covers: [
+        "카테고리를 만들거나 수정할 때 설명이 500자를 초과하면 설명이 너무 길다는 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -182,12 +234,17 @@ export const DescriptionTooLongError: Story = {
       },
     },
   },
-  play: submit("만들기"),
+  play: assertSubmitResult("만들기", ["설명은 500자를 넘을 수 없습니다."]),
 }
 
 export const ColorFormatError: Story = {
   args: { mode: "create", initialValue: badColor },
   parameters: {
+    harness: {
+      covers: [
+        "카테고리를 만들거나 수정할 때 색상 형식이 올바르지 않으면 색상 입력 아래에 형식 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -198,12 +255,17 @@ export const ColorFormatError: Story = {
       },
     },
   },
-  play: submit("만들기"),
+  play: assertSubmitResult("만들기", ["색상은 #RRGGBB 형식으로 입력해 주세요."]),
 }
 
 export const Submitting: Story = {
   args: { mode: "create", initialValue: validValue, onSubmit: hangingSubmit },
   parameters: {
+    harness: {
+      covers: [
+        "카테고리를 만드는 요청을 기다리는 동안 만들기 버튼은 다시 누를 수 없는 상태로 표시된다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -214,12 +276,17 @@ export const Submitting: Story = {
       },
     },
   },
-  play: submit("만들기"),
+  play: assertSubmitResult("만들기", [], "만드는 중..."),
 }
 
 export const DuplicateNameRejection: Story = {
   args: { mode: "create", initialValue: validValue, onSubmit: duplicateSubmit },
   parameters: {
+    harness: {
+      covers: [
+        "이미 사용 중인 이름으로 카테고리를 만들려고 하면 중복 이름 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -230,12 +297,18 @@ export const DuplicateNameRejection: Story = {
       },
     },
   },
-  play: submit("만들기"),
+  play: assertSubmitResult("만들기", ["같은 이름의 카테고리가 이미 있습니다. 다른 이름을 입력해 주세요."]),
 }
 
 export const EditNameRequiredError: Story = {
   args: { mode: "edit", initialValue: blankEditValue },
   parameters: {
+    harness: {
+      requirements: ["REQ-018"],
+      covers: [
+        "카테고리를 만들거나 수정할 때 이름을 비우거나 공백만 입력하면 이름 입력 아래에 입력이 필요하다는 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -246,12 +319,18 @@ export const EditNameRequiredError: Story = {
       },
     },
   },
-  play: submit("저장"),
+  play: assertSubmitResult("저장", ["이름을 입력해 주세요."]),
 }
 
 export const EditNameTooLongError: Story = {
   args: { mode: "edit", initialValue: { ...editValue, name: longName.name } },
   parameters: {
+    harness: {
+      requirements: ["REQ-018"],
+      covers: [
+        "카테고리를 만들거나 수정할 때 이름이 50자를 초과하면 이름이 너무 길다는 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -262,7 +341,7 @@ export const EditNameTooLongError: Story = {
       },
     },
   },
-  play: submit("저장"),
+  play: assertSubmitResult("저장", ["이름은 50자를 넘을 수 없습니다."]),
 }
 
 export const EditDescriptionTooLongError: Story = {
@@ -271,6 +350,12 @@ export const EditDescriptionTooLongError: Story = {
     initialValue: { ...editValue, description: longDescription.description },
   },
   parameters: {
+    harness: {
+      requirements: ["REQ-018"],
+      covers: [
+        "카테고리를 만들거나 수정할 때 설명이 500자를 초과하면 설명이 너무 길다는 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -281,12 +366,18 @@ export const EditDescriptionTooLongError: Story = {
       },
     },
   },
-  play: submit("저장"),
+  play: assertSubmitResult("저장", ["설명은 500자를 넘을 수 없습니다."]),
 }
 
 export const EditColorFormatError: Story = {
   args: { mode: "edit", initialValue: { ...editValue, color: badColor.color } },
   parameters: {
+    harness: {
+      requirements: ["REQ-018"],
+      covers: [
+        "카테고리를 만들거나 수정할 때 색상 형식이 올바르지 않으면 색상 입력 아래에 형식 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -297,12 +388,18 @@ export const EditColorFormatError: Story = {
       },
     },
   },
-  play: submit("저장"),
+  play: assertSubmitResult("저장", ["색상은 #RRGGBB 형식으로 입력해 주세요."]),
 }
 
 export const EditSubmitting: Story = {
   args: { mode: "edit", initialValue: editValue, onSubmit: hangingSubmit },
   parameters: {
+    harness: {
+      requirements: ["REQ-018"],
+      covers: [
+        "카테고리를 수정하는 요청을 기다리는 동안 저장 버튼은 다시 누를 수 없는 상태로 표시된다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -313,12 +410,18 @@ export const EditSubmitting: Story = {
       },
     },
   },
-  play: submit("저장"),
+  play: assertSubmitResult("저장", [], "저장 중..."),
 }
 
 export const EditDuplicateNameRejection: Story = {
   args: { mode: "edit", initialValue: editValue, onSubmit: duplicateSubmit },
   parameters: {
+    harness: {
+      requirements: ["REQ-018"],
+      covers: [
+        "카테고리를 수정할 때 이미 사용 중인 다른 이름으로 바꾸려고 하면 중복 이름 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -329,5 +432,5 @@ export const EditDuplicateNameRejection: Story = {
       },
     },
   },
-  play: submit("저장"),
+  play: assertSubmitResult("저장", ["같은 이름의 카테고리가 이미 있습니다. 다른 이름을 입력해 주세요."]),
 }

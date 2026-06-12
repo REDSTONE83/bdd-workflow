@@ -11,7 +11,7 @@
         "harness.acceptanceCriteria": {
             "ko": "수용 기준",
             "en": "acceptance criteria",
-            "meaning": "요건 카드의 완료 기준 문장 묶음. 각 문장은 백엔드 Acceptance Test의 @Covers 또는 FE BDD 테스트의 Covers 값과 정확히 일치한다.",
+            "meaning": "요건 카드의 완료 기준 문장 묶음. 각 문장은 백엔드 Acceptance Test의 @Covers, Storybook Vitest의 covers, live Playwright의 Covers 값과 정확히 일치한다.",
             "allow": ["AC"]
         },
         "harness.scenario": {
@@ -21,7 +21,7 @@
             "allow": ["시나리오", "Scenario", "feature 시나리오"]
         },
         "harness.scope": {
-            "ko": "scope",
+            "ko": "범위",
             "en": "scope",
             "meaning": "하네스가 application과 harness 같은 대상 시스템별로 인덱스, findings, 추적 상태, 게이트 결과를 분리하는 작업 범위.",
             "allow": ["검증 scope", "선택한 scope"]

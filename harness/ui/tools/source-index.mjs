@@ -49,6 +49,23 @@ function stringArrayFromLiteral(raw) {
     return unique([...raw.matchAll(/['"]([^'"]+)['"]/g)].map((match) => match[1]));
 }
 
+function arrayPropertyFromText(text, property) {
+    const match = text.match(new RegExp(`\\b${property}\\s*:\\s*\\[([\\s\\S]*?)\\]`));
+    return stringArrayFromLiteral(match?.[1] ?? '');
+}
+
+function harnessArrayFromText(text, property) {
+    const match = text.match(new RegExp(`harness\\s*:\\s*\\{[\\s\\S]*?\\b${property}\\s*:\\s*\\[([\\s\\S]*?)\\]`));
+    return stringArrayFromLiteral(match?.[1] ?? '');
+}
+
+function storyDisplayName(story) {
+    return story
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')
+        .trim();
+}
+
 function collectPageMetadata(file, source, cfg) {
     const requirements = unique([...source.matchAll(/@Requirement\s+(REQ-\d{3,})/g)].map((match) => match[1]));
     const page = source.match(/@Page\s+([A-Za-z0-9_]+)/)?.[1];
@@ -89,112 +106,94 @@ function collectPageMetadata(file, source, cfg) {
 
 function collectStoryMetadata(file, source, cfg) {
     const title = source.match(/title\s*:\s*['"]([^'"]+)['"]/)?.[1];
-    if (!title) return [];
-    const requirementsRaw = source.match(/harness\s*:\s*\{\s*requirements\s*:\s*\[([\s\S]*?)\]/)?.[1] ?? '';
-    const requirements = stringArrayFromLiteral(requirementsRaw);
+    if (!title) return { stories: [], tests: [], issues: [] };
+    const exportRegex = /export\s+const\s+([A-Z][A-Za-z0-9_]*)\s*[:=]/g;
+    const exports = [...source.matchAll(exportRegex)];
+    const metaText = source.slice(0, exports[0]?.index ?? source.length);
+    const metaRequirements = harnessArrayFromText(metaText, 'requirements');
+    const metaTags = arrayPropertyFromText(metaText, 'tags');
     const relativeFile = repoRelative(cfg.repoRoot, file);
     const component = title.split('/').at(-1) ?? title;
     const stories = [];
-    const exportRegex = /export\s+const\s+([A-Z][A-Za-z0-9_]*)\s*[:=]/g;
-    for (const match of source.matchAll(exportRegex)) {
+    const tests = [];
+    const issues = [];
+    for (const [index, match] of exports.entries()) {
         const story = match[1];
+        const storyBlock = source.slice(match.index ?? 0, exports[index + 1]?.index ?? source.length);
+        const storyTags = arrayPropertyFromText(storyBlock, 'tags');
+        const requirements = unique([...metaRequirements, ...harnessArrayFromText(storyBlock, 'requirements')]);
+        const covers = harnessArrayFromText(storyBlock, 'covers');
+        const enabledForStorybookVitest = (metaTags.includes('test') || storyTags.includes('test')) && !storyTags.includes('!test');
+        const hasPlay = /\bplay\s*:/.test(storyBlock);
+        const hasAssertion = /\bexpect\s*\(|\bassert[A-Za-z0-9_]*\b/.test(storyBlock);
+        const line = lineForOffset(source, match.index ?? 0);
+        const displayStory = storyDisplayName(story);
         stories.push({
             kind: 'story',
             requirements,
             location: {
                 file: relativeFile,
-                line: lineForOffset(source, match.index ?? 0),
+                line,
                 identity: `${title} / ${story}`,
                 channel: 'FE.Story'
             },
             file: relativeFile,
-            line: lineForOffset(source, match.index ?? 0),
+            line,
             title,
             story,
-            component
+            component,
+            hasPlay,
+            hasAssertion
         });
-    }
-    return stories;
-}
 
-function nearestTestBlock(source, index) {
-    const head = source.slice(0, index);
-    const start = Math.max(head.lastIndexOf('test('), head.lastIndexOf('test.describe('));
-    if (start < 0) return null;
-    const title = source.slice(start, index).match(/test(?:\.describe)?\(\s*['"]([^'"]+)['"]/)?.[1] ?? '';
-    return { start, title };
-}
-
-function collectPlaywrightMetadata(file, source, cfg) {
-    const relativeFile = repoRelative(cfg.repoRoot, file);
-    const annotations = [...source.matchAll(/\{\s*type\s*:\s*['"](Requirement|Covers)['"]\s*,\s*description\s*:\s*['"]([^'"]+)['"]\s*\}/g)];
-    const testsByStart = new Map();
-    const issues = [];
-    for (const annotation of annotations) {
-        const nearest = nearestTestBlock(source, annotation.index ?? 0);
-        if (!nearest) continue;
-        if (!testsByStart.has(nearest.start)) {
-            testsByStart.set(nearest.start, {
-                requirements: [],
-                covers: [],
-                title: nearest.title,
-                line: lineForOffset(source, nearest.start)
-            });
-        }
-        const bucket = testsByStart.get(nearest.start);
-        if (annotation[1] === 'Requirement') bucket.requirements.push(annotation[2]);
-        if (annotation[1] === 'Covers') bucket.covers.push(annotation[2]);
-    }
-
-    const tests = [];
-    for (const test of testsByStart.values()) {
-        const requirements = unique(test.requirements);
-        const covers = unique(test.covers);
         if (covers.length > 0 && requirements.length === 0) {
             issues.push({
                 kind: 'COVERS_WITHOUT_REQUIREMENT',
                 severity: 'error',
-                message: 'Covers annotation has no Requirement annotation',
+                message: 'Storybook Vitest covers metadata has no requirement metadata',
                 requirements: [],
-                location: { file: relativeFile, line: test.line, identity: test.title }
+                location: { file: relativeFile, line, identity: `${title} / ${story}` }
             });
         }
-        if (requirements.length > 0 && covers.length === 0) {
-            issues.push({
-                kind: 'REQUIREMENT_WITHOUT_COVERS',
-                severity: 'error',
-                message: 'Requirement annotation has no Covers annotation',
-                requirements,
-                location: { file: relativeFile, line: test.line, identity: test.title }
-            });
+        if (!enabledForStorybookVitest || covers.length === 0) {
+            continue;
         }
         tests.push({
             kind: 'test',
             source: 'front-end',
-            runtime: 'playwright',
+            runtime: 'storybook-vitest',
             requirements,
             covers,
             file: relativeFile,
-            line: test.line,
-            displayName: test.title,
-            titlePath: [test.title],
-            identity: `${relativeFile}:${test.line} > ${test.title}`,
-            resultKeys: [`${relativeFile} > ${test.title}`],
+            line,
+            displayName: `${title} / ${story}`,
+            titlePath: [title, story],
+            hasPlay,
+            hasAssertion,
+            identity: `${relativeFile}:${line} > ${title} / ${story}`,
+            resultKeys: [
+                `${title} / ${story}`,
+                `${title} > ${story}`,
+                `${relativeFile} > ${displayStory}`,
+                `${path.relative(cfg.frontEndRoot, file).replace(/\\/g, '/')} > ${displayStory}`,
+                displayStory,
+                story,
+                `${relativeFile} > ${title} / ${story}`
+            ],
             location: {
                 file: relativeFile,
-                line: test.line,
-                identity: `${relativeFile}:${test.line} > ${test.title}`,
-                channel: 'FE.Covers'
+                line,
+                identity: `${relativeFile}:${line} > ${title} / ${story}`,
+                channel: 'FE.StorybookVitest'
             }
         });
     }
-    return { tests, issues };
+    return { stories, tests, issues };
 }
 
 function main() {
     const cfg = parseArgs(process.argv.slice(2));
     const srcFiles = walk(path.join(cfg.frontEndRoot, 'src'), (file) => /\.(ts|tsx)$/.test(file));
-    const testFiles = walk(path.join(cfg.frontEndRoot, 'tests', 'e2e'), (file) => /\.(spec|test)\.[cm]?[tj]sx?$/.test(file));
 
     const pages = [];
     const routes = [];
@@ -207,12 +206,8 @@ function main() {
         const pageMeta = collectPageMetadata(file, source, cfg);
         pages.push(...pageMeta.pages);
         routes.push(...pageMeta.routes);
-        stories.push(...collectStoryMetadata(file, source, cfg));
-    }
-
-    for (const file of testFiles) {
-        const source = fs.readFileSync(file, 'utf8');
-        const metadata = collectPlaywrightMetadata(file, source, cfg);
+        const metadata = collectStoryMetadata(file, source, cfg);
+        stories.push(...metadata.stories);
         tests.push(...metadata.tests);
         issues.push(...metadata.issues);
     }

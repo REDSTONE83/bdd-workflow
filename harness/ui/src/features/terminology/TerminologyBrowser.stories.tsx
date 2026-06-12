@@ -11,11 +11,11 @@ const meta = {
     harness: { requirements: ["REQ-036"] },
     docs: {
       description: {
-        component: "선택한 scope의 terminology.index.json 산출물을 기준으로 전체 표준 용어 목록, 검색, 필터, 상세 정보를 검토한다.",
+        component: "선택한 범위의 terminology.index.json 산출물을 기준으로 전체 표준 용어 목록, 검색, 필터, 상세 정보를 검토한다.",
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
 } satisfies Meta<typeof TerminologyBrowser>;
 
 export default meta;
@@ -24,6 +24,9 @@ type Story = StoryObj<typeof meta>;
 export const AllTerms: Story = {
   args: { model: terminologyBrowser },
   parameters: {
+    harness: {
+      covers: ["표준 용어 화면은 전체 term key 목록을 승인 상태, 한국어 이름, 영어 이름, 의미, source file과 함께 표시한다"],
+    },
     docs: {
       description: {
         story: "전체 표준 용어 목록 상태다. term key, 승인 상태, 한국어 이름, 영어 이름, 의미, source file이 목록에서 함께 읽히는지 확인한다.",
@@ -35,6 +38,9 @@ export const AllTerms: Story = {
 export const SearchResults: Story = {
   args: { model: terminologyBrowser, initialQuery: "traceState" },
   parameters: {
+    harness: {
+      covers: ["term key, 한국어 이름, 영어 이름, 의미, 허용 표현, 금지 표현, 코드 이름으로 표준 용어 목록을 검색할 수 있다"],
+    },
     docs: {
       description: {
         story: "코드 이름 검색 결과 상태다. names에 포함된 값으로도 목록이 좁혀지는지 확인한다.",
@@ -46,6 +52,9 @@ export const SearchResults: Story = {
 export const FilteredByDomain: Story = {
   args: { model: terminologyBrowser, initialDomain: "ui" },
   parameters: {
+    harness: {
+      covers: ["도메인과 승인 상태로 표준 용어 목록을 좁힐 수 있다"],
+    },
     docs: {
       description: {
         story: "도메인 필터 적용 상태다. 선택한 도메인의 표준 용어만 남고 결과 수가 함께 표시되어야 한다.",
@@ -57,6 +66,9 @@ export const FilteredByDomain: Story = {
 export const FilteredByStatus: Story = {
   args: { model: terminologyBrowser, initialStatus: "draft" },
   parameters: {
+    harness: {
+      covers: ["도메인과 승인 상태로 표준 용어 목록을 좁힐 수 있다"],
+    },
     docs: {
       description: {
         story: "승인 상태 필터 적용 상태다. draft 용어만 남고 상태 뱃지가 명확히 보여야 한다.",
@@ -68,6 +80,9 @@ export const FilteredByStatus: Story = {
 export const TermDetail: Story = {
   args: { model: terminologyBrowser, initialSelectedKey: "ui.dialog" },
   parameters: {
+    harness: {
+      covers: ["표준 용어를 선택하면 의미, 허용 표현, 금지 표현, 코드 이름, note, reason을 확인할 수 있다"],
+    },
     docs: {
       description: {
         story: "표준 용어 상세 상태다. 의미, 허용 표현, 금지 표현, 코드 이름, note, reason, source file을 한 화면에서 확인한다.",

@@ -93,16 +93,16 @@ Feature: 하네스 UI 요건 상세 추적
   Scenario: API와 데이터 계약 Skeleton 연결을 확인한다
     Covers:
       - 연결된 API 작업은 세로 목록형 카드로 표시되고 Request, Response 구성과 그 안의 중첩 객체 필드는 펼침으로 확인된다
-      - 연결된 Entity 구성은 Entity 탭에서 세로 목록형 카드로 표시되고 속성 목록은 펼침으로 확인된다
+      - 연결된 Entity 구성은 Entity 탭에서 세로 목록형 카드로 표시되고 table과 컬럼 메타데이터는 펼침으로 확인된다
 
     Given 선택한 요건에 연결된 API 작업과 Request, Response, Entity 구성이 있다
     And Response 필드 중 하나가 다른 객체 타입을 참조한다
     When 하네스 작업자가 API 계약 탭과 Entity 탭을 확인한다
-    Then API 계약 탭에서 API method, path, operationId와 Skeleton 상태가 세로 목록형 카드로 보인다
+    Then API 계약 탭에서 API method, path, operationId와 구현 위치가 세로 목록형 카드로 보인다
     And API 계약 탭에서 Request와 Response 이름과 필드 구성은 펼침 영역에서 보인다
     And Response의 중첩 객체 필드는 참조 객체 펼침 영역에서 보인다
-    And Entity 탭에서 Entity 이름, Skeleton 상태와 구현 위치가 세로 목록형 카드로 보인다
-    And Entity 속성 이름, 타입, 필수 여부와 설명은 속성 목록 펼침 영역에서 보인다
+    And Entity 탭에서 DB table이 카드의 주 정보로 보이고 JPA className, listener와 구현 위치는 보조 정보로 보인다
+    And Entity 컬럼의 columnName, PK 여부, nullable, unique, updatable, length가 먼저 보이고 fieldName, javaType, annotation, 연결 요건은 보조 정보로 컬럼 목록 펼침 영역에서 보인다
 
   Scenario: UI 표면은 Storybook 링크로 검토한다
     Covers:

@@ -132,7 +132,7 @@ Skeleton 승인
 - 상위 카드는 하위 카드의 AC를 복사하지 않는다. 상위 카드의 AC는 여러 하위 요건이 함께 만족될 때 확인되는 사용자 여정이나 기능 성과만 둔다.
 - 상위 카드는 얇은 기능 컨텍스트로만 유지한다. 구체 동작, 입력 검증, 예외 조건, 정렬/페이징, 화면 상태, 실행 테스트 연결은 하위 원자 요건으로 내려보낸다.
 - 상위 카드의 AC는 기능 전체 성과를 검증할 수 있을 때만 둔다. 보통 `(E2E)` AC이며, 하위 요건 존재 확인용 구조 AC를 제품 상위 요건에 두지 않는다.
-- 애플리케이션 상위 카드의 `(E2E)` AC는 mock 기반 FE E2E가 아니라 실 백엔드와 실 프런트엔드를 함께 실행하는 live Playwright smoke가 커버한다. 상세 기준은 `app/docs/standards/front-end-testing.md`의 "상위 요건 live 통합 스모크"를 따른다.
+- 애플리케이션 상위 카드의 `(E2E)` AC는 Storybook Vitest가 아니라 실 백엔드와 실 프런트엔드를 함께 실행하는 live Playwright smoke가 커버한다. 상세 기준은 `app/docs/standards/front-end-testing.md`의 "상위 요건 live 통합 스모크"를 따른다.
 - 검증 가능한 AC가 없는 단순 묶음은 REQ로 만들지 않는다. 작업 범위면 Change Set에 두고, 설명 문서면 `app/docs` 또는 `harness/docs`에 둔다.
 
 ## 분리와 병합
@@ -225,11 +225,11 @@ REQ-017 할 일 목록 조회
 마커 의미:
 
 - `API`: 백엔드 Acceptance Test 커버가 필요하다.
-- `UI`: Playwright FE BDD 테스트 커버가 필요하다.
-- `E2E`: Playwright 기반 사용자 여정 테스트 커버가 필요하다. 애플리케이션 상위 요건의 `E2E`는 live Playwright smoke 결과로 판정한다.
-- `STATIC`: 하네스/정적 검사/리포트 검증 테스트 커버가 필요하다. 테스트 위치는 백엔드 Acceptance Test 또는 FE BDD 테스트 어느 쪽이든 가능하다.
+- `UI`: application scope와 harness scope 모두 Storybook Vitest 테스트 커버가 필요하다.
+- `E2E`: 프런트엔드 사용자 여정 테스트 커버가 필요하다. 애플리케이션 상위 요건의 `E2E`는 live Playwright smoke 결과로 판정하고, 그 외 UI-bound 흐름은 Storybook Vitest 커버를 인정한다.
+- `STATIC`: 하네스/정적 검사/리포트 검증 테스트 커버가 필요하다. 테스트 위치는 백엔드 Acceptance Test, Storybook Vitest 테스트, live Playwright 테스트 중 요건 scope와 검증 대상에 맞는 채널을 사용한다.
 
-마커는 카드 표시 정보일 뿐 테스트 식별자는 아니다. 같은 AC를 가리키는 `@Covers`, FE BDD `Covers`, `.feature` Scenario `Covers:` 값에는 마커를 포함하지 않는다.
+마커는 카드 표시 정보일 뿐 테스트 식별자는 아니다. 같은 AC를 가리키는 `@Covers`, Storybook Vitest `covers`, live Playwright `Covers`, `.feature` Scenario `Covers:` 값에는 마커를 포함하지 않는다.
 
 `검증 수준`과 AC 마커 집합은 서로 모순되지 않아야 한다.
 

@@ -13,11 +13,11 @@ const meta = {
     harness: { requirements: ["REQ-031"] },
     docs: {
       description: {
-        component: "선택한 scope의 요건 목록형 카드, 상위/하위 요건 구조, 추적 상태 요약, 필터, 상세 이동 흐름을 검토한다.",
+        component: "선택한 범위의 요건 목록형 카드, 상위/하위 요건 구조, 추적 상태 요약, 필터, 상세 이동 흐름을 검토한다.",
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   decorators: [
     (Story, context) => {
       const router = context.parameters.router as { initialEntries?: string[] } | undefined;
@@ -37,9 +37,12 @@ type Story = StoryObj<typeof meta>;
 export const AllRequirements: Story = {
   args: { rows: requirementRows, summary: requirementSummary },
   parameters: {
+    harness: {
+      covers: ["요건 보드는 선택한 scope의 모든 요건을 요건 ID, 제목, 카드 상태, 제품 영역, 우선순위, 명세 역할, 상위 요건 ID, 하위 요건 수가 한 줄에 있고 추적 상태 뱃지가 우측 끝에 있는 목록형 카드로 표시하며, 카드 상태, 제품 영역, 우선순위는 제목 바로 오른쪽에 접두 문자 없는 종류별 색상의 작은 뱃지로 표시한다"],
+    },
     docs: {
       description: {
-        story: "선택한 scope의 요건 목록 전체를 보여주는 상태다. 요건 ID, 제목, 접두 문자 없는 종류별 색상의 작은 메타 뱃지, 구조 뱃지가 한 줄에 있고 추적 상태 뱃지가 우측 끝에 있는지 확인한다.",
+        story: "선택한 범위의 요건 목록 전체를 보여주는 상태다. 요건 ID, 제목, 접두 문자 없는 종류별 색상의 작은 메타 뱃지, 구조 뱃지가 한 줄에 있고 추적 상태 뱃지가 우측 끝에 있는지 확인한다.",
       },
     },
   },
@@ -48,6 +51,9 @@ export const AllRequirements: Story = {
 export const Hierarchy: Story = {
   args: { rows: requirementRows.filter((row) => row.id === "REQ-021" || row.parentRequirementIds.includes("REQ-021")), summary: requirementSummary },
   parameters: {
+    harness: {
+      covers: ["하위 요건 카드는 좌측 들여쓰기와 세로선으로 하위 관계가 구분된다"],
+    },
     docs: {
       description: {
         story: "상위 요건과 하위 원자 요건이 함께 있는 상태다. 한 줄 카드 안에서 제목 바로 오른쪽의 작은 메타 뱃지와 명세 역할, 상위 요건, 하위 요건 수가 구분되고 하위 카드가 좌측 들여쓰기와 세로선으로 표시되는지 확인한다.",
@@ -70,6 +76,9 @@ export const Filtered: Story = {
 export const FilteredByTitle: Story = {
   args: { rows: requirementRows, summary: requirementSummary, initialTitleQuery: "요건 추적" },
   parameters: {
+    harness: {
+      covers: ["제목 검색어, 추적 상태, 카드 상태, 제품 영역으로 목록을 좁힐 수 있고 필터 상태는 URL query에 반영된다"],
+    },
     docs: {
       description: {
         story: "요건 제목 검색어가 입력된 상태다. 제목에 검색어가 포함된 요건 카드만 목록에 남는지 확인한다.",
@@ -92,6 +101,9 @@ export const EmptyResult: Story = {
 export const StateSummary: Story = {
   args: { rows: requirementRows, summary: requirementSummary },
   parameters: {
+    harness: {
+      covers: ["보드 상단에 추적 상태별 요건 수 요약이 표시된다"],
+    },
     docs: {
       description: {
         story: "추적 상태별 요약 카드 검토 상태다. RED/GREEN/BLUE/INACTIVE 수치가 목록 위에서 빠르게 스캔되는지 확인한다.",
@@ -110,6 +122,9 @@ export const DetailNavigation: Story = {
     </Routes>
   ),
   parameters: {
+    harness: {
+      covers: ["목록에서 요건 ID를 선택하면 현재 필터 query를 유지한 채 그 요건의 상세 화면 route로 이동한다"],
+    },
     router: {
       initialEntries: ["/requirements?title=요건&traceState=RED&cardStatus=초안&productArea=harness"],
     },

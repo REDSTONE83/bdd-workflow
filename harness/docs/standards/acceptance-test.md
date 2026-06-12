@@ -13,7 +13,17 @@ BDD 시나리오는 `app/docs/scenarios/` 또는 `harness/docs/scenarios/`의 Gh
 - `@Covers`: 요건 카드의 수용 기준 문장. 카드의 완료 여부를 판정하는 기계 친화 신호. `.feature`의 `Covers:` 블록과 같은 의미.
 - `@DisplayName`: JUnit 실행 결과에서 사람이 읽는 케이스 레이블. **자유 작성**이며 `.feature`의 `Scenario:` 제목과 일치할 필요는 없다.
 
-`@Covers`가 있는 테스트는 BDD 테스트로 본다. `@Covers`가 없는 테스트는 TDD/일반 보조 테스트로 분류하며 AC 커버리지에는 포함하지 않는다. 프런트엔드도 같은 원칙을 따른다. FE BDD 테스트는 Playwright에서 `Requirement`와 `Covers` 메타데이터를 남기고, Vitest/Testing Library 테스트는 기본적으로 TDD/보조 테스트로 둔다 ([`front-end-testing.md`](../../../app/docs/standards/front-end-testing.md)).
+`@Covers`가 있는 테스트는 BDD 테스트로 본다. `@Covers`가 없는 테스트는 TDD/일반 보조 테스트로 분류하며 AC 커버리지에는 포함하지 않는다. 프런트엔드도 같은 원칙을 따른다. UI AC는 Storybook Vitest story의 `parameters.harness.requirements`/`parameters.harness.covers` 메타데이터로 추적하고, Vitest/Testing Library 단위 테스트는 기본적으로 TDD/보조 테스트로 둔다 ([`front-end-testing.md`](../../../app/docs/standards/front-end-testing.md)).
+
+Storybook Vitest에서 `parameters.harness.covers`가 있는 story는 실행 가능한 Acceptance Test다. 따라서 `play` 함수가 있어야 하고, 그 안에 사용자 행위 또는 상태 진입과 `expect(...)` 검증이 포함되어야 한다. `covers`만 붙은 렌더링 story는 성공 조건이 없으므로 AC 커버리지로 인정하지 않는다.
+
+Storybook story test 작성 공통 원칙:
+
+- `covers`가 있는 story는 `play` 또는 `play`가 가리키는 `assert...` 함수에서 성공 조건을 드러낸다.
+- 성공 조건은 사용자가 관찰하는 최종 상태다. 내부 state, CSS class, 구현 함수 호출 여부를 완료 근거로 쓰지 않는다.
+- 공통 helper는 popup 탐색, 대기, 반복 입력 같은 저수준 동작에만 둔다. AC 성공 조건 자체를 일반 helper 안에 숨기지 않는다.
+- 대화상자, 메뉴, portal 표면은 현재 열린 role/name 범위 안에서 검증한다.
+- 성공 제출 테스트는 정상 사용자 조작으로 실행하고, 완료 후 닫힘/목록 반영/경로 변경 같은 사용자 결과를 확인한다. DOM API를 직접 호출해 제출을 우회하지 않는다.
 
 실행 테스트 작성은 사용자가 검증 설계와 요건 Skeleton을 승인한 뒤에 진행한다. 작성 절차는 [`requirement-authoring.md`](../requirement-authoring.md)를 참조한다.
 
@@ -50,7 +60,7 @@ HTTP API를 직접 호출하지 않는 애플리케이션 보조 Acceptance Test
 
 별도 시나리오 ID는 만들지 않는다. 사람이 검토하는 시나리오 단위는 `.feature`의 `Scenario:` 제목이며, 테스트 실행 식별자는 `TestClass.testMethod`다. 시나리오 제목은 추적 ID가 아니므로 검토 과정에서 자유롭게 다듬을 수 있다.
 
-프런트엔드에서도 별도 시나리오 ID, 화면 ID, 컴포넌트 ID를 만들지 않는다. 테스트 실행 식별자는 Playwright 파일명과 test 제목이며, 추적은 `Requirement` 값(`REQ-XXX`)과 `Covers` 문장으로만 한다.
+프런트엔드에서도 별도 시나리오 ID, 화면 ID, 컴포넌트 ID를 만들지 않는다. 테스트 실행 식별자는 Storybook title/story export 또는 live Playwright 파일명/test 제목이며, 추적은 `Requirement` 값(`REQ-XXX`)과 `Covers` 문장으로만 한다.
 
 파일명은 다음 형식을 따른다.
 
@@ -313,11 +323,11 @@ API/DB/Service 명세는 평소대로 컨트롤러·DTO·Entity·Service 골격,
 - `npm run harness:self-test-index`: 하네스 TypeScript self-test의 `harnessTest({ requirement, covers })` 메타데이터를 source index로 수집.
 - `npm run app:scenario-index` 또는 `npm run harness:trace`: scope별 `REQ-XXX-*.feature`를 파싱해 `@REQ-XXX` 태그, Feature/Scenario 제목, `Covers:` 블록, Given/When/Then을 수집한다. Cucumber 런타임은 사용하지 않고 파서만 사용한다.
 - `npm run app:validate` 또는 `npm run harness:validate`: 카드의 수용 기준이 `@Covers`로 모두 커버되는지, 연결 테스트가 모두 PASS인지 검사.
-- `cd app/front-end && npm run validate`: TypeScript, lint, Vitest, Vite build를 실행한다.
-- `cd app/front-end && npm run validate:full`: 빠른 FE 게이트에 Storybook build와 mock Playwright E2E/accessibility smoke를 더한다.
+- `cd app/front-end && npm run validate`: TypeScript, lint, Vitest, Storybook Vitest, Vite build를 실행한다.
+- `cd app/front-end && npm run validate:full`: 빠른 FE 게이트에 Storybook build와 live Playwright smoke를 더한다.
 - `cd app/front-end && npm run e2e:live`: 애플리케이션 상위 요건의 live Playwright smoke를 실행한다.
-- `npm run app:front-end-source-index`: Playwright FE BDD 테스트의 `Requirement`/`Covers`, route/page/story 메타데이터를 수집한다.
-- `npm run app:trace` 또는 `npm run harness:trace`: AC 마커에 따라 백엔드 Acceptance Test, FE BDD 테스트, live E2E 테스트, STATIC 검증 테스트 결과를 병합한다.
+- `npm run app:front-end-source-index`: Storybook Vitest story의 `requirements`/`covers`, live Playwright 테스트의 `Requirement`/`Covers`, route/page/story 메타데이터를 수집한다.
+- `npm run app:trace` 또는 `npm run harness:trace`: AC 마커에 따라 백엔드 Acceptance Test, Storybook Vitest, live E2E 테스트, STATIC 검증 테스트 결과를 병합한다.
 - `npm run app:trace`는 테스트를 재실행하지 않고 직전 canonical 결과 파일을 읽으므로, 구현이나 테스트를 바꾼 뒤에는 `npm run app:validate` 또는 해당 테스트 명령으로 결과 파일을 먼저 갱신한다.
 - scope별 validate WARNING (report-only, 마이그레이션 완료 후 ERROR 승격 예정):
   - `TEST_COVERS_NO_SCENARIO_COVERS`: BDD 테스트의 `@Covers` AC가 같은 요건의 어떤 `.feature Scenario Covers:`에도 없음.

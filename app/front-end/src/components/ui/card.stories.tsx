@@ -38,7 +38,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   render: (args) => (
     <Card {...args} className="w-[360px]">
       <CardHeader>

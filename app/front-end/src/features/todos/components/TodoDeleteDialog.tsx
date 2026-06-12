@@ -63,6 +63,7 @@ function DeleteConfirmBody({
     setFormError(null)
     try {
       await onConfirm()
+      setSubmitting(false)
       onConfirmed()
     } catch {
       setFormError("삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.")

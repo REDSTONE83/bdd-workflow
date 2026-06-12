@@ -16,6 +16,6 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src", "server", ".storybook", "vite.config.ts", "playwright.config.ts"],
+  "include": ["src", "server", ".storybook", "vite.config.ts", "vitest.config.ts"],
   "references": []
 }

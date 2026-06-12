@@ -90,7 +90,7 @@
   UI Skeleton: `/gate` route는 gate summary와 findings view model을 받아 카테고리 요약과 검사 결과 목록을 구성한다. 화면은 카테고리 차단 판정을 다시 계산하지 않는다.
   Storybook 계약: `Harness/Gates/GateView`의 `Passing`, `CategoryBlocked`, `FindingExpanded`, `Filtered` 상태가 있어야 한다.
   검사기 Skeleton: 통합 게이트 도구의 카테고리 판정을 UI가 읽을 수 있도록 `gate.report.json` 또는 동등한 machine-readable DTO를 만든다. DTO에는 8개 카테고리의 차단 여부, error 수, ruleId별 수량, 관련 finding 참조가 포함되어야 한다.
-  추적 정책: `(UI)` AC는 harness/ui Playwright FE BDD 결과로 판정한다. `(STATIC)` AC는 gate summary DTO가 `gate.mjs`의 CATEGORY_ORDER와 finding 집계를 그대로 반영하는 self-test로 판정한다.
+  추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다. `(STATIC)` AC는 gate summary DTO가 `gate.mjs`의 CATEGORY_ORDER와 finding 집계를 그대로 반영하는 self-test로 판정한다.
   검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-033`로 카드/시나리오/용어 정합성을 확인한다.
   Skeleton 결과: 승인 대기
 

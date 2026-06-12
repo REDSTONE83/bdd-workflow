@@ -168,7 +168,7 @@ export function TerminologyBrowser({
         <MetricCard label="전체" value={model.terms.length} />
         <MetricCard label="approved" value={approvedCount} />
         <MetricCard label="draft" value={draftCount} />
-        <MetricCard label="scope" value={model.scope} />
+        <MetricCard label="범위" value={model.scope} />
       </div>
 
       <Card className="p-4">

@@ -16,7 +16,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   decorators: [
     (Story, context) => {
       const router = context.parameters.router as { initialEntries?: string[] } | undefined;
@@ -42,7 +42,7 @@ export const CompleteCoverage: Story = {
       blueBlockedBy: [],
       acceptanceCriteria: requirementDetail.acceptanceCriteria.map((row) => ({ ...row, status: "PASS" })),
       scenarios: requirementDetail.scenarios.map((scenario) => ({ ...scenario, status: "연결됨" })),
-      coverage: requirementDetail.coverage.map((row) => ({ ...row, status: "PASS", tests: ["harness/ui/tests/e2e/requirements.spec.ts"] })),
+      coverage: requirementDetail.coverage.map((row) => ({ ...row, status: "PASS", tests: ["harness/ui/src/features/requirements/RequirementBoard.stories.tsx > Harness/Requirements/RequirementBoard / AllRequirements"] })),
     },
   },
   parameters: {
@@ -103,7 +103,7 @@ export const AcceptanceAndScenarios: Story = {
   parameters: {
     docs: {
       description: {
-        story: "AC 탭과 시나리오 탭에서 수용 기준 원문 카드 목록과 BDD Scenario 목록을 각각 확인하는 상태다. 각 AC의 ID, 채널 색상 뱃지, 판정, 연결 테스트/시나리오 바로가기와 각 시나리오의 Covers, 커버리지 판정, 연결 테스트, 번호 없는 GWT, feature 위치가 보여야 한다.",
+        story: "AC 탭과 시나리오 탭에서 수용 기준 원문 카드 목록과 BDD Scenario 목록을 각각 확인하는 상태다. 각 AC의 ID, 채널 색상 뱃지, 판정, 연결 테스트/시나리오 바로가기와 각 시나리오의 표준 테스트 파일 링크, 강조된 Given/When/Then, feature 위치가 보여야 한다.",
       },
     },
   },
@@ -114,7 +114,7 @@ export const SkeletonContracts: Story = {
   parameters: {
     docs: {
       description: {
-        story: "API 계약 탭에서 요건에 연결된 API 작업 목록형 카드, Request/Response 펼침, Request/Response 필드의 참조 객체 펼침을 확인하고, Entity 탭에서 Entity 목록형 카드와 속성 목록 펼침을 확인하는 상태다. UI 표면은 UI 탭에서 description이 있는 목록형 카드로 표시되고 Storybook 검토 버튼과 구현 위치 링크를 제공해야 한다.",
+        story: "API 계약 탭에서 요건에 연결된 API 작업 목록형 카드, Request/Response 펼침, Request/Response 필드의 참조 객체 펼침을 확인하고, Entity 탭에서 Entity 테이블과 컬럼 메타데이터 목록을 확인하는 상태다. UI 표면은 UI 탭에서 description이 있는 목록형 카드로 표시되고 Storybook 검토 버튼과 구현 위치 링크를 제공해야 한다.",
       },
     },
   },

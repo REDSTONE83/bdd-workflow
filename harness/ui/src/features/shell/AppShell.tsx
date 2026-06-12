@@ -35,8 +35,8 @@ export function AppShell({ model, children }: { model: ArtifactSummary; children
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-sm text-foreground">
-              <span>scope</span>
-              <Select defaultValue={model.scope} options={scopeOptions} aria-label="scope 선택" />
+              <span>범위</span>
+              <Select defaultValue={model.scope} options={scopeOptions} aria-label="범위 선택" />
             </div>
             <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
               generatedAt: {model.generatedAt ?? "산출물 없음"}
@@ -77,7 +77,7 @@ export function AppShell({ model, children }: { model: ArtifactSummary; children
           {model.missing ? (
             <Alert variant="warning" className="mb-4">
               <AlertDescription>
-                선택한 scope의 검증 산출물이 없다. `npm run harness:trace -- --requirement REQ-XXX` 또는 `npm run harness:validate`를 실행한다.
+                선택한 범위의 검증 산출물이 없다. `npm run harness:trace -- --requirement REQ-XXX` 또는 `npm run harness:validate`를 실행한다.
               </AlertDescription>
             </Alert>
           ) : null}

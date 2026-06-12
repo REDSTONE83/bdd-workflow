@@ -18,7 +18,7 @@ export function linkTargetProps(href: string): Partial<Pick<AnchorHTMLAttributes
 export function shapeTone(shape: RequirementDataShape) {
   if (shape.kind === "Request") return "warning" as const;
   if (shape.kind === "Response") return "blue" as const;
-  return "green" as const;
+  return "neutral" as const;
 }
 
 export function uiSurfaceLabel(surface: RequirementUiSurface) {
@@ -47,6 +47,14 @@ export function uniqueTests(rows: AcceptanceCoverageRow[]) {
   return Array.from(new Set(rows.flatMap((row) => row.tests)));
 }
 
+export function testLocation(test: string) {
+  const [rawLocation] = test.split(" > ");
+  const match = rawLocation.match(/^(.*):(\d+)$/);
+  const file = match?.[1] ?? rawLocation;
+  const line = match?.[2] ? Number(match[2]) : 1;
+  return { file, line, label: `${file}:${line}` };
+}
+
 export function coverageRowsForScenario(detail: RequirementDetail, scenario: RequirementScenario) {
   return detail.coverage.filter((row) => scenario.covers.includes(row.criterion));
 }
@@ -73,7 +81,10 @@ export function artifactKindMeta(kind: string) {
 export function sourceLinksForRequirement(detail: RequirementDetail): LinkedArtifact[] {
   const sourceLinks = [
     ...detail.apiSurfaces.map((api) => ({ kind: `api:${api.operationId}`, file: api.file, line: api.line })),
-    ...detail.dataShapes.map((shape) => ({ kind: `${shape.kind}:${shape.name}`, file: shape.file, line: shape.line })),
+    ...detail.dataShapes
+      .filter((shape) => shape.kind !== "Object")
+      .map((shape) => ({ kind: `${shape.kind}:${shape.name}`, file: shape.file, line: shape.line })),
+    ...detail.entitySurfaces.map((entity) => ({ kind: `Entity:${entity.table}`, file: entity.file, line: entity.line ?? 1 })),
     ...detail.uiSurfaces.map((surface) => ({ kind: `${surface.kind}:${surface.name}`, file: surface.file, line: surface.line })),
   ];
 

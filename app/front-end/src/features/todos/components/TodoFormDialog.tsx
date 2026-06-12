@@ -139,6 +139,7 @@ function TodoForm({
         priority,
         categoryId: categoryId || null,
       })
+      setSubmitting(false)
       onSubmitted()
     } catch {
       setFormError("저장하지 못했습니다. 잠시 후 다시 시도해 주세요.")

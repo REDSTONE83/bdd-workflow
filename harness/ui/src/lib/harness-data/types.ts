@@ -115,12 +115,36 @@ export interface RequirementDataField {
 }
 
 export interface RequirementDataShape {
-  kind: "Request" | "Response" | "Entity";
+  kind: "Request" | "Response" | "Object";
   name: string;
   status: string;
   file: string;
   line: number;
   fields: RequirementDataField[];
+}
+
+export interface RequirementEntityColumn {
+  fieldName: string;
+  columnName: string;
+  javaType: string;
+  primaryKey: boolean;
+  generation: string | null;
+  nullable: boolean | null;
+  unique: boolean | null;
+  updatable: boolean | null;
+  length: number | null;
+  annotations: string[];
+  requirements: string[];
+}
+
+export interface RequirementEntitySurface {
+  className: string;
+  table: string;
+  file: string;
+  line?: number;
+  listeners: string[];
+  requirements: string[];
+  columns: RequirementEntityColumn[];
 }
 
 export interface RequirementUiSurface {
@@ -173,6 +197,7 @@ export interface RequirementDetail {
   linkedArtifacts: LinkedArtifact[];
   apiSurfaces: RequirementApiSurface[];
   dataShapes: RequirementDataShape[];
+  entitySurfaces: RequirementEntitySurface[];
   uiSurfaces: RequirementUiSurface[];
 }
 

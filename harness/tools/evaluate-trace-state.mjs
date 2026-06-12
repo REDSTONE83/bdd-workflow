@@ -365,13 +365,14 @@ function effectiveCoveragePolicy(acTarget) {
 function targetCoverageForCriterion(criterion, requirementTests, requirementScenarios, results, acTarget) {
     const backEndTests = requirementTests.filter((t) => t.source !== 'front-end');
     const frontEndTests = requirementTests.filter((t) => t.source === 'front-end');
+    const storybookVitestTests = frontEndTests.filter((t) => t.runtime === 'storybook-vitest');
     const policy = effectiveCoveragePolicy(acTarget);
     if (policy === 'API') {
         const cov = statusForCriterion(criterion, backEndTests, requirementScenarios, results);
         return { ...cov, requiredChecks: [{ target: 'api', status: cov.status }] };
     }
     if (policy === 'UI') {
-        const cov = statusForCriterion(criterion, frontEndTests, requirementScenarios, results);
+        const cov = statusForCriterion(criterion, storybookVitestTests, requirementScenarios, results);
         return { ...cov, requiredChecks: [{ target: 'ui', status: cov.status }] };
     }
     if (policy === 'E2E') {

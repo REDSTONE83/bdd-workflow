@@ -52,7 +52,7 @@ function PrimitiveGallery() {
               { value: "harness", label: "harness" },
               { value: "application", label: "application" },
             ]}
-            aria-label="primitive scope"
+            aria-label="primitive 범위"
           />
           <Dialog>
             <DialogTrigger>대화상자</DialogTrigger>
@@ -169,7 +169,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
 } satisfies Meta<typeof PrimitiveGallery>;
 
 export default meta;

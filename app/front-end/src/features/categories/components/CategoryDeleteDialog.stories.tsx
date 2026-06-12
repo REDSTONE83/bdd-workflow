@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { userEvent, within } from "storybook/test"
+import { expect, userEvent, waitFor } from "storybook/test"
+
+import { withinCurrentAlertDialog } from "@/test/storybook-dialog"
 
 import { CategoryDeleteDialog } from "./CategoryDeleteDialog"
 
@@ -40,7 +42,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   args: {
     open: true,
     onOpenChange: noop,
@@ -53,8 +55,36 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
+const activeDeleteDialog = async () => {
+  return withinCurrentAlertDialog("‘업무’ 카테고리를 삭제할까요?")
+}
+
+const assertDefaultDeleteDialog = async () => {
+  const dialog = await activeDeleteDialog()
+  await waitFor(() => expect(dialog.getByText("‘업무’ 카테고리를 삭제할까요?")).toBeVisible())
+  await expect(dialog.getByText(/미분류로 바뀝니다/)).toBeVisible()
+  await expect(dialog.getByRole("button", { name: "삭제" })).toBeVisible()
+}
+
+const assertDeleteSubmitting = async () => {
+  const dialog = await activeDeleteDialog()
+  await userEvent.click(dialog.getByRole("button", { name: "삭제" }))
+  await expect(dialog.getByRole("button", { name: "삭제 중..." })).toBeDisabled()
+}
+
+const assertDeleteFailure = async () => {
+  const dialog = await activeDeleteDialog()
+  await userEvent.click(dialog.getByRole("button", { name: "삭제" }))
+  await waitFor(() => expect(dialog.getByText("삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.")).toBeVisible())
+}
+
 export const Default: Story = {
   parameters: {
+    harness: {
+      covers: [
+        "카테고리를 삭제하려고 하면 삭제를 확인받는 안내와 함께, 그 카테고리에 묶였던 할 일이 미분류로 바뀐다는 설명이 보인다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -75,11 +105,17 @@ export const Default: Story = {
       },
     },
   },
+  play: assertDefaultDeleteDialog,
 }
 
 export const Submitting: Story = {
   args: { onConfirm: hangingConfirm },
   parameters: {
+    harness: {
+      covers: [
+        "카테고리를 삭제하는 요청을 기다리는 동안 삭제 버튼은 다시 누를 수 없는 상태로 표시된다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -99,10 +135,7 @@ export const Submitting: Story = {
       },
     },
   },
-  play: async () => {
-    const body = within(document.body)
-    await userEvent.click(body.getByRole("button", { name: "삭제" }))
-  },
+  play: assertDeleteSubmitting,
 }
 
 export const DeleteFailure: Story = {
@@ -127,8 +160,5 @@ export const DeleteFailure: Story = {
       },
     },
   },
-  play: async () => {
-    const body = within(document.body)
-    await userEvent.click(body.getByRole("button", { name: "삭제" }))
-  },
+  play: assertDeleteFailure,
 }

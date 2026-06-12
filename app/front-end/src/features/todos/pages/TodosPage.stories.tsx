@@ -1,9 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { useRef, useState } from "react"
 import { MemoryRouter } from "react-router-dom"
+import { expect, userEvent, waitFor, within } from "storybook/test"
 
 import { AuthContext, type AuthContextValue } from "@/features/auth/AuthContext"
 import type { CategoryView } from "@/features/categories/types"
+import {
+  expectCurrentPopupClosed,
+  withinCurrentAlertDialog,
+  withinCurrentDialog,
+} from "@/test/storybook-dialog"
 
 import { TodosPage } from "./TodosPage"
 import type { TodoInput, TodoPatch, TodoView } from "../types"
@@ -55,6 +61,7 @@ const many: TodoView[] = Array.from({ length: 20 }, (_, i) => ({
 }))
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+const MOCK_MUTATION_DELAY_MS = 50
 
 function TodosPageMock({ initial }: { initial: TodoView[] }) {
   const [todos, setTodos] = useState<TodoView[]>(initial)
@@ -68,7 +75,7 @@ function TodosPageMock({ initial }: { initial: TodoView[] }) {
   }
 
   const handleCreate = async (input: TodoInput) => {
-    await delay(300)
+    await delay(MOCK_MUTATION_DELAY_MS)
     idRef.current += 1
     setTodos((prev) => [
       ...prev,
@@ -85,7 +92,7 @@ function TodosPageMock({ initial }: { initial: TodoView[] }) {
   }
 
   const handleUpdate = async (id: string, input: TodoPatch) => {
-    await delay(300)
+    await delay(MOCK_MUTATION_DELAY_MS)
     setTodos((prev) =>
       prev.map((todo) =>
         todo.id === id
@@ -103,7 +110,7 @@ function TodosPageMock({ initial }: { initial: TodoView[] }) {
   }
 
   const handleDelete = async (id: string) => {
-    await delay(300)
+    await delay(MOCK_MUTATION_DELAY_MS)
     setTodos((prev) => prev.filter((todo) => todo.id !== id))
   }
 
@@ -145,7 +152,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   args: {
     todos: sample,
     categories,
@@ -168,9 +175,82 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
+const assertTodoRouteFlow = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement)
+  await expect(canvas.getByRole("heading", { name: "할 일" })).toBeVisible()
+  await expect(canvas.getByRole("link", { name: "카테고리" })).toBeVisible()
+  await expect(canvas.getByText("분기 보고서 초안")).toBeVisible()
+  await expect(canvas.getByText("목차와 주요 지표를 정리합니다.")).toBeVisible()
+  await expect(canvas.getByText("마감 2026-06-12")).toBeVisible()
+  await expect(canvas.getByText("업무")).toBeVisible()
+  await expect(canvas.getByText("미분류")).toBeVisible()
+
+  await userEvent.click(canvas.getByRole("button", { name: "새 할 일" }))
+  const createDialog = await withinCurrentDialog("새 할 일")
+  await userEvent.type(createDialog.getByLabelText("제목"), "Code review")
+  await userEvent.click(createDialog.getByRole("button", { name: "만들기" }))
+  await expectCurrentPopupClosed("dialog", "새 할 일")
+  await expect(await canvas.findByText("Code review")).toBeVisible()
+
+  await userEvent.click(canvas.getByRole("button", { name: "Code review 수정" }))
+  const editDialog = await withinCurrentDialog("할 일 수정")
+  await expect(editDialog.getByRole("button", { name: "저장" })).toBeEnabled()
+  const editTitle = editDialog.getByLabelText("제목")
+  await userEvent.clear(editTitle)
+  await userEvent.type(editTitle, "Code review updated")
+  await userEvent.click(editDialog.getByRole("button", { name: "저장" }))
+  await expectCurrentPopupClosed("dialog", "할 일 수정")
+  await expect(await canvas.findByText("Code review updated")).toBeVisible()
+
+  await userEvent.click(canvas.getByRole("checkbox", { name: "Code review updated 완료" }))
+  await expect(await canvas.findByText("완료")).toBeVisible()
+
+  await userEvent.click(canvas.getByRole("button", { name: "Code review updated 삭제" }))
+  const deleteDialog = await withinCurrentAlertDialog("‘Code review updated’ 할 일을 삭제할까요?")
+  await expect(deleteDialog.getByText("‘Code review updated’ 할 일을 삭제할까요?")).toBeVisible()
+  await userEvent.click(deleteDialog.getByRole("button", { name: "삭제" }))
+  await expectCurrentPopupClosed("alertdialog", "‘Code review updated’ 할 일을 삭제할까요?")
+  await waitFor(() => expect(canvas.queryByText("Code review updated")).not.toBeInTheDocument())
+}
+
+const assertEmptyTodos = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement)
+  await expect(canvas.getByText("아직 할 일이 없습니다. 새 할 일을 만들어 보세요.")).toBeVisible()
+  await expect(canvas.getByRole("button", { name: "새 할 일" })).toBeVisible()
+}
+
+const assertTodoLoadFailure = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement)
+  await expect(canvas.getByText("할 일 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.")).toBeVisible()
+}
+
+const assertManyTodos = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement)
+  await expect(canvas.getByText("할 일 1")).toBeVisible()
+  await expect(canvas.getByTestId("todo-scroll")).toBeVisible()
+  await expect(canvas.getByTestId("todo-list-sentinel")).toHaveTextContent("스크롤하면 더 불러옵니다")
+}
+
 export const RouteTodos: Story = {
   name: "Route /todos",
   parameters: {
+    harness: {
+      covers: [
+        "`/todos` 경로에 접근하면 자신의 할 일 목록이 보인다",
+        "할 일 목록은 서버가 반환한 순서대로 보인다",
+        "할 일 목록의 각 항목은 제목, 설명, 마감일, 우선순위, 완료 상태, 카테고리 이름과 색상을 함께 표시한다",
+        "카테고리 연결이 없는 할 일은 미분류로 보인다",
+        "할 일 화면은 보호 앱 셸 안에 보이고, 할 일 화면과 카테고리 화면을 오갈 수 있는 내비가 보인다",
+        "데스크톱 화면에서 할 일 목록과 입력 영역의 주요 요소가 화면 밖으로 넘치지 않는다",
+        "할 일 화면은 자동 접근성 검사에서 위반이 없어야 한다",
+        "새 할 일을 만들면 목록에 미완료 할 일로 보인다",
+        "할 일 수정을 열면 기존 제목, 설명, 마감일, 우선순위, 카테고리가 입력 영역에 채워져 보인다",
+        "할 일을 수정하면 목록에 바뀐 제목, 설명, 마감일, 우선순위, 카테고리가 보인다",
+        "할 일의 선택 정보를 비우고 저장하면 목록에서 설명과 마감일은 보이지 않고 카테고리는 미분류로 보인다",
+        "할 일 목록의 완료 체크를 바꾸면 목록의 완료 상태 표시가 바뀐다",
+        "삭제를 확인하면 그 할 일은 목록에서 사라진다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -194,11 +274,17 @@ export const RouteTodos: Story = {
     },
   },
   render: () => <TodosPageMock initial={sample} />,
+  play: assertTodoRouteFlow,
 }
 
 export const Empty: Story = {
   args: { todos: [] },
   parameters: {
+    harness: {
+      covers: [
+        "할 일이 하나도 없으면 할 일이 비어 있다는 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -218,11 +304,46 @@ export const Empty: Story = {
       },
     },
   },
+  play: assertEmptyTodos,
+}
+
+export const LoadFailure: Story = {
+  args: { todos: [], isError: true },
+  parameters: {
+    harness: {
+      covers: [
+        "할 일 목록을 불러오지 못하면 다시 시도하라는 안내가 보인다",
+      ],
+    },
+    docs: {
+      description: {
+        story: `
+### 상태 설명
+
+할 일 목록을 불러오지 못해 화면 안에 다시 시도 안내가 표시된 상태다.
+
+### 사용자 흐름
+
+사용자는 목록 대신 오류 안내를 확인하고 잠시 후 다시 시도한다.
+
+### 관찰 포인트
+
+목록 실패는 빈 상태와 구분되어야 하며, 보호 앱 셸과 화면 제목은 유지되어야 한다.
+        `.trim(),
+      },
+    },
+  },
+  play: assertTodoLoadFailure,
 }
 
 export const ManyItems: Story = {
   args: { todos: many, hasMore: true },
   parameters: {
+    harness: {
+      covers: [
+        "할 일이 한 묶음(20개)보다 많으면, 처음에는 첫 묶음의 할 일까지만 보여주고 목록을 아래로 스크롤하면 다음 묶음의 할 일을 이어서 보여준다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -243,4 +364,5 @@ export const ManyItems: Story = {
       },
     },
   },
+  play: assertManyTodos,
 }

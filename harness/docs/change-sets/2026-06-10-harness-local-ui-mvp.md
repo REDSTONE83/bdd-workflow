@@ -10,12 +10,12 @@
 
 - 하네스·워크플로우 작업을 로컬 퍼스트 웹 UI로 진행할 수 있게 한다.
 - MVP 범위는 관제(읽기 전용 조회)와 검증 명령 실행이다. 문서 쓰기와 승인 액션은 후속 단계로 미룬다.
-- UI Skeleton 검토는 Storybook으로, TDD는 Vitest 보조 테스트와 Playwright FE BDD 테스트로 진행할 수 있는 기반을 함께 마련한다.
+- UI Skeleton 검토와 UI AC 커버리지는 Storybook Vitest로, TDD는 Vitest 보조 테스트로 진행할 수 있는 기반을 함께 마련한다.
 
 ## 작업 범위
 
 - 신규 하네스 요건 발급(초안 시작):
-  - REQ-029 하네스 UI 검증 채널 (harness/ui FE BDD 결과를 하네스 scope 추적에 집계)
+  - REQ-029 하네스 UI 검증 채널 (harness/ui Storybook Vitest 결과를 하네스 scope 추적에 집계)
   - REQ-030 하네스 UI 앱셸
   - REQ-031 하네스 UI 요건 추적 보드
   - REQ-032 하네스 UI 요건 상세 추적
@@ -28,7 +28,7 @@
 - Skeleton 설계 전에 하네스 UI 구조, 데이터 경계, Storybook, FE BDD, 명령 실행 표준을 `harness/docs/standards/harness-ui.md`에 확정한다.
 - REQ-029~REQ-037 카드에 Skeleton 설계를 남긴다. 설계 범위는 검증 설계, UI/검사기/서버 Skeleton, Storybook 계약, 추적 정책이다.
 - harness/ui 프로젝트 스캐폴드: React + Vite + TypeScript + Tailwind, Storybook, Vitest, Playwright (Skeleton 단계부터).
-- 하네스 검증 채널 확장: harness/ui Playwright BDD 메타데이터 collector, 테스트 결과 병합, 추적 판정의 front-end 테스트 채널 사용 (REQ-029).
+- 하네스 검증 채널 확장: harness/ui Storybook Vitest 메타데이터 collector, 테스트 결과 병합, 추적 판정의 front-end 테스트 채널 사용 (REQ-029).
 - 하네스 Storybook 정적 검증 와이어링: harness/ui story 메타데이터 수집, 카드 Storybook 계약 대조, `harness:validate`의 harness/ui Storybook build 실행 (REQ-029).
 - `harness/tools/run.mjs`에 하네스 UI 기동 명령과 `harness:validate` 입력 단계를 추가한다.
 - AGENTS.md와 하네스 문서의 직접 관리 산출물 목록·명령 안내를 갱신한다.
@@ -43,7 +43,7 @@
 ## 완료 조건
 
 - REQ-029~REQ-037이 카드 워크플로우(초안 → Skeleton → 테스트 → 구현 → 검증)를 거쳐 승인된다.
-- `npm run harness:validate`가 통과하고, 하네스 UI 카드의 (UI) 수용 기준이 harness/ui Playwright FE BDD 결과로 판정된다.
+- `npm run harness:validate`가 통과하고, 하네스 UI 카드의 (UI) 수용 기준이 harness/ui Storybook Vitest 결과로 판정된다.
 - 하네스 UI에서 두 scope의 요건 추적 현황, 표준 용어 목록, 게이트 현황, Change Set 진행을 조회하고 허용된 검증 명령을 실행할 수 있다.
 
 ## 검증 명령
@@ -59,7 +59,7 @@
 - 2026-06-10: AI 에이전트는 UI에 내장하지 않는다. 에이전트는 CLI에서 병행 작업하고 UI는 파일 watch로 변경을 반영한다. (사용자가 권장안 채택)
 - 2026-06-10: 위치는 `harness/ui`, 스택은 React + Vite + TypeScript + Tailwind로 `app/front-end`와 동일하게 맞춘다. (사용자가 권장안 채택)
 - 2026-06-10: 하네스 UI는 RED/GREEN/BLUE와 게이트 판정을 재계산하지 않고 `build/{scope}` 산출물과 게이트 도구 판정을 그대로 표시한다. REQ-010 단일 게이트 원칙을 유지하기 위해서다.
-- 2026-06-10: 하네스 UI 카드의 (UI) 수용 기준은 harness/ui Playwright FE BDD 테스트가 커버하고, 이를 위해 하네스 scope에 front-end 테스트 채널을 추가한다(REQ-029). Vitest 단위 테스트는 TDD 보조로 두고 AC 커버리지에 포함하지 않는다.
+- 2026-06-10: 하네스 UI 카드의 (UI) 수용 기준은 harness/ui Storybook Vitest story 테스트가 커버하고, 이를 위해 하네스 scope에 front-end 테스트 채널을 추가한다(REQ-029). Vitest 단위 테스트는 TDD 보조로 두고 AC 커버리지에 포함하지 않는다.
 - 2026-06-10: REQ-029 구현 전까지 UI 카드의 (UI) 수용 기준 RED는 초안/Skeleton/테스트 단계의 정상 RED로 본다.
 - 2026-06-10: harness scope의 Storybook 정적 검증(story 메타데이터 수집, Storybook 계약 대조, Storybook build 실행)을 REQ-029 범위에 포함한다. 하네스 UI 카드의 Skeleton 승인 게이트 강도를 app scope와 맞추기 위해서다.
 - 2026-06-10: 카드 초안 검토 결과 두 가지를 조정한다. `build/` 산출물 경계는 "UI 서버는 직접 쓰지 않고, 갱신은 허용된 검증 명령이 실행하는 기존 하네스 도구가 한다"로 명확화하고, 허용 명령은 npm script 전부에서 명시 등록한 검증 명령 목록으로 좁힌다(REQ-035 의사결정 로그 참조).

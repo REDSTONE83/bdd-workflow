@@ -172,7 +172,7 @@ Storybook과 테스트는 cache 격리를 우선한다.
 - route/page story는 story별 새 `QueryClient`를 제공한다.
 - MSW 또는 주입 가능한 fake API로 서버 응답을 통제한다. Storybook이 실제 백엔드 상태에 의존하지 않게 한다.
 - Vitest helper는 테스트마다 새 `QueryClient`를 만들고 query retry를 `0`으로 낮춰 실패를 빠르게 드러낸다.
-- FE BDD/E2E는 사용자 관찰 상태를 검증한다. Query cache 내부 상태, query key 문자열, TanStack Query 구현 세부는 테스트 표현에 고정하지 않는다.
+- Storybook Vitest와 live E2E는 사용자 관찰 상태를 검증한다. Query cache 내부 상태, query key 문자열, TanStack Query 구현 세부는 테스트 표현에 고정하지 않는다.
 
 ## ESLint / Devtools
 
@@ -202,8 +202,8 @@ npm install -D @tanstack/eslint-plugin-query
 - `npm run typecheck`: query hook, API view model, generated OpenAPI 타입 정합성을 확인한다.
 - `npm run lint`: React hooks와 TanStack Query ESLint 규칙을 확인한다. TanStack Query 도입 전에는 해당 규칙이 없어도 위반으로 보지 않는다.
 - `npm run test`: loading/error/empty/success, mutation validation error, invalidation 후 UI 전환을 검증한다.
-- `npm run e2e`: route 진입, URL query 기반 목록 조회, 주요 mutation 사용자 흐름을 검증한다.
-- `npm run app:validate`: FE BDD 테스트 결과와 `@UsesApi`/OpenAPI 정합성을 앱 게이트에 반영한다.
+- `npm run test:storybook` 또는 `npm run e2e`: route 진입, URL query 기반 목록 조회, 주요 mutation 사용자 흐름을 검증한다.
+- `npm run app:validate`: Storybook Vitest/live E2E 테스트 결과와 `@UsesApi`/OpenAPI 정합성을 앱 게이트에 반영한다.
 
 ## 수동 리뷰 항목
 

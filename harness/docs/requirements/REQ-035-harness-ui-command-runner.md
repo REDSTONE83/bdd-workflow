@@ -131,7 +131,7 @@
   UI Skeleton: `/runs` route는 command registry view model을 받아 허용 명령만 표시한다. 실행 버튼은 선택된 명령 카드 내부에 둔다. 단일 요건 추적 명령은 같은 카드 내부의 REQ-037 요건 검색/선택 진입점에서 선택값을 받고, 초기값은 미선택으로 둔다. 선택한 요건 ID만 `--requirement REQ-XXX` 인자로 전달하고, 선택 해제 시 요건 인자를 전달하지 않는다.
   Storybook 계약: `Harness/Runs/CommandRunner`의 `Ready`, `ReadyWithRequirement`, `Running`, `Succeeded`, `Failed`, `Rejected` 상태가 있어야 한다.
   서버 Skeleton: command registry는 `harness:trace`, `harness:validate`, `harness:self-test`, `app:trace`, `app:validate`, `repo:validate`만 가진다. 인자는 선택적으로 단일 `--requirement REQ-XXX`만 허용하고, 실행 backend는 한 번에 하나의 child process만 유지한다.
-  추적 정책: `(UI)` AC는 harness/ui Playwright FE BDD 결과로 판정한다. `(STATIC)` AC는 UI를 거치지 않은 직접 서버 요청 fixture로 허용 목록 밖 명령 거절을 검증한다.
+  추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다. `(STATIC)` AC는 UI를 거치지 않은 직접 서버 요청 fixture로 허용 목록 밖 명령 거절을 검증한다.
   검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-035`로 카드/시나리오/용어 정합성을 확인한다.
   Skeleton 결과: 승인 대기
 

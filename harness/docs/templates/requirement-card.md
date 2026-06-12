@@ -48,11 +48,11 @@
 ## 수용 기준
 
 - (API) 백엔드 API/서비스/DB 계약으로 검증할 결과를 작성한다
-- (UI) 화면/라우팅/FE BDD 테스트로 검증할 결과를 작성한다
+- (UI) 화면/라우팅/Storybook Vitest 테스트로 검증할 결과를 작성한다
 - (E2E) 여러 기능을 관통하는 사용자 여정 결과를 작성한다
 - (STATIC) 하네스/정적 검사/리포트로 검증할 결과를 작성한다
 
-마커는 필수이며 `@Covers`, FE `Covers`, `.feature` `Covers:`에는 마커를 포함하지 않는다.
+마커는 필수이며 `@Covers`, Storybook Vitest `covers`, live Playwright `Covers`, `.feature` `Covers:`에는 마커를 포함하지 않는다.
 
 ## 검증 대상
 

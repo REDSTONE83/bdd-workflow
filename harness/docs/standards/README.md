@@ -8,7 +8,7 @@
 - [`acceptance-test.md`](./acceptance-test.md): BDD 시나리오와 실행 테스트 연결 규칙.
 - [`terminology.md`](./terminology.md): 표준 용어 운영과 카드 `표준 용어` 섹션 정책.
 - [`ui-vocabulary.md`](./ui-vocabulary.md): UI 컴포넌트/위젯 문서 어휘.
-- [`harness-ui.md`](./harness-ui.md): `harness/ui` 로컬 웹 UI의 구조, UI 서버, 데이터 경계, Storybook, FE BDD, 명령 실행 표준.
+- [`harness-ui.md`](./harness-ui.md): `harness/ui` 로컬 웹 UI의 구조, UI 서버, 데이터 경계, Storybook Vitest, 명령 실행 표준.
 
 ## 표준 추가 원칙
 

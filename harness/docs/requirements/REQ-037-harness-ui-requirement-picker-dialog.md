@@ -126,7 +126,7 @@
   UI Skeleton: `RequirementPickerDialog`는 호출 화면이 전달한 `RequirementRow` 후보 목록을 기준으로 요건 ID와 제목을 한 줄에 표시하고, 추적 상태는 우측 끝 뱃지로, 명세 역할과 상위/하위 요건 구조는 같은 줄의 보조 뱃지로 축약 표시한다. 상위 검색 하위 포함, 검색, 단일 선택, 선택 해제, 검색 결과 수와 무관한 viewport 기준 고정 높이, 긴 후보 목록 스크롤, 빈 결과 상태를 제공한다. 현재 선택 요약은 두지 않고 선택 후보만 강조한다. 호출 화면별 제목·설명 문구는 props로 바꿀 수 있지만 후보 목록과 선택값의 의미 적용은 부모 화면이 소유한다.
   Storybook 계약: `Harness/Requirements/RequirementPickerDialog`의 `Open`, `Hierarchy`, `SearchResults`, `ParentSearchIncludesChildren`, `WithSelection`, `ScrollableList`, `EmptyResult` 상태가 있어야 한다. Docs에서는 열린 portal이 문서 본문을 가리지 않도록 닫힌 호출 화면 프레임으로 렌더링한다.
   서버 Skeleton: 해당 없음. 대화상자는 부모 화면 DTO의 요건 후보 목록을 받는다.
-  추적 정책: `(UI)` AC는 harness/ui Playwright FE BDD 결과로 판정한다.
+  추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다.
   검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-037`로 카드/시나리오 정합성을 확인한다.
   Skeleton 결과: 승인 대기
 

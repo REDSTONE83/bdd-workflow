@@ -116,7 +116,7 @@
   UI Skeleton: `AppShell` route wrapper와 `src/lib/harness-data`의 scope별 산출물 summary DTO를 기준으로 구현한다. 파일 watch와 cache 무효화는 shell provider에서 한 번만 처리하고, 개별 화면은 선택 scope의 화면 모델만 받는다.
   Storybook 계약: `Harness/Shell/AppShell`의 `DefaultArtifacts`, `MissingArtifacts`, `StaleArtifacts`, `ScopeSwitch` 상태가 있어야 한다.
   서버 Skeleton: `npm run harness:ui`는 loopback 주소에만 bind하고 기본 포트 5180을 사용한다. `HARNESS_UI_PORT`는 포트만 바꾸며 외부 bind 주소를 열지 않는다.
-  추적 정책: `(UI)` AC는 harness/ui Playwright FE BDD 결과로 판정한다. `(STATIC)` localhost 제한은 하네스 self-test 또는 서버 단위 검증으로 판정한다.
+  추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다. `(STATIC)` localhost 제한은 하네스 self-test 또는 서버 단위 검증으로 판정한다.
   검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-030`로 카드/시나리오/용어 정합성을 확인한다.
   Skeleton 결과: 승인 대기
 

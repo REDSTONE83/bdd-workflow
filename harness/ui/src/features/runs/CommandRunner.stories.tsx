@@ -15,7 +15,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
 } satisfies Meta<typeof CommandRunner>;
 
 export default meta;

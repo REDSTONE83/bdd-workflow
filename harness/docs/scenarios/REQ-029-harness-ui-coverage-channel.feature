@@ -1,26 +1,26 @@
 @REQ-029
 Feature: 하네스 UI 검증 채널
 
-  Scenario: 하네스 UI FE BDD 결과가 하네스 scope 수용 기준 판정에 들어간다
+  Scenario: 하네스 UI Storybook Vitest 결과가 하네스 scope 수용 기준 판정에 들어간다
     Covers:
-      - harness/ui Playwright FE BDD 테스트의 요건·수용 기준 메타데이터가 하네스 scope 테스트 인덱스로 수집된다
-      - harness/ui Playwright 실행 결과가 하네스 scope 테스트 결과 인덱스에 병합되어 수용 기준 판정에 사용된다
+      - harness/ui Storybook Vitest story 테스트의 요건·수용 기준 메타데이터가 하네스 scope 테스트 인덱스로 수집된다
+      - harness/ui Storybook Vitest 실행 결과가 하네스 scope 테스트 결과 인덱스에 병합되어 수용 기준 판정에 사용된다
       - 하네스 scope에서 (UI) 마커 수용 기준은 front-end 테스트의 커버와 결과로 PASS/FAIL이 판정된다
 
-    Given harness/ui Playwright FE BDD 테스트가 요건과 수용 기준을 Covers로 연결한다
+    Given harness/ui Storybook story 테스트가 요건과 수용 기준을 Covers로 연결한다
     And 해당 테스트 실행 결과가 준비되어 있다
     When 하네스가 하네스 scope 추적을 생성한다
     Then 테스트 인덱스에 요건과 수용 기준 연결이 수집된다
     And 실행 결과가 하네스 scope 테스트 결과에 포함된다
     And (UI) 수용 기준은 연결된 front-end 테스트 결과로 PASS 또는 FAIL이 판정된다
 
-  Scenario: 하네스 검증은 최신 harness/ui FE BDD 결과를 사용한다
+  Scenario: 하네스 검증은 최신 harness/ui Storybook Vitest 결과를 사용한다
     Covers:
-      - `npm run harness:validate`는 harness/ui FE BDD 테스트를 실행해 최신 결과로 판정한다
+      - `npm run harness:validate`는 harness/ui Storybook Vitest 테스트를 실행해 최신 결과로 판정한다
 
-    Given harness/ui FE BDD 테스트가 실행 가능한 상태다
+    Given harness/ui Storybook Vitest 테스트가 실행 가능한 상태다
     When 개발자가 npm run harness:validate를 실행한다
-    Then 하네스 검증 과정에 harness/ui FE BDD 테스트 실행이 포함된다
+    Then 하네스 검증 과정에 harness/ui Storybook Vitest 테스트 실행이 포함된다
     And 추적 판정은 그 실행에서 나온 최신 결과를 사용한다
 
   Scenario: harness/ui 검증 결과가 없으면 UI 수용 기준이 RED로 남는다

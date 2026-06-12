@@ -44,7 +44,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   args: {
     onEdit: noop,
     onDelete: noop,

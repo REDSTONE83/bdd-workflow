@@ -445,16 +445,58 @@ function storyRequirements(defaultObject, storyObject, fileMetadata) {
   return fileMetadata.requirements
 }
 
-function collectStories(sourceFile, filePath, metadata) {
+function storyCovers(storyObject) {
+  const locations = [
+    ["parameters", "harness", "covers"],
+    ["parameters", "covers"],
+  ]
+
+  for (const parts of locations) {
+    const storyValue = storyObject ? nestedObjectProperty(storyObject, parts) : null
+    const covers = stringArray(storyValue)
+    if (covers.length > 0) {
+      return covers
+    }
+  }
+
+  return []
+}
+
+function storyTags(defaultObject, storyObject) {
+  return unique([
+    ...stringArray(objectProperty(defaultObject, "tags")),
+    ...stringArray(objectProperty(storyObject, "tags")),
+  ])
+}
+
+function storyDisplayName(story) {
+  return story
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2")
+    .trim()
+}
+
+function storyResultName(storyName, storyObject) {
+  const explicitName = objectProperty(storyObject, "name")
+  return (explicitName ? stringValue(explicitName) : null) ?? storyDisplayName(storyName)
+}
+
+function storyPlayText(storyObject, sourceFile) {
+  const play = objectProperty(storyObject, "play")
+  return play ? objectText(play, sourceFile) : ""
+}
+
+function collectStories(sourceFile, filePath, metadata, issues, textChannels) {
   const fileRel = repoRelative(filePath)
   if (!/\.stories\.tsx?$/.test(fileRel)) {
-    return []
+    return { stories: [], tests: [] }
   }
 
   const defaultObject = defaultExportObject(sourceFile)
   const title = defaultObject ? stringValue(objectProperty(defaultObject, "title")) : null
   const component = defaultObject ? objectProperty(defaultObject, "component") : null
   const stories = []
+  const tests = []
 
   for (const declaration of exportedVariableDeclarations(sourceFile)) {
     const storyName = declaration.name.text
@@ -465,18 +507,90 @@ function collectStories(sourceFile, filePath, metadata) {
       ? declaration.initializer
       : null
     const requirements = storyRequirements(defaultObject, storyObject, metadata)
+    const covers = storyCovers(storyObject)
+    const tags = storyTags(defaultObject, storyObject)
+    const storybookVitestEnabled = tags.includes("test") && !tags.includes("!test")
+    const playText = storyPlayText(storyObject, sourceFile)
+    const hasPlay = playText.trim().length > 0
+    const hasAssertion = /\bexpect\s*\(|\bassert[A-Za-z0-9_]*\b/.test(playText)
+    const line = lineOf(sourceFile, declaration)
+    const identity = `${title} / ${storyName}`
     stories.push({
       source: "front-end",
       requirements,
       title,
       component: component ? objectText(component, sourceFile) : null,
       story: storyName,
+      hasPlay,
+      hasAssertion,
       file: fileRel,
-      line: lineOf(sourceFile, declaration),
+      line,
     })
+
+    if (covers.length > 0 && requirements.length === 0) {
+      issues.push({
+        severity: "warning",
+        kind: "COVERS_WITHOUT_REQUIREMENT",
+        message: "Storybook Vitest test has Covers metadata but no Requirement metadata.",
+        location: { file: fileRel, line, identity },
+      })
+    }
+
+    if (!storybookVitestEnabled || covers.length === 0) {
+      continue
+    }
+
+    const displayStory = storyDisplayName(storyName)
+    const resultStory = storyResultName(storyName, storyObject)
+    const feRel = frontEndRelative(filePath)
+    const testIdentity = `${fileRel}:${line} > ${identity}`
+    tests.push({
+      source: "front-end",
+      runtime: "storybook-vitest",
+      requirements,
+      className: path.basename(fileRel),
+      method: slug(storyName),
+      identity: testIdentity,
+      resultKeys: [
+        `${title} / ${storyName}`,
+        `${title} > ${storyName}`,
+        `${fileRel} > ${displayStory}`,
+        `${fileRel} > ${resultStory}`,
+        `${feRel} > ${displayStory}`,
+        `${feRel} > ${resultStory}`,
+        displayStory,
+        resultStory,
+        storyName,
+        `${fileRel} > ${title} / ${storyName}`,
+      ],
+      displayName: `${title} / ${storyName}`,
+      titlePath: [title, storyName],
+      covers,
+      hasPlay,
+      hasAssertion,
+      file: fileRel,
+      line,
+      location: {
+        file: fileRel,
+        line,
+        identity: testIdentity,
+        channel: "FE.StorybookVitest",
+      },
+    })
+
+    for (const coversValue of covers) {
+      textChannels.push({
+        channel: "FE.Covers",
+        content: coversValue,
+        file: fileRel,
+        line,
+        source: testIdentity,
+        requirements,
+      })
+    }
   }
 
-  return stories
+  return { stories, tests }
 }
 
 function callText(node, sourceFile) {
@@ -615,6 +729,7 @@ function collectPlaywrightTests(sourceFile, filePath, issues, textChannels) {
           const testEntry = {
             source: "front-end",
             kind: "playwright",
+            runtime: "playwright",
             requirements,
             className: path.basename(fileRel),
             method: slug(title),
@@ -944,7 +1059,9 @@ function main() {
     const metadata = fileHarnessMetadata(sourceText)
     pages.push(...collectPages(sourceFile, sourceText, filePath, metadata))
     routes.push(...collectRoutes(sourceFile, filePath, metadata))
-    stories.push(...collectStories(sourceFile, filePath, metadata))
+    const storyMetadata = collectStories(sourceFile, filePath, metadata, issues, textChannels)
+    stories.push(...storyMetadata.stories)
+    tests.push(...storyMetadata.tests)
     apiUsages.push(...collectDeclaredApiUsages(filePath, metadata))
     apiCalls.push(...collectFrontEndApiCalls(sourceFile, filePath, metadata, issues))
     issues.push(...collectDeclaredApiUsageIssues(filePath, metadata))
@@ -952,7 +1069,7 @@ function main() {
   }
 
   for (const filePath of walk(e2eRoot)) {
-    if (!/\.spec\.tsx?$/.test(filePath)) {
+    if (!/\.live\.spec\.tsx?$/.test(filePath)) {
       continue
     }
     const sourceFile = parseSourceFile(filePath)
@@ -966,7 +1083,7 @@ function main() {
       issues.push({
         severity: "warning",
         kind: "COVERS_WITHOUT_REQUIREMENT",
-        message: "FE BDD test has Covers metadata but no Requirement metadata.",
+        message: "Front-end acceptance test has Covers metadata but no Requirement metadata.",
         location: { file: test.file, line: test.line },
       })
     }
@@ -974,7 +1091,7 @@ function main() {
       issues.push({
         severity: "warning",
         kind: "REQUIREMENT_WITHOUT_COVERS",
-        message: "FE BDD test has Requirement metadata but no Covers metadata, so it does not cover an AC.",
+        message: "Front-end acceptance test has Requirement metadata but no Covers metadata, so it does not cover an AC.",
         location: { file: test.file, line: test.line },
       })
     }
@@ -996,7 +1113,7 @@ function main() {
   fs.mkdirSync(outDir, { recursive: true })
   fs.writeFileSync(outFile, `${JSON.stringify(payload, null, 2)}\n`)
   console.log(
-    `front-end.source-index.json: ${pages.length} page(s), ${routes.length} route(s), ${stories.length} story/stories, ${tests.length} BDD test(s), ${apiUsages.length} api usage(s), ${apiCalls.length} api call(s), ${issues.length} issue(s)`,
+    `front-end.source-index.json: ${pages.length} page(s), ${routes.length} route(s), ${stories.length} story/stories, ${tests.length} acceptance test(s), ${apiUsages.length} api usage(s), ${apiCalls.length} api call(s), ${issues.length} issue(s)`,
   )
 }
 

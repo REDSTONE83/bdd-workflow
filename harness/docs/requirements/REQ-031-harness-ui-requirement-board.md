@@ -115,7 +115,7 @@
   UI Skeleton: `/requirements` route는 `src/lib/harness-data`의 requirement board view model을 받아 목록 행을 만든다. React 컴포넌트는 `trace.state.json` 원형을 직접 순회하지 않는다.
   Storybook 계약: `Harness/Requirements/RequirementBoard`의 `AllRequirements`, `Hierarchy`, `Filtered`, `FilteredByTitle`, `EmptyResult`, `StateSummary`, `DetailNavigation` 상태가 있어야 한다.
   서버 Skeleton: 요건 목록 DTO는 추적 산출물의 판정 값과 카드 인덱스의 제목/상태/제품 영역/우선순위/명세 역할/상위 요건 ID/하위 요건 수를 결합하되, RED/GREEN/BLUE를 새로 계산하지 않는다.
-  추적 정책: `(UI)` AC는 harness/ui Playwright FE BDD 결과로 판정한다. `(STATIC)` AC는 DTO가 trace state 값을 그대로 노출하는 self-test로 판정한다.
+  추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다. `(STATIC)` AC는 DTO가 trace state 값을 그대로 노출하는 self-test로 판정한다.
   검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-031`로 카드/시나리오/용어 정합성을 확인한다.
   Skeleton 결과: 승인 대기
 

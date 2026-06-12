@@ -10,12 +10,12 @@ import { linkTargetProps, uiSurfaceLabel } from "./detail-utils";
 export function RequirementUiTab({ detail }: { detail: RequirementDetail }) {
   return (
     <>
-      <SectionHeader title="UI 검토 링크" description="Storybook 링크와 구현 위치를 UI 표면별 목록형 카드로 확인한다." />
+      <SectionHeader title="UI 검토 링크" />
       <div className="grid gap-3" role="list" aria-label="연결된 UI 표면">
         {detail.uiSurfaces.map((surface) => {
           return (
             <Card key={`${surface.kind}-${surface.name}-${surface.storybookStory ?? surface.route ?? ""}`} className="p-4" role="listitem">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge label={surface.kind} />
@@ -25,17 +25,14 @@ export function RequirementUiTab({ detail }: { detail: RequirementDetail }) {
                   {surface.description ? <div className="mt-2 break-words text-sm text-foreground">{surface.description}</div> : null}
                   <LocationLink className="mt-2" file={surface.file} line={surface.line} />
                 </div>
-                <StatusBadge label={surface.status} tone={surface.storybookUrl ? "green" : "neutral"} />
-              </div>
-              {surface.storybookUrl ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button asChild size="sm">
+                {surface.storybookUrl ? (
+                  <Button asChild size="sm" className="shrink-0">
                     <a href={surface.storybookUrl} {...linkTargetProps(surface.storybookUrl)}>
                       Storybook 검토
                     </a>
                   </Button>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </Card>
           );
         })}

@@ -259,11 +259,11 @@
   결정자: Tech Lead
   영향: `common/auth`에 `CookieFirstBearerTokenResolver`(또는 동등) 를 추가하고 `SecurityConfig.securityFilterChain`의 `oauth2ResourceServer`에 등록한다. REQ-004의 토큰 검증 규칙은 변경하지 않는다.
 
-- 결정일: 2026-05-26 (2026-06-02 현행 마커로 갱신)
-  결정: 본 카드의 모든 `(UI)`와 `(E2E)` AC는 Playwright BDD 테스트(`tests/e2e/**/*.spec.ts`)가 `Covers` 메타데이터로 직접 커버한다. Vitest 단위/컴포넌트 테스트는 `Covers`를 두지 않는 보조 TDD로만 사용한다.
-  이유: FE BDD 표준은 Playwright이며 게이트(`gate.mjs`)도 AC 성격에 따라 Playwright canonical 결과(mock: `front-end/test-results/e2e-results.json`, 상위 live: `front-end/test-results/e2e-live-results.json`)를 커버 입력으로 본다. 본 카드는 원자 로그인/로그아웃 흐름이므로 mock canonical 결과가 완료 판정 입력이다. Vitest는 form validation, password 토글 상태 같은 상세 단위 검증으로 두면 회귀를 빠르게 잡지만 AC 커버로는 인정되지 않는다. 어느 layer에 어떤 검증이 들어갈지 미리 정해야 마커별 RED 회피가 가능하다.
+- 결정일: 2026-05-26 (2026-06-02 현행 마커로 갱신, 2026-06-12 Storybook Vitest 전환)
+  결정: 본 카드의 `(UI)` AC와 UI-bound `(E2E)` AC는 Storybook Vitest story가 `parameters.harness.covers` 메타데이터로 직접 커버한다. 애플리케이션 상위 성과를 검증하는 live Playwright smoke는 상위 요건이 소유하고, Vitest 단위/컴포넌트 테스트는 `covers`를 두지 않는 보조 TDD로만 사용한다.
+  이유: FE BDD 표준은 Storybook Vitest를 UI AC의 canonical 결과로 사용하고, 게이트(`gate.mjs`)는 `app/front-end/test-results/storybook-junit.xml`과 live Playwright smoke 결과를 함께 본다. 본 카드는 원자 로그인/로그아웃 화면 상태와 인증 사용자 흐름을 다루므로 Storybook story에서 상태별 화면과 라우팅 결과를 안정적으로 검증하는 편이 mock Playwright보다 유지 비용이 낮다. 실제 백엔드와 Vite proxy, Cookie 인증 결합은 상위 통합 smoke가 담당한다.
   결정자: Tech Lead
-  영향: Skeleton 단계에서는 `Covers`가 붙은 Playwright spec 또는 Vitest 테스트를 작성하지 않는다(요건 작성 절차 7단계 금지 항목). 구현/GREEN 단계에 들어가면 본 카드의 `(UI)`와 `(E2E)` AC 텍스트와 정확 일치하는 `Covers` annotation을 가진 Playwright spec 파일을 채운다. Vitest 테스트는 같은 AC 텍스트를 `Covers`로 사용하지 않는다.
+  영향: 본 카드의 Storybook stories는 `parameters.harness.requirements`와 `parameters.harness.covers`를 유지한다. mock Playwright spec은 사용하지 않으며, live Playwright smoke는 상위 요건의 `(E2E)` AC에만 둔다.
 
 - 결정일: 2026-05-26
   결정: FE와 BE는 동일 origin으로 통신한다. 로컬 개발과 Playwright E2E는 Vite dev server의 path-prefix proxy로 BE에 전달해 동일 origin을 유지하고, 운영도 reverse proxy 뒤에서 동일 origin을 둔다. FE OpenAPI 클라이언트는 모든 요청에 `credentials: 'include'`를 둔다.

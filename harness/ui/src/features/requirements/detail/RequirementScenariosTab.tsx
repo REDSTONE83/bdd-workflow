@@ -3,13 +3,28 @@ import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { Card } from "../../../components/ui/card";
 import { EmptyState } from "../../../components/ui/empty-state";
 import { LocationLink } from "../../../components/ui/location-link";
-import { coverageRowsForScenario, coverageTone, uniqueTests } from "./detail-utils";
+import { coverageRowsForScenario, testLocation, uniqueTests } from "./detail-utils";
 import { SectionHeader } from "./SectionHeader";
+
+const stepKeywordClassNames = {
+  Given: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  When: "border-amber-200 bg-amber-50 text-amber-800",
+  Then: "border-sky-200 bg-sky-50 text-sky-800",
+  And: "border-slate-200 bg-slate-50 text-slate-700",
+} as const;
+
+type StepKeyword = keyof typeof stepKeywordClassNames;
+
+function scenarioStepParts(step: string): { keyword?: StepKeyword; text: string } {
+  const match = step.match(/^(Given|When|Then|And)\s+(.*)$/);
+  if (!match) return { text: step };
+  return { keyword: match[1] as StepKeyword, text: match[2] };
+}
 
 export function RequirementScenariosTab({ detail }: { detail: RequirementDetail }) {
   return (
     <>
-      <SectionHeader title="시나리오" description="BDD Scenario의 Covers 관계와 주요 Given/When/Then을 확인한다." />
+      <SectionHeader title="시나리오" />
       <div className="grid gap-3" role="list" aria-label="연결된 시나리오">
         {detail.scenarios.map((scenario) => {
           const coverageRows = coverageRowsForScenario(detail, scenario);
@@ -24,33 +39,46 @@ export function RequirementScenariosTab({ detail }: { detail: RequirementDetail 
                 <StatusBadge label={scenario.status} tone="blue" />
               </div>
               <div className="mt-3">
-                <div className="text-xs font-semibold text-muted-foreground">Covers</div>
-                <ul className="mt-1 space-y-1 text-muted-foreground">
-                  {scenario.covers.map((cover) => <li key={cover} className="break-words">{cover}</li>)}
-                </ul>
-              </div>
-              <div className="mt-3">
-                <div className="text-xs font-semibold text-muted-foreground">커버리지 판정</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {coverageRows.length > 0 ? coverageRows.map((row) => (
-                    <StatusBadge key={row.criterion} label={`${row.channel} ${row.status}`} tone={coverageTone(row.status)} />
-                  )) : <StatusBadge label="연결 없음" />}
-                </div>
-              </div>
-              <div className="mt-3">
                 <div className="text-xs font-semibold text-muted-foreground">연결 테스트</div>
                 {tests.length > 0 ? (
-                  <ul className="mt-2 grid gap-2 text-muted-foreground">
-                    {tests.map((test) => <li key={test} className="break-words font-mono text-xs">{test}</li>)}
-                  </ul>
+                  <div className="mt-2 grid gap-1">
+                    {tests.map((test) => {
+                      const location = testLocation(test);
+                      return (
+                        <LocationLink
+                          key={test}
+                          file={location.file}
+                          line={location.line}
+                          label={location.label}
+                          aria-label={`${location.label} 테스트 위치 바로가기`}
+                        />
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div className="mt-2 text-muted-foreground">없음</div>
                 )}
               </div>
               <div className="mt-3">
-                <div className="text-xs font-semibold text-muted-foreground">GWT</div>
-                <div className="mt-1 space-y-1 text-muted-foreground">
-                  {scenario.steps.map((step) => <div key={step} className="break-words">{step}</div>)}
+                <div className="text-xs font-semibold text-muted-foreground">Given/When/Then</div>
+                <div className="mt-2 grid gap-1 text-muted-foreground">
+                  {scenario.steps.map((step) => {
+                    const stepParts = scenarioStepParts(step);
+                    if (!stepParts.keyword) {
+                      return <div key={step} className="break-words text-sm leading-5">{stepParts.text}</div>;
+                    }
+
+                    return (
+                      <div key={step} className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-2 text-sm leading-5">
+                        <span
+                          className={`inline-flex h-5 w-16 items-center justify-center rounded border px-2 text-xs font-semibold ${stepKeywordClassNames[stepParts.keyword]}`}
+                        >
+                          {stepParts.keyword}
+                        </span>
+                        <span className="min-w-0 break-words">{stepParts.text}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </Card>

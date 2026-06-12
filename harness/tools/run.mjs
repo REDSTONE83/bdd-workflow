@@ -222,11 +222,17 @@ function frontEndNpm(label, script) {
 }
 
 function frontEndE2e() {
-    frontEndNpm('front-end:e2e', 'e2e');
+    frontEndStorybookTest();
 }
 
 function frontEndLiveE2e() {
     frontEndNpm('front-end:e2e:live', 'e2e:live');
+}
+
+function frontEndStorybookTest() {
+    fs.rmSync(path.join(frontEndRoot, 'test-results', 'storybook-junit.xml'), { force: true });
+    fs.rmSync(path.join(frontEndRoot, 'test-results', 'e2e-results.json'), { force: true });
+    frontEndNpm('front-end:test-storybook', 'test:storybook');
 }
 
 function frontEndBuildStorybook() {
@@ -239,6 +245,15 @@ function harnessUiNpm(label, script, args = []) {
 
 function harnessUi() {
     harnessUiNpm('harness:ui', 'dev');
+}
+
+function harnessUiBuildStorybook() {
+    harnessUiNpm('harness:ui:build-storybook', 'build-storybook');
+}
+
+function harnessUiStorybookTest() {
+    fs.rmSync(path.join(harnessUiRoot, 'test-results', 'storybook-junit.xml'), { force: true });
+    harnessUiNpm('harness:ui:test-storybook', 'test:storybook');
 }
 
 function selfTest() {
@@ -271,9 +286,9 @@ function appTrace(args) {
 
 function appValidate(args) {
     collectAppStaticInputs();
+    frontEndStorybookTest();
     frontEndBuildStorybook();
     backEndTest();
-    frontEndE2e();
     frontEndLiveE2e();
     indexTestResults('application');
     emitFindingsAndReports('application');
@@ -302,6 +317,8 @@ function harnessTrace(args) {
 function harnessValidate(args) {
     toolTest();
     collectHarnessStaticInputs();
+    harnessUiStorybookTest();
+    harnessUiBuildStorybook();
     selfTest();
     indexTestResults('harness');
     emitFindingsAndReports('harness');
@@ -311,6 +328,7 @@ function harnessValidate(args) {
 function harnessTest() {
     toolTest();
     collectHarnessStaticInputs();
+    harnessUiStorybookTest();
     selfTest();
 }
 
@@ -326,7 +344,7 @@ Commands:
   app:validate [trace args...]       Run application tests, application indexes, validators, and app gate.
   app:trace [trace args...]          Refresh application indexes/findings/reports and render app trace.
   app:test                           Run application back-end JUnit tests.
-  app:e2e                            Run application front-end mock Playwright E2E tests.
+  app:e2e                            Run application front-end Storybook Vitest tests.
   app:e2e:live                       Run application live Playwright integration smoke tests.
   app:source-index                   Generate build/app/indexes/backend.source-index.json.
   app:front-end-source-index         Generate build/app/indexes/front-end.source-index.json.

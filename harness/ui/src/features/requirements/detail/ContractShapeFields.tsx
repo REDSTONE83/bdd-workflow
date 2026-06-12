@@ -1,7 +1,6 @@
 import type { RequirementDataField, RequirementDataShape } from "../../../lib/harness-data/types";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible";
-import { shapeTone } from "./detail-utils";
 
 const MAX_CONTRACT_SHAPE_DEPTH = 3;
 
@@ -45,13 +44,12 @@ export function ContractShapeFields({
                   return (
                     <Collapsible key={`${field.name}-${reference.name}`} className="bg-muted/20">
                       <CollapsibleTrigger className="text-xs">
-                        참조 객체 펼치기
+                        참조 객체
                         <span className="ml-2 font-mono font-normal text-muted-foreground">{reference.name}</span>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
-                        <div className="mb-2 flex items-center justify-between gap-2">
+                        <div className="mb-2">
                           <div className="text-sm font-semibold text-foreground">{reference.name}</div>
-                          <StatusBadge label={reference.status} tone={shapeTone(reference)} />
                         </div>
                         {hasCycle ? (
                           <div className="text-xs text-muted-foreground">순환 참조라 이 단계에서 멈춘다.</div>
@@ -79,7 +77,7 @@ export function ContractShapeDetails({ label, names, shapes }: { label: string; 
   return (
     <Collapsible className="text-sm">
       <CollapsibleTrigger>
-        {label} 펼치기
+        {label}
         <span className="ml-2 font-normal text-muted-foreground">{names.length > 0 ? names.join(", ") : "없음"}</span>
       </CollapsibleTrigger>
       <CollapsibleContent>
@@ -89,7 +87,7 @@ export function ContractShapeDetails({ label, names, shapes }: { label: string; 
               <section key={`${label}-${name}`}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-semibold text-foreground">{name}</div>
-                  {shape ? <StatusBadge label={shape.status} tone={shapeTone(shape)} /> : <StatusBadge label="정보 없음" />}
+                  {!shape ? <StatusBadge label="정보 없음" /> : null}
                 </div>
                 {shape ? (
                   <div className="mt-2">
