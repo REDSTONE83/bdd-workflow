@@ -28,7 +28,7 @@ const CollapsibleTrigger = React.forwardRef<HTMLButtonElement, CollapsibleTrigge
       )}
       {...props}
     >
-      <span className="min-w-0 break-words">{children}</span>
+      <div className="min-w-0 flex-1 break-words">{children}</div>
       {hideIcon ? null : (
         <ChevronDown className="collapsible-icon size-4 shrink-0 text-muted-foreground transition-transform" aria-hidden="true" />
       )}

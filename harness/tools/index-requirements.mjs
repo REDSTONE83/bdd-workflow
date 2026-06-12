@@ -175,6 +175,50 @@ function bddReviewResultSummary(markdown) {
     };
 }
 
+function decisionLogItems(markdown) {
+    const fields = {
+        '결정일': 'date',
+        '결정': 'decision',
+        '이유': 'reason',
+        '결정자': 'decisionMaker',
+        '영향': 'impact'
+    };
+    const logs = [];
+    let current = null;
+
+    for (const line of markdown.split('\n')) {
+        const match = line.match(/^[ \t]*(?:-\s*)?(결정일|결정|이유|결정자|영향)[ \t]*[:：][ \t]*(.+?)\s*$/);
+        if (!match) continue;
+
+        const [, label, value] = match;
+        if (label === '결정일') {
+            if (current) logs.push(current);
+            current = {
+                date: value,
+                decision: '',
+                reason: '',
+                decisionMaker: '',
+                impact: ''
+            };
+            continue;
+        }
+
+        if (!current) {
+            current = {
+                date: '',
+                decision: '',
+                reason: '',
+                decisionMaker: '',
+                impact: ''
+            };
+        }
+        current[fields[label]] = value;
+    }
+
+    if (current) logs.push(current);
+    return logs.filter((log) => log.date || log.decision || log.reason || log.decisionMaker || log.impact);
+}
+
 function firstNonEmptySection(content, headings) {
     for (const heading of headings) {
         const value = section(content, heading).trim();
@@ -199,9 +243,13 @@ function parseCard(file) {
     const relatedRequirementIds = requirementRefs(headerValue(content, '관련 요건'));
     const replacedByRequirementIds = requirementRefs(headerValue(content, '대체 요건'));
     const acceptanceCriteria = acceptanceCriterionItems(section(content, '수용 기준'));
+    const purpose = section(content, '사용자/목적').trim();
+    const scopeItems = bulletItems(section(content, '범위'));
     const openQuestions = bulletItems(section(content, '열린 질문'))
         .filter((item) => !/^없음$/.test(item.trim()));
     const terms = bulletItems(section(content, '표준 용어'));
+    const outOfScopeItems = bulletItems(section(content, '제외 범위'));
+    const decisionLogs = decisionLogItems(section(content, '의사결정 로그'));
     const verificationTargets = verificationTargetItems(section(content, '검증 대상'));
     const apiSkeleton = bulletItems(section(content, 'API Skeleton'));
     const dbSkeleton = bulletItems(section(content, 'DB Skeleton'));
@@ -237,9 +285,13 @@ function parseCard(file) {
         relatedRequirementIds,
         replacedByRequirementIds,
         approved: normalizeApprovalStatus(status),
+        purpose,
+        scopeItems,
         acceptanceCriteria,
         openQuestions,
         terms,
+        outOfScopeItems,
+        decisionLogs,
         verificationTargets,
         apiSkeleton,
         dbSkeleton,
@@ -276,9 +328,13 @@ function toEntry(card) {
         relatedRequirementIds: card.relatedRequirementIds,
         replacedByRequirementIds: card.replacedByRequirementIds,
         approved: card.approved,
+        purpose: card.purpose,
+        scopeItems: card.scopeItems,
         acceptanceCriteria: card.acceptanceCriteria,
         openQuestions: card.openQuestions,
         terms: card.terms,
+        outOfScopeItems: card.outOfScopeItems,
+        decisionLogs: card.decisionLogs,
         verificationTargets: card.verificationTargets,
         apiSkeleton: card.apiSkeleton,
         dbSkeleton: card.dbSkeleton,
@@ -312,6 +368,7 @@ export {
     acceptanceCriterionItems,
     bddReviewResultItems,
     bddReviewResultSummary,
+    decisionLogItems,
     verificationTargetItems,
     storybookContractItems,
     AC_TARGET_TOKENS,

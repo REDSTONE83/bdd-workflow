@@ -17,11 +17,38 @@ export interface RequirementRow {
   cardStatus: string;
   productArea: string;
   priority: string;
+  specRole: string;
+  parentRequirementIds: string[];
+  childRequirementIds: string[];
+  relatedRequirementIds: string[];
 }
 
 export interface RequirementSummary {
   state: TraceState;
   count: number;
+}
+
+export type TermStatus = "approved" | "draft";
+
+export interface TerminologyTerm {
+  key: string;
+  domain: string;
+  status: TermStatus;
+  sourceFile: string;
+  ko: string;
+  en: string;
+  meaning: string;
+  allow: string[];
+  ban: string[];
+  names: Record<string, string[]>;
+  note?: string;
+  reason?: string;
+}
+
+export interface TerminologyBrowserModel {
+  scope: HarnessScope;
+  generatedAt: string | null;
+  terms: TerminologyTerm[];
 }
 
 export interface AcceptanceCoverageRow {
@@ -109,6 +136,20 @@ export interface RequirementUiSurface {
   storybookUrl?: string;
 }
 
+export interface RequirementDecisionLog {
+  date: string;
+  decision: string;
+  reason: string;
+  decisionMaker: string;
+  impact: string;
+}
+
+export interface RequirementStandardTerm {
+  key: string;
+  ko: string;
+  en: string;
+}
+
 export interface RequirementDetail {
   id: string;
   title: string;
@@ -119,6 +160,11 @@ export interface RequirementDetail {
   verificationLevel: string;
   traceState: TraceState;
   sourceFile: LinkedArtifact;
+  purpose: string;
+  scopeItems: string[];
+  terms: RequirementStandardTerm[];
+  outOfScopeItems: string[];
+  decisionLogs: RequirementDecisionLog[];
   acceptanceCriteria: RequirementAcceptanceCriterion[];
   scenarios: RequirementScenario[];
   coverage: AcceptanceCoverageRow[];

@@ -1,5 +1,8 @@
 import type { RequirementDetail } from "../../lib/harness-data/types";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { StatusBadge } from "../../components/ui/StatusBadge";
+import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { RequirementAcceptanceTab } from "./detail/RequirementAcceptanceTab";
@@ -10,12 +13,25 @@ import { RequirementOverviewTab } from "./detail/RequirementOverviewTab";
 import { RequirementScenariosTab } from "./detail/RequirementScenariosTab";
 import { RequirementUiTab } from "./detail/RequirementUiTab";
 import { sourceLinksForRequirement } from "./detail/detail-utils";
+import { requirementListPath } from "./requirement-navigation";
 
 export function RequirementDetailView({ detail }: { detail: RequirementDetail }) {
   const sourceLinks = sourceLinksForRequirement(detail);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const requirementListHref = requirementListPath(location.search);
 
   return (
     <section className="space-y-4">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-fit px-1 text-sky-800 hover:bg-transparent hover:text-sky-900 hover:underline"
+        onClick={() => navigate(requirementListHref)}
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        요건 목록
+      </Button>
       <Card className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div>

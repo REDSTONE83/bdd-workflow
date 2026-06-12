@@ -89,9 +89,10 @@ function termFindings(payload) {
 
 describe('validate-requirement-cards — CARD-TERM-UI-PRIMITIVE', () => {
     it('UI 컴포넌트 원자 키는 CARD-TERM-UI-PRIMITIVE로 차단한다 (UNREGISTERED 아님)', () => {
-        const payload = runValidator(['ui.formDialog']);
+        const payload = runValidator(['ui.formDialog', 'ui.badge']);
         assert.deepEqual(termFindings(payload), [
-            { ruleId: 'CARD-TERM-UI-PRIMITIVE', term: 'ui.formDialog' }
+            { ruleId: 'CARD-TERM-UI-PRIMITIVE', term: 'ui.formDialog' },
+            { ruleId: 'CARD-TERM-UI-PRIMITIVE', term: 'ui.badge' }
         ]);
     });
 

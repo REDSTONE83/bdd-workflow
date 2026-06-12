@@ -1,15 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { CircleHelp } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "./alert";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import { Card } from "./card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
+import { Dialog, DialogBackdrop, DialogClose, DialogDescription, DialogPopup, DialogPortal, DialogTitle, DialogTrigger } from "./dialog";
+import { EmptyState } from "./empty-state";
 import { Input } from "./input";
+import { LocationLink } from "./location-link";
 import { MetricCard } from "./metric-card";
 import { Select } from "./select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 function PrimitiveGallery() {
   return (
@@ -25,6 +30,16 @@ function PrimitiveGallery() {
           <Badge variant="success">GREEN</Badge>
           <Badge variant="warning">경고</Badge>
           <Badge variant="info">BLUE</Badge>
+          <Badge size="sm" variant="secondary">Skeleton 검토중</Badge>
+          <Badge size="sm" variant="warning">높음</Badge>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button aria-label="도구 설명 확인" size="icon" variant="ghost">
+                <CircleHelp className="size-4" aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>아이콘 버튼은 접근 가능한 이름과 도구 설명을 함께 가진다.</TooltipContent>
+          </Tooltip>
         </div>
       </Card>
       <Card className="p-5">
@@ -39,6 +54,21 @@ function PrimitiveGallery() {
             ]}
             aria-label="primitive scope"
           />
+          <Dialog>
+            <DialogTrigger>대화상자</DialogTrigger>
+            <DialogPortal>
+              <DialogBackdrop />
+              <DialogPopup>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <DialogTitle>요건 검색/선택</DialogTitle>
+                    <DialogDescription className="mt-2">대화상자 primitive의 제목, 설명, 닫기 버튼, 배경 레이어를 검토한다.</DialogDescription>
+                  </div>
+                  <DialogClose aria-label="primitive 대화상자 닫기" />
+                </div>
+              </DialogPopup>
+            </DialogPortal>
+          </Dialog>
         </div>
       </Card>
       <div className="grid grid-cols-4 gap-3">
@@ -51,6 +81,11 @@ function PrimitiveGallery() {
         <AlertTitle>오래된 데이터 경고</AlertTitle>
         <AlertDescription>원본 문서가 산출물 생성 이후에 변경되었다.</AlertDescription>
       </Alert>
+      <EmptyState>조건에 맞는 항목이 없다.</EmptyState>
+      <Card className="p-5">
+        <h2 className="text-base font-semibold text-foreground">Location Link</h2>
+        <LocationLink className="mt-3" file="/Users/redstone/Workspace/claude/bdd-workflow/harness/docs/requirements/REQ-032-harness-ui-requirement-detail.md" line={1} />
+      </Card>
       <Card className="p-5">
         <h2 className="text-base font-semibold text-foreground">Tabs</h2>
         <Tabs defaultValue="overview" className="mt-4">
@@ -128,7 +163,7 @@ const meta = {
 ### 관찰 포인트
 
 - Base UI는 상호작용 primitive의 내부 기반으로만 쓰고 app primitive나 app 테마를 직접 공유하지 않는다.
-- 버튼, 선택, 탭, 펼침, 배지, 입력, 경고, 표가 하네스 관제 화면의 밀도에 맞게 보인다.
+- 버튼, 선택, 탭, 펼침, 뱃지, 도구 설명, 입력, 경고, 빈 상태, 위치 링크, 표가 하네스 관제 화면의 밀도에 맞게 보인다.
 - 상태 의미는 색상뿐 아니라 텍스트 라벨로도 드러난다.
         `.trim(),
       },

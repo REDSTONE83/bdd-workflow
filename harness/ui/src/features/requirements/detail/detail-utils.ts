@@ -1,4 +1,5 @@
 import type { AnchorHTMLAttributes } from "react";
+import { editorHref } from "../../../components/ui/location-link";
 import type {
   AcceptanceCoverageRow,
   LinkedArtifact,
@@ -8,9 +9,7 @@ import type {
   RequirementUiSurface,
 } from "../../../lib/harness-data/types";
 
-export function editorHref(file: string, line: number) {
-  return `vscode://file/${file}:${line}`;
-}
+export { editorHref };
 
 export function linkTargetProps(href: string): Partial<Pick<AnchorHTMLAttributes<HTMLAnchorElement>, "target" | "rel">> {
   return href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {};
@@ -33,6 +32,14 @@ export function coverageTone(status: string) {
   if (status === "PASS") return "green" as const;
   if (status === "FAIL") return "red" as const;
   if (status === "MISSING") return "warning" as const;
+  return "neutral" as const;
+}
+
+export function channelTone(channel: string) {
+  if (channel === "UI") return "blue" as const;
+  if (channel === "API") return "warning" as const;
+  if (channel === "E2E") return "green" as const;
+  if (channel === "STATIC") return "inactive" as const;
   return "neutral" as const;
 }
 

@@ -1,10 +1,10 @@
 import type { RequirementDetail } from "../../../lib/harness-data/types";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
-import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
+import { EmptyState } from "../../../components/ui/empty-state";
+import { LocationLink } from "../../../components/ui/location-link";
 import { ContractShapeDetails } from "./ContractShapeFields";
 import { SectionHeader } from "./SectionHeader";
-import { editorHref } from "./detail-utils";
 
 export function RequirementApiContractsTab({ detail }: { detail: RequirementDetail }) {
   return (
@@ -21,12 +21,10 @@ export function RequirementApiContractsTab({ detail }: { detail: RequirementDeta
                     <div className="break-all font-mono text-sm font-semibold text-foreground">{api.path}</div>
                   </div>
                   <div className="mt-2 break-words text-sm text-muted-foreground">operationId: {api.operationId}</div>
+                  <LocationLink className="mt-2" file={api.file} line={api.line} />
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <StatusBadge label={api.status} tone="warning" />
-                  <Button asChild size="sm" variant="outline">
-                    <a href={editorHref(api.file, api.line)}>파일 열기</a>
-                  </Button>
                 </div>
               </div>
               <div className="mt-3 grid gap-2">
@@ -36,7 +34,7 @@ export function RequirementApiContractsTab({ detail }: { detail: RequirementDeta
             </Card>
           ))}
         </div>
-        {detail.apiSurfaces.length === 0 ? <div className="rounded-md border border-border p-4 text-sm text-muted-foreground">연결된 API 작업이 없다.</div> : null}
+        {detail.apiSurfaces.length === 0 ? <EmptyState>연결된 API 작업이 없다.</EmptyState> : null}
       </section>
     </div>
   );

@@ -10,7 +10,7 @@ const meta = {
     harness: { requirements: ["REQ-030"] },
     docs: {
       description: {
-        component: "하네스 UI의 공통 머리 영역, scope 전환, 주요 내비, 산출물 상태를 검토한다.",
+        component: "하네스 UI의 공통 머리 영역, scope 전환, 좌측 LNB, 산출물 상태를 검토한다.",
       },
     },
   },
@@ -34,7 +34,7 @@ export const DefaultArtifacts: Story = {
   parameters: {
     docs: {
       description: {
-        story: "산출물이 있는 기본 앱셸 상태다. 현재 scope, generatedAt, 주요 내비가 한 화면에서 읽히는지 확인한다.",
+        story: "산출물이 있는 기본 앱셸 상태다. 현재 scope, generatedAt, 좌측 LNB가 한 화면에서 읽히는지 확인한다.",
       },
     },
   },

@@ -25,6 +25,7 @@
 | 탭 | tab | — | 화면 영역 전환 |
 | 토글 | toggle | — | 두 상태 전환 스위치 |
 | 도구 설명 | tooltip | 툴팁 | hover 시 보조 설명 |
+| 뱃지 | badge | 배지 | 상태·종류·메타데이터를 짧게 표시하는 보조 표식 |
 
 정규 명칭 목록은 현재 화면 요건에서 실제 쓰이는 컴포넌트로 한정한다. 새 컴포넌트가 필요하면 이 표에 정규 명칭과 별칭을 증분 추가한다.
 
@@ -34,7 +35,7 @@ UI 컴포넌트 원자 키는 카드 `## 표준 용어` 섹션에 둘 수 없다
 
 ```text
 ui.button  ui.input  ui.checkbox  ui.dialog  ui.formDialog  ui.confirmDialog
-ui.tooltip  ui.modal  ui.dropdown  ui.tab  ui.toggle
+ui.tooltip  ui.modal  ui.dropdown  ui.tab  ui.toggle  ui.badge
 ```
 
 이 판정은 `CARD-TERM-UNREGISTERED`보다 먼저 수행한다. 즉 "용어집에 등록하지 않은 누락"이 아니라 "잘못된 레이어에 둔 용어"로 안내한다. 해당 의미는 용어집에 등록하지 말고, 위 정규 명칭으로 본문/수용 기준/시나리오에 표현한다.

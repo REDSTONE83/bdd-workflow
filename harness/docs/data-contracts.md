@@ -108,7 +108,7 @@ build/{app|harness}/
 - `story`: `title`, `story`, `component`
 - `scenario`: `title`, `featureTitle`, `featureTags[]`, `covers[]`, `steps[]`
 - `test`: `source` (`back-end` | `front-end` | `harness`), `runtime` (`junit` | `playwright` | `node`), `displayName`, `titlePath[]`, `covers[]`, `resultKeys[]`
-- `card`: `id`, `title`, `status`, `priority`, `requirementType`, `specRole`, `targetSystem`, `productArea`, `qualityAttributes[]`, `verificationLevel`, `relatedRequirementIds[]`, `replacedByRequirementIds[]`, `acceptanceCriteria[]`, `verificationTargets`, `apiSkeleton[]`, `dbSkeleton[]`, `uiSkeleton[]`, `storybookContract[]`, `openQuestions[]`, `terms[]`, `sectionPresent`, `approved`, `bddReviewResult`, `bddReviewIncomplete`, `bddReviewApproved`. `acceptanceCriteria[]`는 `string`이 아니라 `{ text, target, invalidMarker? }` 객체 배열이다. `text`는 bullet 시작의 마커 토큰을 제거한 원문, `target`은 `API | UI | E2E | STATIC | null`, `invalidMarker`는 bullet 시작에 마커처럼 보이는 토큰이 있으나 허용 목록 밖일 때만 채워진다. 같은 카드의 `@Covers`, FE BDD `Covers`, `.feature` `Covers:` 매칭은 모두 `text` 값으로 한다. `verificationTargets`는 `API`, `DB`, `UI`, `Storybook`, `E2E`, `STATIC` 같은 키를 `{ required: boolean | null, raw: string }`으로 둔다. `storybookContract[]`는 `{ title, states[], raw }` 형태이며 `title`은 Storybook sidebar title, `states[]`는 named export 이름이다. `bddReviewResult`는 `BDD 테스트 리뷰` 섹션에서 최신 `결과:` 라인만 추출한 `{ line, status, normalizedStatus } | null`이며, `Skeleton 결과:`와 자유 텍스트는 제외한다. `bddReviewIncomplete`/`bddReviewApproved`는 이 최신 결과 라인에서 계산한다.
+- `card`: `id`, `title`, `status`, `priority`, `requirementType`, `specRole`, `targetSystem`, `productArea`, `qualityAttributes[]`, `verificationLevel`, `relatedRequirementIds[]`, `replacedByRequirementIds[]`, `purpose`, `scopeItems[]`, `acceptanceCriteria[]`, `verificationTargets`, `apiSkeleton[]`, `dbSkeleton[]`, `uiSkeleton[]`, `storybookContract[]`, `openQuestions[]`, `terms[]`, `outOfScopeItems[]`, `decisionLogs[]`, `sectionPresent`, `approved`, `bddReviewResult`, `bddReviewIncomplete`, `bddReviewApproved`. `purpose`는 `사용자/목적` 섹션의 본문 문자열이다. `scopeItems[]`, `outOfScopeItems[]`, `terms[]`는 각 섹션의 bullet 목록이다. `decisionLogs[]`는 `의사결정 로그` 섹션의 `{ date, decision, reason, decisionMaker, impact }` 목록이다. `acceptanceCriteria[]`는 `string`이 아니라 `{ text, target, invalidMarker? }` 객체 배열이다. `text`는 bullet 시작의 마커 토큰을 제거한 원문, `target`은 `API | UI | E2E | STATIC | null`, `invalidMarker`는 bullet 시작에 마커처럼 보이는 토큰이 있으나 허용 목록 밖일 때만 채워진다. 같은 카드의 `@Covers`, FE BDD `Covers`, `.feature` `Covers:` 매칭은 모두 `text` 값으로 한다. `verificationTargets`는 `API`, `DB`, `UI`, `Storybook`, `E2E`, `STATIC` 같은 키를 `{ required: boolean | null, raw: string }`으로 둔다. `storybookContract[]`는 `{ title, states[], raw }` 형태이며 `title`은 Storybook sidebar title, `states[]`는 named export 이름이다. `bddReviewResult`는 `BDD 테스트 리뷰` 섹션에서 최신 `결과:` 라인만 추출한 `{ line, status, normalizedStatus } | null`이며, `Skeleton 결과:`와 자유 텍스트는 제외한다. `bddReviewIncomplete`/`bddReviewApproved`는 이 최신 결과 라인에서 계산한다.
 - `change-set`: `title`, `status`, `requestedDate`, `changeTypes[]`, `affectedRequirementIds[]`, `discussionStatus`, `requestSummary[]`, `scopeItems[]`, `outOfScopeItems[]`, `completionCriteria[]`, `verificationCommands[]`, `decisions[]`, `openDiscussions[]`, `sectionPresent`, `referencedRequirementIds[]`. Change Set은 별도 사람이 관리하는 ID를 만들지 않으므로 `location.identity`는 repo-relative 파일 경로다. `requirements[]`에는 `affectedRequirementIds[]`를 그대로 둔다.
 - `term`: `key`, `surfaces[]`, `mode`
 - `test-result`: `identity`, `alternateIdentities[]`, `status` (`PASS` | `FAIL` | `SKIP` | `NOT_RUN`), `runtime` (`junit` | `playwright` | `node`). 엔트리 `kind`는 항상 `"test-result"`이고, runner 구분은 `runtime` 필드를 쓴다.
@@ -117,6 +117,49 @@ build/{app|harness}/
 - `api-usage` (`front-end.source-index.json`의 `apiUsages[]`): 파일 상단 JSDoc `@UsesApi METHOD /path [trigger]` 선언에서 추출한 화면/API 사용 계약. `method`, `path`, `trigger`, `route`, `page`, `surfaceType`, `requirements[]`, `file`, `line`을 가진다. 정적 validator는 같은 요건 안에서 `apiUsages[]`와 `apiCalls[]`의 method+path 집합을 비교한다.
 - `front-end.source-index.json`의 `issues[]`: source index가 AST 스캔 중 발견한 FE 정적 위반을 담는다. REQ-008부터 `DIRECT_FETCH_OUTSIDE_API`는 `front-end/src/**` 중 `src/api/**` 밖 직접 `fetch` 호출을 의미하며, Layer 2에서 `FE-API-DIRECT-FETCH` finding으로 정규화된다.
 - `scenarios.index.json`의 `issues[]` (REQ-009): 전역 `issues[]`와 각 feature의 `issues[]`에 `{ line, message, kind }` 형태로 담긴다. `kind`는 다음 7개 enum 중 하나이며, Layer 2 validator(`validate-scenarios.mjs`)가 같은 이름의 SCN-* finding으로 정규화한다. `SCN-DIALECT-FORBIDDEN`, `SCN-FEATURE-HEADER-MISSING`, `SCN-REQ-TAG-MISSING`, `SCN-UNSUPPORTED-KEYWORD`, `SCN-STRAY-LINE`, `SCN-COVERS-OUTSIDE-SCENARIO`, `SCN-STEP-OUTSIDE-SCENARIO`. feature에 속한 issue의 SCN-* finding은 `requirements`로 feature의 `@REQ-XXX` 태그를 그대로 옮기고, 전역 issue 또는 태그가 없는 feature의 issue는 `requirements: []`로 두어 scope 전체 게이트만 차단한다.
+
+## 표준 용어 인덱스
+
+`build/{app|harness}/indexes/terminology.index.json`은 표준 용어 검증과 하네스 UI 표준 용어 조회 화면의 입력이다. 이 파일은 일반 `entries[]` source index와 달리 key 기반 객체를 최상위에 둔다.
+
+최소 형태:
+
+```jsonc
+{
+  "generatedAt": "2026-06-12T00:00:00.000Z",
+  "counts": {
+    "approved": 0,
+    "draft": 0
+  },
+  "terms": {
+    "harness.standardTerm": {
+      "status": "approved" | "draft",
+      "sourceFile": "harness/docs/terminology/domains/harness.json",
+      "ko": "표준 용어",
+      "en": "standard term",
+      "meaning": "...",
+      "allow": ["용어"],
+      "ban": ["..."],
+      "names": {
+        "java": ["..."],
+        "method": ["..."],
+        "field": ["..."],
+        "column": ["..."],
+        "table": ["..."],
+        "json": ["..."],
+        "path": ["..."]
+      },
+      "note": "...",
+      "reason": "..."
+    }
+  },
+  "surfaceIndex": {},
+  "codeNameIndex": {},
+  "nameDuplicates": []
+}
+```
+
+`terms`의 객체 key가 term key다. 하네스 UI 서버가 화면 DTO를 만들 때 `status`, `sourceFile`, `ko`, `en`, `meaning`, `allow`, `ban`, `names`, `note`, `reason` 값을 보존해야 한다. 검색과 필터는 이 DTO 위에서 수행하되, 용어 사전 원본 파일을 UI 컴포넌트가 직접 읽지 않는다.
 
 ## 게이트 요약 리포트 (Layer 4)
 

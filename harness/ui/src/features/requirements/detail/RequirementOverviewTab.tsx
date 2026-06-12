@@ -1,8 +1,18 @@
 import type { LinkedArtifact, RequirementDetail } from "../../../lib/harness-data/types";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { Card } from "../../../components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible";
 import { MetricCard } from "../../../components/ui/metric-card";
-import { coverageTone } from "./detail-utils";
+
+function BulletList({ items, emptyLabel }: { items: string[]; emptyLabel: string }) {
+  if (items.length === 0) return <div className="mt-3 text-sm text-muted-foreground">{emptyLabel}</div>;
+
+  return (
+    <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+      {items.map((item) => <li key={item} className="break-words">{item}</li>)}
+    </ul>
+  );
+}
 
 export function RequirementOverviewTab({
   detail,
@@ -30,31 +40,63 @@ export function RequirementOverviewTab({
         ))}
       </div>
       <div className="grid grid-cols-[1fr_1fr] gap-4">
-        <Card className="p-4">
-          <h2 className="text-base font-semibold text-foreground">대표 AC</h2>
-          {detail.acceptanceCriteria[0] ? (
-            <div className="mt-3 text-sm">
-              <div className="font-mono text-xs text-muted-foreground">{detail.acceptanceCriteria[0].id}</div>
-              <div className="mt-2 break-words font-medium text-foreground">{detail.acceptanceCriteria[0].text}</div>
-              <div className="mt-3 flex items-center gap-2">
-                <StatusBadge label={detail.acceptanceCriteria[0].channel} />
-                <StatusBadge label={detail.acceptanceCriteria[0].status} tone={coverageTone(detail.acceptanceCriteria[0].status)} />
-              </div>
-            </div>
-          ) : <div className="mt-3 text-sm text-muted-foreground">수용 기준이 없다.</div>}
+        <Card className="col-span-2 p-4">
+          <h2 className="text-base font-semibold text-foreground">사용자 / 목적</h2>
+          <p className="mt-3 break-words text-sm text-muted-foreground">{detail.purpose || "사용자/목적 본문이 없다."}</p>
         </Card>
         <Card className="p-4">
-          <h2 className="text-base font-semibold text-foreground">대표 API</h2>
-          {detail.apiSurfaces[0] ? (
-            <div className="mt-3 text-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge label={detail.apiSurfaces[0].method} />
-                <span className="break-all font-mono font-semibold text-foreground">{detail.apiSurfaces[0].path}</span>
-              </div>
-              <div className="mt-2 break-words text-muted-foreground">operationId: {detail.apiSurfaces[0].operationId}</div>
-              <div className="mt-3"><StatusBadge label={detail.apiSurfaces[0].status} tone="warning" /></div>
+          <h2 className="text-base font-semibold text-foreground">범위</h2>
+          <BulletList items={detail.scopeItems} emptyLabel="범위 항목이 없다." />
+        </Card>
+        <Card className="p-4">
+          <h2 className="text-base font-semibold text-foreground">제외 범위</h2>
+          <BulletList items={detail.outOfScopeItems} emptyLabel="제외 범위 항목이 없다." />
+        </Card>
+        <Card className="col-span-2 p-4">
+          <h2 className="text-base font-semibold text-foreground">표준 용어</h2>
+          {detail.terms.length > 0 ? (
+            <div className="mt-3 divide-y divide-border rounded-md border border-border">
+              {detail.terms.map((term) => (
+                <div key={term.key} className="grid grid-cols-[minmax(15rem,0.8fr)_1fr] gap-3 px-3 py-2 text-sm">
+                  <div className="break-all font-mono text-foreground">{term.key}</div>
+                  <div className="min-w-0">
+                    <span className="break-words font-medium text-foreground">{term.ko}</span>
+                    <span className="text-muted-foreground"> / {term.en}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : <div className="mt-3 text-sm text-muted-foreground">연결된 API 작업이 없다.</div>}
+          ) : <div className="mt-3 text-sm text-muted-foreground">표준 용어가 없다.</div>}
+        </Card>
+        <Card className="col-span-2 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-base font-semibold text-foreground">의사결정 로그</h2>
+            <StatusBadge label={`${detail.decisionLogs.length}건`} tone={detail.decisionLogs.length > 0 ? "blue" : "neutral"} />
+          </div>
+          {detail.decisionLogs.length > 0 ? (
+            <div className="mt-3 divide-y divide-border rounded-md border border-border">
+              {detail.decisionLogs.map((log) => (
+                <Collapsible key={`${log.date}-${log.decision}`} className="rounded-none border-0 bg-transparent">
+                  <CollapsibleTrigger className="w-full justify-between">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="font-mono text-xs text-muted-foreground">{log.date}</span>
+                      <span className="truncate text-sm font-semibold text-foreground">{log.decision}</span>
+                    </span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <dl className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-2 text-sm">
+                      <dt className="text-muted-foreground">이유</dt>
+                      <dd className="break-words text-foreground">{log.reason || "없음"}</dd>
+                      <dt className="text-muted-foreground">결정자</dt>
+                      <dd className="break-words text-foreground">{log.decisionMaker || "없음"}</dd>
+                      <dt className="text-muted-foreground">영향</dt>
+                      <dd className="break-words text-foreground">{log.impact || "없음"}</dd>
+                    </dl>
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
+            </div>
+          ) : <div className="mt-3 text-sm text-muted-foreground">의사결정 로그가 없다.</div>}
         </Card>
       </div>
     </>

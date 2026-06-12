@@ -9,6 +9,7 @@ import {
     acceptanceCriterionItems,
     bddReviewResultItems,
     bddReviewResultSummary,
+    decisionLogItems,
     storybookContractItems,
     verificationTargetItems
 } from '../index-requirements.mjs';
@@ -126,6 +127,39 @@ describe('storybookContractItems', () => {
                 title: 'Todos/TodoFormDialog',
                 states: ['Create', 'Submitting'],
                 raw: '`Todos/TodoFormDialog`: `Create`, `Submitting`'
+            }
+        ]);
+    });
+});
+
+describe('decisionLogItems', () => {
+    it('parses requirement decision log blocks', () => {
+        assert.deepEqual(decisionLogItems([
+            '- 결정일: 2026-06-10',
+            '  결정: 추적 산출물 값을 그대로 표시한다.',
+            '  이유: CLI와 UI가 다른 답을 주면 안 된다.',
+            '  결정자: REDSTONE',
+            '  영향: 화면은 판정 값을 재계산하지 않는다.',
+            '',
+            '- 결정일: 2026-06-11',
+            '  결정: 개요 탭에 카드 요약 섹션을 표시한다.',
+            '  이유: 상세 진입 직후 요건 의도를 확인해야 한다.',
+            '  결정자: REDSTONE',
+            '  영향: 요구사항 인덱스가 카드 섹션 요약을 제공한다.'
+        ].join('\n')), [
+            {
+                date: '2026-06-10',
+                decision: '추적 산출물 값을 그대로 표시한다.',
+                reason: 'CLI와 UI가 다른 답을 주면 안 된다.',
+                decisionMaker: 'REDSTONE',
+                impact: '화면은 판정 값을 재계산하지 않는다.'
+            },
+            {
+                date: '2026-06-11',
+                decision: '개요 탭에 카드 요약 섹션을 표시한다.',
+                reason: '상세 진입 직후 요건 의도를 확인해야 한다.',
+                decisionMaker: 'REDSTONE',
+                impact: '요구사항 인덱스가 카드 섹션 요약을 제공한다.'
             }
         ]);
     });

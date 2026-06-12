@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { CommandRunner } from "./CommandRunnerPage";
-import { commands, failedRun, readyRun, rejectedRun, runningRun, succeededRun } from "../../lib/harness-data/fixtures";
+import { commands, failedRun, readyRun, rejectedRun, requirementRows, runningRun, succeededRun } from "../../lib/harness-data/fixtures";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { ErrorState } from "../../components/ui/ErrorState";
 
@@ -11,7 +11,7 @@ const meta = {
     harness: { requirements: ["REQ-035"] },
     docs: {
       description: {
-        component: "허용된 검증 명령 선택, 단일 요건 인자, 실행 로그, 단일 실행 잠금, 서버 거절 상태를 검토한다.",
+        component: "허용된 검증 명령 선택, 선택된 명령 카드 내부의 단일 요건 검색/선택과 실행 버튼, 실행 로그, 단일 실행 잠금, 서버 거절 상태를 검토한다.",
       },
     },
   },
@@ -22,29 +22,40 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Ready: Story = {
-  args: { commands, run: readyRun },
+  args: { commands, run: readyRun, requirements: requirementRows },
   parameters: {
     docs: {
       description: {
-        story: "명령 실행 전 준비 상태다. 허용된 명령 목록, 단일 요건 입력, 실행 버튼이 같은 작업 흐름으로 보이는지 확인한다.",
+        story: "명령 실행 전 준비 상태다. 실행 대상 요건이 미선택으로 시작하고, 선택된 명령 카드 내부에서 요건 검색/선택 진입점과 실행 버튼이 함께 보이는지 확인한다.",
+      },
+    },
+  },
+};
+
+export const ReadyWithRequirement: Story = {
+  args: { commands, run: { ...readyRun, requirementId: "REQ-031" }, requirements: requirementRows },
+  parameters: {
+    docs: {
+      description: {
+        story: "요건을 선택한 준비 상태다. 선택된 명령 카드 내부에서 선택 요건 요약과 선택 해제 동작이 함께 보이는지 확인한다.",
       },
     },
   },
 };
 
 export const Running: Story = {
-  args: { commands, run: runningRun },
+  args: { commands, run: runningRun, requirements: requirementRows },
   parameters: {
     docs: {
       description: {
-        story: "명령 실행 중 상태다. 실행 버튼이 비활성화되고 로그가 진행 중인 상태로 표시되는지 확인한다.",
+        story: "명령 실행 중 상태다. 선택된 명령 카드 내부의 실행 버튼이 비활성화되고 로그가 진행 중인 상태로 표시되는지 확인한다.",
       },
     },
   },
 };
 
 export const Succeeded: Story = {
-  args: { commands, run: succeededRun },
+  args: { commands, run: succeededRun, requirements: requirementRows },
   parameters: {
     docs: {
       description: {
@@ -55,7 +66,7 @@ export const Succeeded: Story = {
 };
 
 export const Failed: Story = {
-  args: { commands, run: failedRun },
+  args: { commands, run: failedRun, requirements: requirementRows },
   parameters: {
     docs: {
       description: {
@@ -66,7 +77,7 @@ export const Failed: Story = {
 };
 
 export const Rejected: Story = {
-  args: { commands, run: rejectedRun },
+  args: { commands, run: rejectedRun, requirements: requirementRows },
   parameters: {
     docs: {
       description: {
@@ -77,7 +88,7 @@ export const Rejected: Story = {
 };
 
 export const Loading: Story = {
-  args: { commands, run: readyRun },
+  args: { commands, run: readyRun, requirements: requirementRows },
   render: () => <LoadingState label="명령 목록을 불러오는 중" />,
   parameters: {
     docs: {
@@ -89,7 +100,7 @@ export const Loading: Story = {
 };
 
 export const ErrorStateStory: Story = {
-  args: { commands, run: readyRun },
+  args: { commands, run: readyRun, requirements: requirementRows },
   render: () => <ErrorState message="명령 실행 상태를 읽지 못했다." />,
   parameters: {
     docs: {

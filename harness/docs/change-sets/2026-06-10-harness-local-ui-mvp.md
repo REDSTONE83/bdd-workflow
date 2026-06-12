@@ -3,7 +3,7 @@
 상태: 진행중
 요청일: 2026-06-10
 변경 유형: 신규
-영향 요건: REQ-029, REQ-030, REQ-031, REQ-032, REQ-033, REQ-034, REQ-035
+영향 요건: REQ-029, REQ-030, REQ-031, REQ-032, REQ-033, REQ-034, REQ-035, REQ-036, REQ-037
 논의 상태: 없음
 
 ## 요청 요약
@@ -22,9 +22,11 @@
   - REQ-033 하네스 UI 게이트 현황 조회
   - REQ-034 하네스 UI Change Set 진행 조회
   - REQ-035 하네스 UI 검증 명령 실행
+  - REQ-036 하네스 UI 표준 용어 조회
+  - REQ-037 하네스 UI 요건 검색/선택 대화상자
 - 요건별 `.feature` 시나리오를 `harness/docs/scenarios`에 작성한다.
 - Skeleton 설계 전에 하네스 UI 구조, 데이터 경계, Storybook, FE BDD, 명령 실행 표준을 `harness/docs/standards/harness-ui.md`에 확정한다.
-- REQ-029~REQ-035 카드에 Skeleton 설계를 남긴다. 설계 범위는 검증 설계, UI/검사기/서버 Skeleton, Storybook 계약, 추적 정책이다.
+- REQ-029~REQ-037 카드에 Skeleton 설계를 남긴다. 설계 범위는 검증 설계, UI/검사기/서버 Skeleton, Storybook 계약, 추적 정책이다.
 - harness/ui 프로젝트 스캐폴드: React + Vite + TypeScript + Tailwind, Storybook, Vitest, Playwright (Skeleton 단계부터).
 - 하네스 검증 채널 확장: harness/ui Playwright BDD 메타데이터 collector, 테스트 결과 병합, 추적 판정의 front-end 테스트 채널 사용 (REQ-029).
 - 하네스 Storybook 정적 검증 와이어링: harness/ui story 메타데이터 수집, 카드 Storybook 계약 대조, `harness:validate`의 harness/ui Storybook build 실행 (REQ-029).
@@ -40,13 +42,13 @@
 
 ## 완료 조건
 
-- REQ-029~REQ-035가 카드 워크플로우(초안 → Skeleton → 테스트 → 구현 → 검증)를 거쳐 승인된다.
+- REQ-029~REQ-037이 카드 워크플로우(초안 → Skeleton → 테스트 → 구현 → 검증)를 거쳐 승인된다.
 - `npm run harness:validate`가 통과하고, 하네스 UI 카드의 (UI) 수용 기준이 harness/ui Playwright FE BDD 결과로 판정된다.
-- 하네스 UI에서 두 scope의 요건 추적 현황, 게이트 현황, Change Set 진행을 조회하고 허용된 검증 명령을 실행할 수 있다.
+- 하네스 UI에서 두 scope의 요건 추적 현황, 표준 용어 목록, 게이트 현황, Change Set 진행을 조회하고 허용된 검증 명령을 실행할 수 있다.
 
 ## 검증 명령
 
-- `npm run harness:trace -- --requirement REQ-029` (REQ-030~REQ-035 동일)
+- `npm run harness:trace -- --requirement REQ-029` (REQ-030~REQ-037 동일)
 - `npm run harness:validate`
 - Skeleton 단계 이후: `cd harness/ui && npm run typecheck && npm run test && npm run build-storybook && npm run e2e`
 
@@ -68,6 +70,8 @@
 - 2026-06-10: Skeleton 설계 산출물은 카드에 먼저 남기고, 실제 harness/ui Storybook surface와 source index를 만든 뒤 REQ-029~REQ-035를 `Skeleton 검토중`으로 올린다. 실행 테스트가 아직 없으므로 최신 BDD 테스트 리뷰 `결과:`는 `미완료`로 둔다.
 - 2026-06-10: REQ-033 게이트 화면은 `gate.mjs`의 카테고리 판정을 UI가 재계산하지 않도록 `build/{scope}/reports/gate-report.json` 또는 동등한 machine-readable DTO를 사용한다.
 - 2026-06-10: 하네스 UI 데이터 조회는 TanStack Query를 유지한다. 표준이 요구하는 query cache 무효화 기반 자동 갱신, 화면 공통 로딩/조회 실패 상태, 화면 간 산출물 공유 캐시, scope 전환 경합 차단을 자체 store로 재구현하지 않기 위해서이고, `app/front-end`와 같은 라이브러리라 패턴 재학습이 없다. (사용자가 권장안 채택)
+- 2026-06-12: AppShell 좌측 LNB에 표준 용어 메뉴를 추가하고, 전체 표준 용어 목록 조회/검색 화면을 REQ-036으로 분리한다. 표준 용어 화면은 `terminology.index.json` 산출물을 표시하고 원본 용어 사전 편집은 다루지 않는다.
+- 2026-06-12: 실행 화면과 Change Set 화면이 함께 쓰는 요건 검색/선택 대화상자를 REQ-037로 분리한다. 부모 화면은 선택값 적용만 소유하고, 후보 표시·검색·단일 선택·선택 해제·빈 결과 UI 계약은 공용 요건에서 검증한다.
 
 ## 열린 논의
 

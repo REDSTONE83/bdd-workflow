@@ -81,13 +81,13 @@
   결정: 하네스 UI 카드의 (UI) 수용 기준은 하네스 scope에 front-end 테스트 채널을 추가해 harness/ui Playwright FE BDD 테스트로 판정한다.
   이유: 기존 하네스 카드의 (STATIC)+self-test 채널만으로는 화면 동작을 사용자 관찰 수준에서 검증할 수 없고, 추적 판정기는 이미 front-end 테스트 채널 분기를 갖고 있어 수집·병합만 추가하면 된다.
   결정자: REDSTONE
-  영향: 하네스 scope collector 추가, 테스트 결과 병합, `run.mjs`의 `harness:validate` 단계 확장. REQ-030~REQ-035가 (UI) 마커를 쓸 수 있게 된다.
+  영향: 하네스 scope collector 추가, 테스트 결과 병합, `run.mjs`의 `harness:validate` 단계 확장. REQ-030~REQ-036과 이후 하네스 UI 카드가 (UI) 마커를 쓸 수 있게 된다.
 
 - 결정일: 2026-06-10
   결정: harness/ui Storybook 정적 검증을 하네스 scope 검증 채널에 와이어링한다. story 메타데이터를 수집해 카드 Storybook 계약과 대조하고, `harness:validate`가 Storybook build를 실행한다.
   이유: Storybook 계약 검증이 없으면 하네스 UI 카드의 Skeleton 승인 게이트가 약해진다.
   결정자: REDSTONE
-  영향: REQ-030~REQ-035의 Skeleton 승인이 Storybook 계약 대조를 받는다. `harness:validate` 실행 시간이 Storybook build만큼 늘어난다.
+  영향: REQ-030~REQ-036과 이후 하네스 UI 카드의 Skeleton 승인이 Storybook 계약 대조를 받는다. `harness:validate` 실행 시간이 Storybook build만큼 늘어난다.
 
 ## BDD 테스트 리뷰
 
@@ -99,7 +99,7 @@
   검증 설계: `.feature`의 7개 Scenario가 카드 수용 기준 7개를 1:1 `Covers:`로 연결한다. 모든 AC는 `(STATIC)`이며 실행 테스트는 하네스 self-test로 작성한다.
   검사기 Skeleton: `harness/ui/tools/source-index.mjs`가 page, route, story, Playwright FE BDD annotation을 수집해 `build/harness/indexes/front-end.source-index.json`을 만든다. `index-test-results.mjs`는 `harness/ui/test-results/e2e-results.json`을 하네스 scope `front-end` 테스트 결과로 병합한다. `evaluate-trace-state.mjs`는 하네스 scope의 `(UI)` AC를 front-end 테스트 채널로 판정한다. `validate-front-end-standards.mjs`는 하네스 UI Storybook 계약과 story 인덱스를 대조한다.
   실행 Skeleton: `run.mjs`는 REQ-029 구현 이후 `harness:validate`에서 harness/ui source index, Storybook build, Playwright FE BDD 실행, 테스트 결과 인덱싱을 순차 실행한다. 부분 실행 결과는 canonical 결과 파일을 덮어쓰지 않는다.
-  추적 정책: REQ-030~REQ-035의 `(UI)` AC는 harness/ui FE BDD 결과가 생기기 전까지 RED가 정상이다. 이 카드의 `(STATIC)` AC는 self-test가 작성된 뒤 GREEN 판정한다.
+  추적 정책: REQ-030~REQ-036과 이후 하네스 UI 카드의 `(UI)` AC는 harness/ui FE BDD 결과가 생기기 전까지 RED가 정상이다. 이 카드의 `(STATIC)` AC는 self-test가 작성된 뒤 GREEN 판정한다.
   검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-029`로 카드/시나리오/용어 정합성을 확인한다.
   Skeleton 결과: 승인 대기
 

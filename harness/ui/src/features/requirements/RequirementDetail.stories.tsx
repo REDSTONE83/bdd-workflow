@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { MemoryRouter } from "react-router-dom";
 import { RequirementDetailView } from "./RequirementDetailView";
 import { requirementDetail } from "../../lib/harness-data/fixtures";
 import { LoadingState } from "../../components/ui/LoadingState";
@@ -11,11 +12,22 @@ const meta = {
     harness: { requirements: ["REQ-032"] },
     docs: {
       description: {
-        component: "요건 하나의 메타데이터 아래에서 개요, AC, 시나리오, UI, API 계약, Entity, 산출물/소스 탭으로 AC 카드 목록, 시나리오별 테스트 정보, UI 표면 목록형 카드, API Request/Response, Entity 목록형 카드, 요건 카드/시나리오 연결 산출물과 UI 접두 뱃지가 있는 소스 위치 카드를 확인한다.",
+        component: "요건 하나의 메타데이터 아래에서 개요, AC, 시나리오, UI, API 계약, Entity, 산출물/소스 탭으로 사용자/목적, 범위, 표준 용어, 제외 범위, 의사결정 로그, AC 카드 목록, 시나리오별 테스트 정보, UI 표면 목록형 카드, API Request/Response, Entity 목록형 카드, 요건 카드/시나리오 연결 산출물과 UI 접두 뱃지가 있는 소스 위치 카드를 확인한다.",
       },
     },
   },
   tags: ["autodocs"],
+  decorators: [
+    (Story, context) => {
+      const router = context.parameters.router as { initialEntries?: string[] } | undefined;
+
+      return (
+        <MemoryRouter initialEntries={router?.initialEntries ?? ["/requirements/REQ-031"]}>
+          <Story />
+        </MemoryRouter>
+      );
+    },
+  ],
 } satisfies Meta<typeof RequirementDetailView>;
 
 export default meta;
@@ -36,7 +48,18 @@ export const CompleteCoverage: Story = {
   parameters: {
     docs: {
       description: {
-        story: "모든 AC 커버리지가 PASS이고 RED/BLUE 차단 사유가 없는 상태다. 메타데이터, AC 항목 카드의 연결 테스트와 시나리오 항목의 테스트 정보가 BLUE 상태와 일관되는지 확인한다.",
+        story: "모든 AC 커버리지가 PASS이고 RED/BLUE 차단 사유가 없는 상태다. 메타데이터, AC 항목 카드의 채널 색상 뱃지, 연결 테스트/시나리오 바로가기와 시나리오 항목의 테스트 정보가 BLUE 상태와 일관되는지 확인한다.",
+      },
+    },
+  },
+};
+
+export const OverviewSections: Story = {
+  args: { detail: requirementDetail },
+  parameters: {
+    docs: {
+      description: {
+        story: "개요 탭에서 요건 카드의 사용자/목적, 범위, 표준 용어 key와 한국어/영어 이름, 제외 범위, 의사결정 로그를 확인하는 상태다. 의사결정 로그는 결정일과 결정 요약을 먼저 보여주고 세부 항목을 펼쳐 볼 수 있어야 한다.",
       },
     },
   },
@@ -69,7 +92,7 @@ export const LinkedArtifacts: Story = {
   parameters: {
     docs: {
       description: {
-        story: "카드 원본과 시나리오 산출물 링크가 표시되는 상태다. 산출물/소스 탭의 연결 산출물에는 요건 카드와 시나리오만 보이고, 소스 위치에는 산출물 파일 없이 API/Data/UI 구현 표면이 종류 뱃지가 있는 목록형 카드로 보이는지 확인한다.",
+        story: "카드 원본과 시나리오 산출물 링크가 표시되는 상태다. 산출물/소스 탭의 연결 산출물에는 요건 카드와 시나리오만 보이고, 소스 위치에는 산출물 파일 없이 API/Data/UI 구현 표면이 종류 뱃지가 있는 목록형 카드로 보이는지 확인한다. 파일 경로와 라인은 별도 열기 버튼 없이 위치 텍스트 자체가 로컬 에디터 바로가기처럼 동작해야 한다.",
       },
     },
   },
@@ -80,7 +103,7 @@ export const AcceptanceAndScenarios: Story = {
   parameters: {
     docs: {
       description: {
-        story: "AC 탭과 시나리오 탭에서 수용 기준 원문 카드 목록과 BDD Scenario 목록을 각각 확인하는 상태다. 각 AC의 검증 채널, 판정, 연결 테스트와 시나리오, 각 시나리오의 Covers, 커버리지 판정, 연결 테스트, 번호 없는 GWT, feature 위치가 보여야 한다.",
+        story: "AC 탭과 시나리오 탭에서 수용 기준 원문 카드 목록과 BDD Scenario 목록을 각각 확인하는 상태다. 각 AC의 ID, 채널 색상 뱃지, 판정, 연결 테스트/시나리오 바로가기와 각 시나리오의 Covers, 커버리지 판정, 연결 테스트, 번호 없는 GWT, feature 위치가 보여야 한다.",
       },
     },
   },
@@ -91,7 +114,21 @@ export const SkeletonContracts: Story = {
   parameters: {
     docs: {
       description: {
-        story: "API 계약 탭에서 요건에 연결된 API 작업 목록형 카드, Request/Response 펼침, Request/Response 필드의 참조 객체 펼침을 확인하고, Entity 탭에서 Entity 목록형 카드와 속성 목록 펼침을 확인하는 상태다. UI 표면은 UI 탭에서 description이 있는 목록형 카드로 표시되고 Storybook 링크와 구현 위치 링크를 제공해야 한다.",
+        story: "API 계약 탭에서 요건에 연결된 API 작업 목록형 카드, Request/Response 펼침, Request/Response 필드의 참조 객체 펼침을 확인하고, Entity 탭에서 Entity 목록형 카드와 속성 목록 펼침을 확인하는 상태다. UI 표면은 UI 탭에서 description이 있는 목록형 카드로 표시되고 Storybook 검토 버튼과 구현 위치 링크를 제공해야 한다.",
+      },
+    },
+  },
+};
+
+export const BackToBoardLink: Story = {
+  args: { detail: requirementDetail },
+  parameters: {
+    router: {
+      initialEntries: ["/requirements/REQ-031?title=요건&traceState=RED&cardStatus=초안&productArea=harness"],
+    },
+    docs: {
+      description: {
+        story: "필터 query가 있는 상세 route 상태다. 메타데이터 카드 바깥 상단 좌측의 테두리 없는 요건 목록 버튼을 선택하면 현재 query를 유지한 /requirements route로 이동하는지 확인한다.",
       },
     },
   },

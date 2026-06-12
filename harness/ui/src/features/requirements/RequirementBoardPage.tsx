@@ -3,21 +3,26 @@
  * @Page RequirementBoardPage
  * @Route /requirements
  */
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import type { ReactNode } from "react";
+import { useMemo } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { requirementRows, requirementSummary } from "../../lib/harness-data/fixtures";
 import type { RequirementRow, RequirementSummary, TraceState } from "../../lib/harness-data/types";
-import { StatusBadge } from "../../components/ui/StatusBadge";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
+import { EmptyState } from "../../components/ui/empty-state";
+import { Input } from "../../components/ui/input";
 import { MetricCard } from "../../components/ui/metric-card";
 import { Select } from "../../components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { cn } from "../../lib/utils";
+import { RequirementHierarchySummary } from "./RequirementHierarchySummary";
+import { requirementDetailPath } from "./requirement-navigation";
 
-function toneForState(state: TraceState) {
-  if (state === "RED") return "red" as const;
-  if (state === "GREEN") return "green" as const;
-  if (state === "BLUE") return "blue" as const;
+function traceStateVariant(state: TraceState) {
+  if (state === "RED") return "destructive" as const;
+  if (state === "GREEN") return "success" as const;
+  if (state === "BLUE") return "info" as const;
   return "inactive" as const;
 }
 
@@ -29,33 +34,104 @@ const traceStateOptions = [
   { value: "INACTIVE", label: "INACTIVE" },
 ];
 
-const cardStatusOptions = [
-  { value: "ALL", label: "전체" },
-  { value: "초안", label: "초안" },
-  { value: "승인", label: "승인" },
-];
+const filterQueryKeys = {
+  title: "title",
+  traceState: "traceState",
+  cardStatus: "cardStatus",
+  productArea: "productArea",
+} as const;
 
-const productAreaOptions = [
-  { value: "ALL", label: "전체" },
-  { value: "harness", label: "harness" },
-];
+function uniqueValues(values: string[]) {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+}
 
-export function RequirementBoard({ rows, summary }: { rows: RequirementRow[]; summary: RequirementSummary[] }) {
-  const [traceState, setTraceState] = useState("ALL");
-  const [cardStatus, setCardStatus] = useState("ALL");
-  const [productArea, setProductArea] = useState("ALL");
+function normalize(value: string) {
+  return value.toLocaleLowerCase().replace(/\s+/g, "");
+}
+
+function RequirementMetaBadge({
+  children,
+  variant,
+}: {
+  children: ReactNode;
+  variant: "secondary" | "info" | "warning";
+}) {
+  return (
+    <Badge className="shrink-0" size="sm" variant={variant}>
+      {children}
+    </Badge>
+  );
+}
+
+export function filterRequirementRows(
+  rows: RequirementRow[],
+  filters: { titleQuery: string; traceState: string; cardStatus: string; productArea: string },
+) {
+  const normalizedTitleQuery = normalize(filters.titleQuery.trim());
+
+  return rows.filter((row) => {
+    if (normalizedTitleQuery && !normalize(row.title).includes(normalizedTitleQuery)) return false;
+    if (filters.traceState !== "ALL" && row.traceState !== filters.traceState) return false;
+    if (filters.cardStatus !== "ALL" && row.cardStatus !== filters.cardStatus) return false;
+    if (filters.productArea !== "ALL" && row.productArea !== filters.productArea) return false;
+    return true;
+  });
+}
+
+export function RequirementBoard({
+  rows,
+  summary,
+  initialTitleQuery = "",
+}: {
+  rows: RequirementRow[];
+  summary: RequirementSummary[];
+  initialTitleQuery?: string;
+}) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  const cardStatusOptions = useMemo(
+    () => [{ value: "ALL", label: "전체" }, ...uniqueValues(rows.map((row) => row.cardStatus)).map((value) => ({ value, label: value }))],
+    [rows],
+  );
+  const productAreaOptions = useMemo(
+    () => [{ value: "ALL", label: "전체" }, ...uniqueValues(rows.map((row) => row.productArea)).map((value) => ({ value, label: value }))],
+    [rows],
+  );
+  const titleQuery = searchParams.has(filterQueryKeys.title) ? (searchParams.get(filterQueryKeys.title) ?? "") : initialTitleQuery;
+  const traceStateParam = searchParams.get(filterQueryKeys.traceState);
+  const cardStatusParam = searchParams.get(filterQueryKeys.cardStatus);
+  const productAreaParam = searchParams.get(filterQueryKeys.productArea);
+  const traceState = traceStateOptions.some((option) => option.value === traceStateParam) ? traceStateParam ?? "ALL" : "ALL";
+  const cardStatus = cardStatusOptions.some((option) => option.value === cardStatusParam) ? cardStatusParam ?? "ALL" : "ALL";
+  const productArea = productAreaOptions.some((option) => option.value === productAreaParam) ? productAreaParam ?? "ALL" : "ALL";
 
   const visibleRows = useMemo(
-    () =>
-      rows.filter((row) => {
-        if (traceState !== "ALL" && row.traceState !== traceState) return false;
-        if (cardStatus !== "ALL" && row.cardStatus !== cardStatus) return false;
-        if (productArea !== "ALL" && row.productArea !== productArea) return false;
-        return true;
-      }),
-    [cardStatus, productArea, rows, traceState],
+    () => filterRequirementRows(rows, { titleQuery, traceState, cardStatus, productArea }),
+    [cardStatus, productArea, rows, titleQuery, traceState],
   );
+  const updateFilterQuery = (key: keyof typeof filterQueryKeys, value: string) => {
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        const queryKey = filterQueryKeys[key];
+
+        if (key === "title") {
+          next.set(queryKey, value);
+          return next;
+        }
+
+        if (value === "ALL") {
+          next.delete(queryKey);
+        } else {
+          next.set(queryKey, value);
+        }
+
+        return next;
+      },
+      { replace: true },
+    );
+  };
 
   return (
     <section className="space-y-4">
@@ -64,51 +140,70 @@ export function RequirementBoard({ rows, summary }: { rows: RequirementRow[]; su
           <MetricCard key={item.state} label={item.state} value={item.count} />
         ))}
       </div>
-      <Card className="flex items-center gap-3 p-4">
-        <div className="flex items-center gap-2 text-sm">
+      <Card className="grid gap-3 p-4 lg:grid-cols-[minmax(220px,1fr)_12rem_12rem_12rem]">
+        <label className="grid gap-1 text-sm text-foreground">
+          <span>제목</span>
+          <Input
+            value={titleQuery}
+            onChange={(event) => updateFilterQuery("title", event.currentTarget.value)}
+            placeholder="요건 제목"
+            aria-label="요건 제목 검색"
+          />
+        </label>
+        <label className="grid gap-1 text-sm text-foreground">
           <span>추적 상태</span>
-          <Select value={traceState} onValueChange={setTraceState} options={traceStateOptions} aria-label="추적 상태 필터" />
-        </div>
-        <div className="flex items-center gap-2 text-sm">
+          <Select value={traceState} onValueChange={(value) => updateFilterQuery("traceState", value)} options={traceStateOptions} aria-label="추적 상태 필터" />
+        </label>
+        <label className="grid gap-1 text-sm text-foreground">
           <span>카드 상태</span>
-          <Select value={cardStatus} onValueChange={setCardStatus} options={cardStatusOptions} aria-label="카드 상태 필터" />
-        </div>
-        <div className="flex items-center gap-2 text-sm">
+          <Select value={cardStatus} onValueChange={(value) => updateFilterQuery("cardStatus", value)} options={cardStatusOptions} aria-label="카드 상태 필터" />
+        </label>
+        <label className="grid gap-1 text-sm text-foreground">
           <span>제품 영역</span>
-          <Select value={productArea} onValueChange={setProductArea} options={productAreaOptions} aria-label="제품 영역 필터" />
-        </div>
+          <Select value={productArea} onValueChange={(value) => updateFilterQuery("productArea", value)} options={productAreaOptions} aria-label="제품 영역 필터" />
+        </label>
       </Card>
-      <Card className="overflow-hidden">
-        <Table className="table-fixed">
-          <TableHeader className="bg-muted/70">
-            <TableRow>
-              <TableHead className="w-28">요건 ID</TableHead>
-              <TableHead>제목</TableHead>
-              <TableHead className="w-32">추적 상태</TableHead>
-              <TableHead className="w-32">카드 상태</TableHead>
-              <TableHead className="w-32">제품 영역</TableHead>
-              <TableHead className="w-28">우선순위</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visibleRows.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell className="font-mono text-foreground">
-                  <Button className="h-auto p-0 font-mono" variant="link" onClick={() => navigate(`/requirements/${row.id}`)}>
+      <div className="grid gap-1.5">
+        {visibleRows.map((row) => {
+          const childRequirement = row.parentRequirementIds.length > 0;
+
+          return (
+            <div key={row.id} className={cn(childRequirement && "ml-8 border-l-2 border-sky-200 pl-4")}>
+              <Card className={cn("px-3 py-1.5", childRequirement && "bg-sky-50/20")}>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Button
+                    className="h-auto shrink-0 p-0 font-mono font-semibold"
+                    variant="link"
+                    onClick={() => navigate(requirementDetailPath(row.id, location.search))}
+                  >
                     {row.id}
                   </Button>
-                </TableCell>
-                <TableCell className="break-words font-medium text-foreground">{row.title}</TableCell>
-                <TableCell><StatusBadge label={row.traceState} tone={toneForState(row.traceState)} /></TableCell>
-                <TableCell>{row.cardStatus}</TableCell>
-                <TableCell>{row.productArea}</TableCell>
-                <TableCell>{row.priority}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {visibleRows.length === 0 ? <div className="p-6 text-sm text-muted-foreground">조건에 맞는 요건이 없다.</div> : null}
-      </Card>
+                  <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                    <span className="min-w-0 truncate text-sm font-medium text-foreground" title={row.title}>
+                      {row.title}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <RequirementMetaBadge variant="secondary">{row.cardStatus}</RequirementMetaBadge>
+                      <RequirementMetaBadge variant="info">{row.productArea}</RequirementMetaBadge>
+                      <RequirementMetaBadge variant="warning">{row.priority}</RequirementMetaBadge>
+                    </div>
+                  </div>
+                  <RequirementHierarchySummary
+                    className="shrink-0 flex-nowrap"
+                    requirement={row}
+                  />
+                  <div className="ml-auto shrink-0">
+                    <Badge className="shrink-0" size="sm" variant={traceStateVariant(row.traceState)}>
+                      {row.traceState}
+                    </Badge>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          );
+        })}
+        {visibleRows.length === 0 ? <EmptyState className="p-6">조건에 맞는 요건이 없다.</EmptyState> : null}
+      </div>
     </section>
   );
 }

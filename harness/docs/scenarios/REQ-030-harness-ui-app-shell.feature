@@ -10,13 +10,13 @@ Feature: 하네스 UI 앱셸
     Then 로컬 주소의 요청만 수신된다
     And 외부에서 접근 가능한 호스트 주소의 접근은 받아들여지지 않는다
 
-  Scenario: 앱셸은 모든 화면에서 주요 작업 영역 내비를 유지한다
+  Scenario: 앱셸은 모든 화면에서 좌측 LNB를 유지한다
     Covers:
-      - 하네스 UI는 모든 화면에서 요건, 게이트, Change Set, 실행 화면으로 이동하는 내비를 표시한다
+      - 하네스 UI는 모든 화면에서 요건, 표준 용어, 게이트, Change Set, 실행 화면으로 이동하는 좌측 LNB를 표시한다
 
     Given 하네스 작업자가 하네스 UI를 열었다
-    When 요건, 게이트, Change Set, 실행 화면을 오간다
-    Then 모든 화면에서 요건, 게이트, Change Set, 실행 화면으로 이동하는 내비가 보인다
+    When 요건, 표준 용어, 게이트, Change Set, 실행 화면을 오간다
+    Then 모든 화면에서 요건, 표준 용어, 게이트, Change Set, 실행 화면으로 이동하는 좌측 LNB가 보인다
 
   Scenario: scope 전환과 산출물 상태가 화면에 드러난다
     Covers:

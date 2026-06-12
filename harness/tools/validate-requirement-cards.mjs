@@ -102,7 +102,8 @@ const UI_PRIMITIVE_DENY_LIST = new Set([
     'ui.modal',
     'ui.dropdown',
     'ui.tab',
-    'ui.toggle'
+    'ui.toggle',
+    'ui.badge'
 ]);
 const scenariosDir = path.join(repoRoot, 'docs', 'scenarios');
 // 카드의 "시나리오 문서:" 줄이 아직 작성 예정으로 남아 있는지 판단하는 표기.
