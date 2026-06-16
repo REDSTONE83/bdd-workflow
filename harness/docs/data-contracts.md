@@ -108,7 +108,7 @@ build/{app|harness}/
 - `story`: `title`, `story`, `component`, `hasPlay`, `hasAssertion`. `hasPlay`는 story export가 `play` 함수를 가진다는 뜻이고, `hasAssertion`은 해당 `play` 본문 또는 참조 helper에서 `expect(...)`/assertion 호출이 발견됐다는 뜻이다.
 - `scenario`: `title`, `featureTitle`, `featureTags[]`, `covers[]`, `steps[]`
 - `test`: `source` (`back-end` | `front-end` | `harness`), `runtime` (`junit` | `playwright` | `node` | `storybook-vitest`), `displayName`, `titlePath[]`, `covers[]`, `resultKeys[]`, `hasPlay`, `hasAssertion`. Storybook Vitest test 엔트리는 story 엔트리와 같은 `hasPlay`/`hasAssertion` 값을 보존한다.
-- `card`: `id`, `title`, `status`, `priority`, `requirementType`, `specRole`, `targetSystem`, `productArea`, `qualityAttributes[]`, `verificationLevel`, `relatedRequirementIds[]`, `replacedByRequirementIds[]`, `purpose`, `scopeItems[]`, `acceptanceCriteria[]`, `verificationTargets`, `apiSkeleton[]`, `dbSkeleton[]`, `uiSkeleton[]`, `storybookContract[]`, `openQuestions[]`, `terms[]`, `outOfScopeItems[]`, `decisionLogs[]`, `sectionPresent`, `approved`, `bddReviewResult`, `bddReviewIncomplete`, `bddReviewApproved`. `purpose`는 `사용자/목적` 섹션의 본문 문자열이다. `scopeItems[]`, `outOfScopeItems[]`, `terms[]`는 각 섹션의 bullet 목록이다. `decisionLogs[]`는 `의사결정 로그` 섹션의 `{ date, decision, reason, decisionMaker, impact }` 목록이다. `acceptanceCriteria[]`는 `string`이 아니라 `{ text, target, invalidMarker? }` 객체 배열이다. `text`는 bullet 시작의 마커 토큰을 제거한 원문, `target`은 `API | UI | E2E | STATIC | null`, `invalidMarker`는 bullet 시작에 마커처럼 보이는 토큰이 있으나 허용 목록 밖일 때만 채워진다. 같은 카드의 `@Covers`, Storybook Vitest `covers`, live Playwright `Covers`, `.feature` `Covers:` 매칭은 모두 `text` 값으로 한다. `verificationTargets`는 `API`, `DB`, `UI`, `Storybook`, `E2E`, `STATIC` 같은 키를 `{ required: boolean | null, raw: string }`으로 둔다. `storybookContract[]`는 `{ title, states[], raw }` 형태이며 `title`은 Storybook sidebar title, `states[]`는 named export 이름이다. `bddReviewResult`는 `BDD 테스트 리뷰` 섹션에서 최신 `결과:` 라인만 추출한 `{ line, status, normalizedStatus } | null`이며, `Skeleton 결과:`와 자유 텍스트는 제외한다. `bddReviewIncomplete`/`bddReviewApproved`는 이 최신 결과 라인에서 계산한다.
+- `card`: `id`, `title`, `status`, `priority`, `requirementType`, `specRole`, `targetSystem`, `productArea`, `qualityAttributes[]`, `verificationLevel`, `parentRequirementIds[]`, `relatedRequirementIds[]`, `replacedByRequirementIds[]`, `purpose`, `scopeItems[]`, `acceptanceCriteria[]`, `verificationTargets`, `apiSkeleton[]`, `dbSkeleton[]`, `uiSkeleton[]`, `storybookContract[]`, `openQuestions[]`, `terms[]`, `outOfScopeItems[]`, `decisionLogs[]`, `sectionPresent`, `approved`, `bddReviewResult`, `bddReviewIncomplete`, `bddReviewApproved`. `purpose`는 `사용자/목적` 섹션의 본문 문자열이다. `scopeItems[]`, `outOfScopeItems[]`, `terms[]`는 각 섹션의 bullet 목록이다. `decisionLogs[]`는 `의사결정 로그` 섹션의 `{ date, decision, reason, decisionMaker, impact }` 목록이다. `parentRequirementIds[]`는 카드 헤더의 `상위 요건`에서 온 단일 소스이며, `없음`이면 빈 배열이다. `acceptanceCriteria[]`는 `string`이 아니라 `{ text, target, invalidMarker?, line }` 객체 배열이다. `line`은 카드 본문 전체 기준 1-based AC bullet 줄 번호다. `text`는 bullet 시작의 마커 토큰을 제거한 원문, `target`은 `API | UI | E2E | STATIC | null`, `invalidMarker`는 bullet 시작에 마커처럼 보이는 토큰이 있으나 허용 목록 밖일 때만 채워진다. 같은 카드의 `@Covers`, Storybook Vitest `covers`, live Playwright `Covers`, `.feature` `Covers:` 매칭은 모두 `text` 값으로 한다. `verificationTargets`는 `API`, `DB`, `UI`, `Storybook`, `E2E`, `STATIC` 같은 키를 `{ required: boolean | null, raw: string }`으로 둔다. `storybookContract[]`는 `{ title, states[], raw }` 형태이며 `title`은 Storybook sidebar title, `states[]`는 named export 이름이다. `bddReviewResult`는 `BDD 테스트 리뷰` 섹션에서 최신 `결과:` 라인만 추출한 `{ line, status, normalizedStatus } | null`이며, `Skeleton 결과:`와 자유 텍스트는 제외한다. `bddReviewIncomplete`/`bddReviewApproved`는 이 최신 결과 라인에서 계산한다.
 - `change-set`: `title`, `status`, `requestedDate`, `changeTypes[]`, `affectedRequirementIds[]`, `discussionStatus`, `requestSummary[]`, `scopeItems[]`, `outOfScopeItems[]`, `completionCriteria[]`, `verificationCommands[]`, `decisions[]`, `openDiscussions[]`, `sectionPresent`, `referencedRequirementIds[]`. Change Set은 별도 사람이 관리하는 ID를 만들지 않으므로 `location.identity`는 repo-relative 파일 경로다. `requirements[]`에는 `affectedRequirementIds[]`를 그대로 둔다.
 - `term`: `key`, `surfaces[]`, `mode`
 - `test-result`: `identity`, `alternateIdentities[]`, `status` (`PASS` | `FAIL` | `SKIP` | `NOT_RUN`), `runtime` (`junit` | `playwright` | `node` | `storybook-vitest`). 엔트리 `kind`는 항상 `"test-result"`이고, runner 구분은 `runtime` 필드를 쓴다.
@@ -163,7 +163,7 @@ build/{app|harness}/
 
 ## 게이트 요약 리포트 (Layer 4)
 
-REQ-033 구현 이후 통합 게이트 도구는 UI가 읽을 수 있는 `build/{app|harness}/reports/gate-report.json`을 만들 수 있다. 이 파일은 화면용 캐시일 뿐이며, 카테고리 판정의 원천은 여전히 `harness/tools/gate.mjs`다.
+REQ-033 구현 이후 통합 게이트 도구는 실행할 때마다 UI가 읽을 수 있는 `build/{app|harness}/reports/gate-report.json`을 만든다. 이 파일은 화면용 캐시일 뿐이며, 카테고리 판정의 원천은 여전히 `harness/tools/gate.mjs`다.
 
 최소 형태:
 
@@ -280,6 +280,7 @@ REQ-033 구현 이후 통합 게이트 도구는 UI가 읽을 수 있는 `build/
     {
       "id": "REQ-005",
       "title": "애플리케이션 기본 앱 셸",
+      "file": "app/docs/requirements/REQ-005-app-shell.md",
       "status": "검토중",
       "requirementType": "기능",
       "specRole": "원자 요건",
@@ -287,6 +288,8 @@ REQ-033 구현 이후 통합 게이트 도구는 UI가 읽을 수 있는 `build/
       "productArea": "platform",
       "qualityAttributes": ["usability"],
       "verificationLevel": "mixed",
+      "parentRequirementIds": [],
+      "childRequirementIds": [],
       "state": "RED" | "GREEN" | "BLUE" | "INACTIVE",
       "redReasons": [
         {
@@ -303,6 +306,7 @@ REQ-033 구현 이후 통합 게이트 도구는 UI가 읽을 수 있는 `build/
         {
           "criterion": "애플리케이션 기본 앱 셸이 표시된다",
           "target": "API" | "UI" | "E2E" | "STATIC" | null,
+          "line": 42,
           "status": "PASS" | "FAIL" | "SKIP" | "NOT_RUN" | "MISSING",
           "requiredChecks": [{ "target": "api" | "ui" | "e2e" | "static" | "unknown", "status": "PASS" }],
           "tests": [/* 연결된 test 인덱스 항목 + result */],

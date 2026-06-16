@@ -10,6 +10,7 @@
 제품 영역: category
 품질 속성: usability
 검증 수준: mixed
+상위 요건: REQ-015
 관련 요건: REQ-015, REQ-004
 대체 요건: 없음
 

@@ -104,10 +104,11 @@ function readAllRequirementCards() {
             productArea: entry.productArea ?? '',
             qualityAttributes: entry.qualityAttributes ?? [],
             verificationLevel: entry.verificationLevel ?? '',
+            parentRequirementIds: entry.parentRequirementIds ?? [],
             relatedRequirementIds: entry.relatedRequirementIds ?? [],
             replacedByRequirementIds: entry.replacedByRequirementIds ?? [],
             approved: Boolean(entry.approved),
-            file: path.join(workspaceRoot, entry.location?.file ?? ''),
+            file: entry.location?.file ?? '',
             referencedRequirementIds: entry.referencedRequirementIds ?? [],
             acceptanceCriteria: entry.acceptanceCriteria ?? [],
             openQuestions: entry.openQuestions ?? [],
@@ -391,6 +392,13 @@ function traceReason(ruleId, message, evidence = {}) {
     return { ruleId, message, evidence };
 }
 
+function blueBlockersFor(card) {
+    const blueBlockedBy = [];
+    if (!card.approved) blueBlockedBy.push(`요건 카드 상태가 승인 아님: ${card.status || '미기재'}`);
+    if (card.openQuestions.length > 0) blueBlockedBy.push('열린 질문 남음');
+    return blueBlockedBy;
+}
+
 function evaluateRequirement(card, apis, tests, scenarios, entities, results, frontEndIndex) {
     const requirementApis = apis.filter((api) => api.requirements.includes(card.id));
     const requirementTests = tests.filter((test) => test.requirements.includes(card.id));
@@ -405,6 +413,7 @@ function evaluateRequirement(card, apis, tests, scenarios, entities, results, fr
         return {
             criterion: text,
             target,
+            line: typeof criterion === 'string' ? 0 : (criterion.line ?? 0),
             ...targetCoverageForCriterion(text, requirementTests, requirementScenarios, results, target)
         };
     });
@@ -426,13 +435,11 @@ function evaluateRequirement(card, apis, tests, scenarios, entities, results, fr
             { criterion: row.criterion, status: row.status, requiredChecks: row.requiredChecks ?? [] }));
     }
 
+    const blueBlockedBy = blueBlockersFor(card);
     if (redReasons.length > 0) {
         return { ...card, state: 'RED', redReasons, apis: requirementApis, tests: requirementTests,
-            scenarios: requirementScenarios, entities: requirementEntities, frontEnd: frontEndSurfaces, coverage };
+            scenarios: requirementScenarios, entities: requirementEntities, frontEnd: frontEndSurfaces, coverage, blueBlockedBy };
     }
-    const blueBlockedBy = [];
-    if (!card.approved) blueBlockedBy.push(`요건 카드 상태가 승인 아님: ${card.status || '미기재'}`);
-    if (card.openQuestions.length > 0) blueBlockedBy.push('열린 질문 남음');
     return {
         ...card, state: blueBlockedBy.length === 0 ? 'BLUE' : 'GREEN',
         redReasons, blueBlockedBy,
@@ -450,12 +457,31 @@ function flattenScenarios(scenarioIndex) {
     );
 }
 
+function attachRequirementHierarchy(cards) {
+    const childrenByParent = new Map();
+    for (const card of cards) {
+        for (const parentId of card.parentRequirementIds ?? []) {
+            if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, []);
+            childrenByParent.get(parentId).push(card.id);
+        }
+    }
+    for (const childIds of childrenByParent.values()) {
+        childIds.sort((a, b) => a.localeCompare(b));
+    }
+    return cards.map((card) => ({
+        ...card,
+        parentRequirementIds: card.parentRequirementIds ?? [],
+        childRequirementIds: childrenByParent.get(card.id) ?? []
+    }));
+}
+
 function buildModel(allCards, cards, apis, tests, entities, results, terminologyReport, scenarioIndex, frontEndIndex, selectedIds, flags) {
-    const knownRequirementIds = new Set(cards.map((card) => card.id));
+    const cardsWithHierarchy = attachRequirementHierarchy(cards);
+    const knownRequirementIds = new Set(cardsWithHierarchy.map((card) => card.id));
     const terminologyBucket = bucketTerminologyFindings(terminologyReport, knownRequirementIds);
     const scenarios = flattenScenarios(scenarioIndex);
     const isSelected = (id) => !selectedIds || selectedIds.has(id);
-    const allRequirements = cards
+    const allRequirements = cardsWithHierarchy
         .map((card) => evaluateRequirement(card, apis, tests, scenarios, entities, results, frontEndIndex))
         .map((req) => attachTerminology(req, terminologyBucket));
     const requirements = allRequirements.filter((req) => isSelected(req.id));
@@ -614,7 +640,10 @@ function resolveSelectedIds(cli, allCards) {
     for (const reqFile of cli.requirementFiles) {
         if (!fs.existsSync(reqFile)) { errors.push(`--requirement-file 경로가 존재하지 않음: ${reqFile}`); continue; }
         const resolvedFile = fs.realpathSync(reqFile);
-        const match = allCards.find((card) => fs.realpathSync(card.file) === resolvedFile);
+        const match = allCards.find((card) => {
+            const cardFile = path.isAbsolute(card.file) ? card.file : path.join(workspaceRoot, card.file);
+            return fs.existsSync(cardFile) && fs.realpathSync(cardFile) === resolvedFile;
+        });
         if (!match) { errors.push(`--requirement-file: ${path.relative(workspaceRoot, reqFile)}에 일치하는 카드 없음`); continue; }
         if (!match.id) { errors.push(`--requirement-file: ${path.relative(workspaceRoot, reqFile)} 카드에 유효한 요건 ID 없음`); continue; }
         selected.add(match.id);

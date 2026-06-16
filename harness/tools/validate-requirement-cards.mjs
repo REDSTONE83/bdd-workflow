@@ -270,6 +270,7 @@ function validateCard(card, allCards, terminologyIndex) {
     const fname = path.basename(card.location?.file ?? '');
     const fnameMatch = fname.match(REQUIREMENT_FILENAME_PATTERN);
     const knownIds = new Set(allCards.map((c) => c.id).filter(Boolean));
+    const cardById = new Map(allCards.filter((c) => c.id).map((c) => [c.id, c]));
 
     if (!card.idRaw) {
         findings.push(findingForCard(card, 'CARD-ID-MISSING', '요건 ID 누락'));
@@ -375,6 +376,29 @@ function validateCard(card, allCards, terminologyIndex) {
         findings.push(findingForCard(card, 'CARD-REPLACED-BY-UNKNOWN',
             `대체 요건이 존재하지 않음: ${replacement}`,
             { replacedByRequirementId: replacement }));
+    }
+
+    // 상위 요건은 계층의 단일 소스다. 자식이 부모를 명시 선언하고, 부모는 실재하며
+    // 명세 역할이 '상위 요건'이어야 한다. 자식 목록(childRequirementIds)은 추적 판정기가 역산한다.
+    for (const parent of card.parentRequirementIds ?? []) {
+        if (parent === card.id) {
+            findings.push(findingForCard(card, 'CARD-PARENT-SELF',
+                '상위 요건이 자기 자신을 가리킴',
+                { parentRequirementId: parent }));
+            continue;
+        }
+        const parentCard = cardById.get(parent);
+        if (!parentCard) {
+            findings.push(findingForCard(card, 'CARD-PARENT-REQ-UNKNOWN',
+                `상위 요건이 존재하지 않음: ${parent}`,
+                { parentRequirementId: parent }));
+            continue;
+        }
+        if (parentCard.specRole !== '상위 요건') {
+            findings.push(findingForCard(card, 'CARD-PARENT-REQ-NOT-PARENT',
+                `상위 요건 ${parent}의 명세 역할이 '상위 요건'이 아님: "${parentCard.specRole || '미기재'}"`,
+                { parentRequirementId: parent, parentSpecRole: parentCard.specRole }));
+        }
     }
 
     if (card.status === '대체됨' && (card.replacedByRequirementIds ?? []).length === 0) {

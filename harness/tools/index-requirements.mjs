@@ -65,19 +65,38 @@ const AC_TARGET_TOKENS = ['API', 'UI', 'E2E', 'STATIC'];
 // 공백이 있으면 자연어로 간주해 마커 후보에서 제외한다.
 const AC_MARKER_VALID_PATTERN = /^\(([^()\s]+)\)\s+/;
 const AC_MARKER_LOOSE_PATTERN = /^\(([^()\s]+)\)/;
+const BULLET_PATTERN = /^\s*-\s+(?:\[[ xX]\]\s*)?(.+?)\s*$/;
+
+function parseAcMarker(raw) {
+    const validMatch = raw.match(AC_MARKER_VALID_PATTERN);
+    if (validMatch && AC_TARGET_TOKENS.includes(validMatch[1])) {
+        return { text: raw.slice(validMatch[0].length), target: validMatch[1] };
+    }
+    const looseMatch = raw.match(AC_MARKER_LOOSE_PATTERN);
+    if (looseMatch) {
+        return { text: raw, target: null, invalidMarker: looseMatch[1] };
+    }
+    return { text: raw, target: null };
+}
 
 function acceptanceCriterionItems(markdown) {
-    return bulletItems(markdown).map((raw) => {
-        const validMatch = raw.match(AC_MARKER_VALID_PATTERN);
-        if (validMatch && AC_TARGET_TOKENS.includes(validMatch[1])) {
-            return { text: raw.slice(validMatch[0].length), target: validMatch[1] };
-        }
-        const looseMatch = raw.match(AC_MARKER_LOOSE_PATTERN);
-        if (looseMatch) {
-            return { text: raw, target: null, invalidMarker: looseMatch[1] };
-        }
-        return { text: raw, target: null };
-    });
+    return bulletItems(markdown).map(parseAcMarker);
+}
+
+// 카드 본문 전체를 줄 단위로 훑어 `## 수용 기준` 섹션의 각 AC bullet에 1-based 줄
+// 번호를 부여한다. section() 부분 문자열은 절대 줄 번호를 잃으므로 본문을 직접 스캔한다.
+function acceptanceCriteriaWithLines(content) {
+    const lines = content.split('\n');
+    const headingIndex = lines.findIndex((line) => /^## 수용 기준\s*$/.test(line));
+    if (headingIndex < 0) return [];
+    const items = [];
+    for (let i = headingIndex + 1; i < lines.length; i += 1) {
+        if (/^## /.test(lines[i])) break;
+        const bullet = lines[i].match(BULLET_PATTERN);
+        if (!bullet) continue;
+        items.push({ ...parseAcMarker(bullet[1]), line: i + 1 });
+    }
+    return items;
 }
 
 function normalizeApprovalStatus(status) {
@@ -242,7 +261,8 @@ function parseCard(file) {
     const verificationLevel = headerValue(content, '검증 수준');
     const relatedRequirementIds = requirementRefs(headerValue(content, '관련 요건'));
     const replacedByRequirementIds = requirementRefs(headerValue(content, '대체 요건'));
-    const acceptanceCriteria = acceptanceCriterionItems(section(content, '수용 기준'));
+    const parentRequirementIds = requirementRefs(headerValue(content, '상위 요건'));
+    const acceptanceCriteria = acceptanceCriteriaWithLines(content);
     const purpose = section(content, '사용자/목적').trim();
     const scopeItems = bulletItems(section(content, '범위'));
     const openQuestions = bulletItems(section(content, '열린 질문'))
@@ -284,6 +304,7 @@ function parseCard(file) {
         verificationLevel,
         relatedRequirementIds,
         replacedByRequirementIds,
+        parentRequirementIds,
         approved: normalizeApprovalStatus(status),
         purpose,
         scopeItems,
@@ -327,6 +348,7 @@ function toEntry(card) {
         verificationLevel: card.verificationLevel,
         relatedRequirementIds: card.relatedRequirementIds,
         replacedByRequirementIds: card.replacedByRequirementIds,
+        parentRequirementIds: card.parentRequirementIds,
         approved: card.approved,
         purpose: card.purpose,
         scopeItems: card.scopeItems,
@@ -366,6 +388,8 @@ function main() {
 
 export {
     acceptanceCriterionItems,
+    acceptanceCriteriaWithLines,
+    parseAcMarker,
     bddReviewResultItems,
     bddReviewResultSummary,
     decisionLogItems,

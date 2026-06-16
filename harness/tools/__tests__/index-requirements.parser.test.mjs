@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 
 import {
     acceptanceCriterionItems,
+    acceptanceCriteriaWithLines,
     bddReviewResultItems,
     bddReviewResultSummary,
     decisionLogItems,
@@ -95,6 +96,37 @@ describe('acceptanceCriterionItems — multi-bullet behavior', () => {
         assert.equal(out[4].target, null);
         assert.equal(out[4].invalidMarker, undefined);
         assert.equal(out[5].invalidMarker, 'BE');
+    });
+});
+
+describe('acceptanceCriteriaWithLines', () => {
+    it('assigns absolute 1-based card body lines to AC bullets', () => {
+        const card = [
+            '# REQ-900 fixture',
+            '',
+            '요건 ID: REQ-900',
+            '제목: fixture',
+            '',
+            '## 사용자/목적',
+            '',
+            '- 목적은 수용 기준이 아니다.',
+            '',
+            '## 수용 기준',
+            '',
+            '- (STATIC) 첫 번째 AC',
+            '- [ ] (UI) 체크박스 AC',
+            '- (BE) 허용되지 않은 마커도 원본 line을 유지한다.',
+            '',
+            '## 열린 질문',
+            '',
+            '- 이 bullet은 AC가 아니다.'
+        ].join('\n');
+
+        assert.deepEqual(acceptanceCriteriaWithLines(card), [
+            { text: '첫 번째 AC', target: 'STATIC', line: 12 },
+            { text: '체크박스 AC', target: 'UI', line: 13 },
+            { text: '(BE) 허용되지 않은 마커도 원본 line을 유지한다.', target: null, invalidMarker: 'BE', line: 14 }
+        ]);
     });
 });
 

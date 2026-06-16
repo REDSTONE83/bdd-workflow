@@ -12,11 +12,13 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { outputRootFor } from './workspace-config.mjs';
+import { currentScope, outputRootFor } from './workspace-config.mjs';
 
 const harnessDir = outputRootFor();
 const stateFile = path.join(harnessDir, 'state', 'trace.state.json');
 const findingsDir = path.join(harnessDir, 'findings');
+const reportsDir = path.join(harnessDir, 'reports');
+const gateReportFile = path.join(reportsDir, 'gate-report.json');
 
 const CATEGORY_ORDER = ['TRACE', 'CARD', 'REF', 'TRC', 'BE', 'FE', 'SCN', 'TRM'];
 
@@ -120,7 +122,7 @@ function severityValue(finding, field) {
 }
 
 function categorizeFindings(selectedIds) {
-    const buckets = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, { errors: 0, byRuleId: {} }]));
+    const buckets = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, { errors: 0, byRuleId: {}, findingRefs: [] }]));
     const fileCache = new Map();
     for (const spec of FINDING_INPUTS) {
         if (!fileCache.has(spec.file)) fileCache.set(spec.file, loadFindings(spec.file));
@@ -133,6 +135,12 @@ function categorizeFindings(selectedIds) {
             buckets[spec.category].errors += 1;
             const ruleId = finding.ruleId ?? '(no ruleId)';
             buckets[spec.category].byRuleId[ruleId] = (buckets[spec.category].byRuleId[ruleId] ?? 0) + 1;
+            buckets[spec.category].findingRefs.push({
+                ruleId,
+                file: finding.location?.file ?? null,
+                line: finding.location?.line ?? 0,
+                requirements: finding.requirements ?? []
+            });
         }
     }
     return buckets;
@@ -219,6 +227,52 @@ function renderQuiet(buckets, traceReasons, filter, exit) {
     return `gate: ${parts.join(' ')}`;
 }
 
+function traceReportCategory(traceReasons) {
+    const byRuleId = traceReasons.length > 0 ? { 'TRACE-BLOCKED': traceReasons.length } : {};
+    return {
+        category: 'TRACE',
+        blocked: traceReasons.length > 0,
+        errors: traceReasons.length,
+        byRuleId,
+        findingRefs: []
+    };
+}
+
+function findingReportCategory(category, bucket) {
+    return {
+        category,
+        blocked: bucket.errors > 0,
+        errors: bucket.errors,
+        byRuleId: bucket.byRuleId,
+        findingRefs: bucket.findingRefs
+    };
+}
+
+function writeGateReport({ buckets, traceReasons, exit }) {
+    const traceFailing = traceReasons.length > 0;
+    const categoryFailing = CATEGORY_ORDER.some((category) => category !== 'TRACE' && buckets[category].errors > 0);
+    const categories = CATEGORY_ORDER.map((category) =>
+        category === 'TRACE'
+            ? traceReportCategory(traceReasons)
+            : findingReportCategory(category, buckets[category])
+    );
+    const payload = {
+        generatedAt: new Date().toISOString(),
+        schemaVersion: '1',
+        source: 'gate',
+        scope: currentScope(),
+        summary: {
+            passed: exit === 0,
+            traceFailing,
+            categoryFailing
+        },
+        categories
+    };
+
+    fs.mkdirSync(reportsDir, { recursive: true });
+    fs.writeFileSync(gateReportFile, JSON.stringify(payload, null, 2) + '\n');
+}
+
 function main() {
     const cli = parseCliArgs(process.argv.slice(2));
     assertRequiredInputs();
@@ -236,6 +290,7 @@ function main() {
     const traceFailing = traceReasons.length > 0;
     const failed = (cli.checkMode || cli.requireBlue) && (anyCategoryFailing || traceFailing);
     const exit = failed ? 1 : 0;
+    writeGateReport({ buckets, traceReasons, exit });
 
     const filterArray = selectedIds ? [...selectedIds].sort() : null;
     if (cli.quiet) {
