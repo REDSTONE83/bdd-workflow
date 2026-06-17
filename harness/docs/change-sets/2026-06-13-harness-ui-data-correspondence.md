@@ -16,7 +16,7 @@
 
 - 요건 카드 표준에 `상위 요건` 헤더 필드를 추가한다. 계층(parent/child)을 `관련 요건`+`명세 역할` 휴리스틱으로 파생하지 않고 자식 카드가 부모를 명시 선언하게 한다.
 - `index-requirements.mjs`가 `상위 요건`을 `parentRequirementIds`로 파싱하고, 수용 기준 항목에 카드 본문 줄 번호(`line`)를 부여한다.
-- `validate-requirement-cards.mjs`가 `상위 요건` 참조의 존재 여부와 부모의 명세 역할(`상위 요건`)을 검증한다(`CARD-PARENT-REQ-UNKNOWN`, `CARD-PARENT-REQ-NOT-PARENT`, `CARD-PARENT-SELF`).
+- `validate-requirement-cards.mjs`가 `상위 요건` 참조의 존재 여부, 단일 부모 제약, 비활성 카드의 부모 금지, 순환 여부, 부모의 명세 역할(`상위 요건`)을 검증한다(`CARD-PARENT-REQ-UNKNOWN`, `CARD-PARENT-REQ-NOT-PARENT`, `CARD-PARENT-SELF`, `CARD-PARENT-MULTIPLE`, `CARD-PARENT-INACTIVE-FORBIDDEN`, `CARD-PARENT-CYCLE`).
 - `evaluate-trace-state.mjs`가 `parentRequirementIds`를 전파하고 `childRequirementIds`를 역산하며, RED 카드에도 `blueBlockedBy`를 채우고, 수용 기준 `line`을 coverage row에 전파한다.
 - `evaluate-trace-state.mjs`/`render-trace-report.mjs`의 `trace.state.json` `requirements[].file`을 절대 경로가 아니라 repo-relative 경로로 출력한다.
 - `gate.mjs`가 데이터 계약의 게이트 요약 리포트(`build/{scope}/reports/gate-report.json`)를 생성한다.
@@ -32,6 +32,7 @@
 
 - `상위 요건: REQ-XXX`를 가진 카드의 추적 상태에 `parentRequirementIds`가 들어가고, 부모 카드 추적 상태에 `childRequirementIds`가 역산되어 들어간다.
 - 존재하지 않거나 `상위 요건`이 아닌 부모를 가리키면 카드 검사가 오류를 보고한다.
+- 한 카드가 둘 이상의 `상위 요건`을 적거나, 대체됨/폐기 카드가 `상위 요건`을 가지거나, `상위 요건` 관계에 순환이 있으면 카드 검사가 오류를 보고한다.
 - RED 카드의 추적 상태가 `blueBlockedBy`를 가진다.
 - 수용 기준 항목과 coverage row가 카드 본문 줄 번호(`line`)를 가진다.
 - `trace.state.json`의 `requirements[].file`이 repo-relative다.
@@ -53,6 +54,9 @@
 - 2026-06-13: `blueBlockedBy`는 RED 카드에도 채운다. UI 요건 상세가 "왜 BLUE가 아닌가"를 RED 단계에서도 표시할 수 있어야 하기 때문이다. RED 자체는 `state` 값으로 드러나고, `blueBlockedBy`는 승인/열린 질문 같은 비-RED 차단 사유만 담는다.
 - 2026-06-13: `trace.state.json`의 파일 경로는 데이터 계약의 "repo-relative" 규약을 따른다. 절대 경로 누출은 추적 산출물 이식성과 UI 링크 생성을 깨뜨린다.
 - 2026-06-13: 게이트 요약 리포트는 `gate.mjs`가 게이트 실행마다 생성한다. UI는 이 파일을 읽기만 하고 카테고리 분류나 차단 여부를 자체 계산하지 않는다. REQ-010 단일 게이트 원칙을 유지한다.
+- 2026-06-17: `상위 요건`은 단일 부모만 허용한다. 다중 부모는 UI 트리와 추적 판정의 대표 부모를 모호하게 하므로 `CARD-PARENT-MULTIPLE`로 차단한다.
+- 2026-06-17: `상태: 대체됨` 또는 `상태: 폐기` 카드는 계층에서 제외한다. 완료 판정 대상이 아닌 카드가 부모/자식 트리에 남으면 현재 명세 구조가 왜곡되므로 `CARD-PARENT-INACTIVE-FORBIDDEN`으로 차단한다.
+- 2026-06-17: `상위 요건` 관계는 순환할 수 없다. 추적 판정기가 부모에서 자식을 역산하고 UI가 계층으로 표시하므로 순환은 `CARD-PARENT-CYCLE`로 차단한다.
 
 ## 열린 논의
 

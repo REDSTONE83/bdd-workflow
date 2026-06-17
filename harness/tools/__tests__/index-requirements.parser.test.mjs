@@ -128,6 +128,29 @@ describe('acceptanceCriteriaWithLines', () => {
             { text: '(BE) 허용되지 않은 마커도 원본 line을 유지한다.', target: null, invalidMarker: 'BE', line: 14 }
         ]);
     });
+
+    it('matches acceptanceCriterionItems except for source line metadata', () => {
+        const criteria = [
+            '- (API) API 응답을 반환한다.',
+            '- [ ] (UI) 화면에 상태를 표시한다.',
+            '- (API): 잘못된 마커는 원문을 유지한다.',
+            '- 마커 없는 AC'
+        ].join('\n');
+        const card = [
+            '# REQ-900 fixture',
+            '',
+            '## 수용 기준',
+            criteria,
+            '',
+            '## 열린 질문',
+            '',
+            '- 없음'
+        ].join('\n');
+
+        const withLines = acceptanceCriteriaWithLines(card)
+            .map(({ line, ...criterion }) => criterion);
+        assert.deepEqual(withLines, acceptanceCriterionItems(criteria));
+    });
 });
 
 describe('verificationTargetItems', () => {

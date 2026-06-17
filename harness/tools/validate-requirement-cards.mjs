@@ -265,6 +265,26 @@ function verificationContractFindings(card) {
     return findings;
 }
 
+function parentCycleFor(card, cardById) {
+    if (!card.id) return null;
+    if ((card.parentRequirementIds ?? []).includes(card.id)) return null;
+    const visited = new Set([card.id]);
+    let current = card;
+    while ((current.parentRequirementIds ?? []).length > 0) {
+        // Multiple parents are already rejected by CARD-PARENT-MULTIPLE. Follow the
+        // canonical first parent here only to detect cycles in the supported shape.
+        const parentId = current.parentRequirementIds[0];
+        if (visited.has(parentId)) {
+            return [...visited, parentId];
+        }
+        visited.add(parentId);
+        const parent = cardById.get(parentId);
+        if (!parent) return null;
+        current = parent;
+    }
+    return null;
+}
+
 function validateCard(card, allCards, terminologyIndex) {
     const findings = [];
     const fname = path.basename(card.location?.file ?? '');
@@ -380,7 +400,24 @@ function validateCard(card, allCards, terminologyIndex) {
 
     // 상위 요건은 계층의 단일 소스다. 자식이 부모를 명시 선언하고, 부모는 실재하며
     // 명세 역할이 '상위 요건'이어야 한다. 자식 목록(childRequirementIds)은 추적 판정기가 역산한다.
-    for (const parent of card.parentRequirementIds ?? []) {
+    const parentRequirementIds = card.parentRequirementIds ?? [];
+    if (parentRequirementIds.length > 1) {
+        findings.push(findingForCard(card, 'CARD-PARENT-MULTIPLE',
+            '상위 요건은 하나만 적을 수 있음',
+            { parentRequirementIds }));
+    }
+    if (['대체됨', '폐기'].includes(card.status) && parentRequirementIds.length > 0) {
+        findings.push(findingForCard(card, 'CARD-PARENT-INACTIVE-FORBIDDEN',
+            `상태=${card.status}인 카드는 상위 요건을 가질 수 없음`,
+            { status: card.status, parentRequirementIds }));
+    }
+    const parentCycle = parentCycleFor(card, cardById);
+    if (parentCycle) {
+        findings.push(findingForCard(card, 'CARD-PARENT-CYCLE',
+            `상위 요건 관계에 순환이 있음: ${parentCycle.join(' -> ')}`,
+            { cycle: parentCycle }));
+    }
+    for (const parent of parentRequirementIds) {
         if (parent === card.id) {
             findings.push(findingForCard(card, 'CARD-PARENT-SELF',
                 '상위 요건이 자기 자신을 가리킴',

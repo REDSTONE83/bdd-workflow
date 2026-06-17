@@ -128,4 +128,51 @@ describe('validate-requirement-cards — 상위 요건', () => {
             { ruleId: 'CARD-PARENT-REQ-NOT-PARENT', requirement: 'REQ-901', parent: 'REQ-900', parentSpecRole: '원자 요건' }
         ]);
     });
+
+    it('rejects more than one parent requirement', () => {
+        const payload = runValidator([
+            cardFixture({ id: 'REQ-900', specRole: '상위 요건' }),
+            cardFixture({ id: 'REQ-902', specRole: '상위 요건' }),
+            cardFixture({ id: 'REQ-901', parentRequirementIds: ['REQ-900', 'REQ-902'] })
+        ]);
+
+        const finding = payload.findings.find((item) => item.ruleId === 'CARD-PARENT-MULTIPLE');
+        assert.equal(finding.requirements[0], 'REQ-901');
+        assert.deepEqual(finding.evidence.parentRequirementIds, ['REQ-900', 'REQ-902']);
+    });
+
+    it('rejects parent requirements on inactive cards', () => {
+        const payload = runValidator([
+            cardFixture({ id: 'REQ-900', specRole: '상위 요건' }),
+            cardFixture({
+                id: 'REQ-901',
+                status: '대체됨',
+                parentRequirementIds: ['REQ-900'],
+                replacedByRequirementIds: ['REQ-900']
+            })
+        ]);
+
+        const finding = payload.findings.find((item) => item.ruleId === 'CARD-PARENT-INACTIVE-FORBIDDEN');
+        assert.equal(finding.requirements[0], 'REQ-901');
+        assert.deepEqual(finding.evidence, {
+            status: '대체됨',
+            parentRequirementIds: ['REQ-900']
+        });
+    });
+
+    it('rejects cycles in parent requirement links', () => {
+        const payload = runValidator([
+            cardFixture({ id: 'REQ-900', specRole: '상위 요건', parentRequirementIds: ['REQ-901'] }),
+            cardFixture({ id: 'REQ-901', specRole: '상위 요건', parentRequirementIds: ['REQ-900'] })
+        ]);
+
+        const cycles = payload.findings
+            .filter((item) => item.ruleId === 'CARD-PARENT-CYCLE')
+            .map((item) => ({ requirement: item.requirements[0], cycle: item.evidence.cycle }))
+            .sort((a, b) => a.requirement.localeCompare(b.requirement));
+        assert.deepEqual(cycles, [
+            { requirement: 'REQ-900', cycle: ['REQ-900', 'REQ-901', 'REQ-900'] },
+            { requirement: 'REQ-901', cycle: ['REQ-901', 'REQ-900', 'REQ-901'] }
+        ]);
+    });
 });

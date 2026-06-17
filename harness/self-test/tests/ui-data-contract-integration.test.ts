@@ -159,3 +159,78 @@ harnessTest({
     ]);
     assert.ok(report.categories.every((category: any) => category.blocked === false && category.errors === 0));
 });
+
+harnessTest({
+    requirement: 'REQ-033',
+    name: '게이트 차단 결과는 UI용 gate-report.json에 blocked와 findingRefs로 전파된다',
+    covers: ['게이트 화면의 카테고리 차단 판정은 통합 하네스 게이트 도구의 판정과 일치한다']
+}, () => {
+    const stateFile = path.join(stateDir, 'trace.state.json');
+    const reportFile = path.join(reportsDir, 'gate-report.json');
+    const files = [stateFile, reportFile, ...findingFiles.map((file) => path.join(findingsDir, file))];
+
+    const report = withFileBackups(files, () => {
+        writeJson(stateFile, {
+            generatedAt: '2026-06-16T00:00:00.000Z',
+            schemaVersion: '1',
+            source: 'trace.state',
+            filter: null,
+            requirements: [
+                {
+                    id: 'REQ-900',
+                    status: '승인',
+                    state: 'RED',
+                    redReasons: [{ ruleId: 'TRACE-AC-MISSING', message: 'fixture RED' }],
+                    blueBlockedBy: []
+                }
+            ]
+        });
+        const findings = allCleanFindings();
+        findings['requirement-cards.findings.json'].findings.push({
+            ruleId: 'CARD-PARENT-MULTIPLE',
+            severity: 'error',
+            strictSeverity: 'error',
+            requirements: ['REQ-900'],
+            message: 'fixture CARD finding',
+            location: {
+                file: 'harness/docs/requirements/REQ-900-fixture.md',
+                line: 13
+            }
+        });
+        for (const file of findingFiles) {
+            writeJson(path.join(findingsDir, file), findings[file] ?? emptyFindingPayload(file));
+        }
+
+        const run = runNodeTool('gate.mjs', ['--check', '--quiet'], { allowNonZero: true });
+        assert.equal(run.status, 1);
+        assert.ok(run.output.includes('gate: exit=1'));
+        return readJson(reportFile);
+    });
+
+    const trace = report.categories.find((category: any) => category.category === 'TRACE');
+    const card = report.categories.find((category: any) => category.category === 'CARD');
+
+    assert.deepEqual(report.summary, {
+        passed: false,
+        traceFailing: true,
+        categoryFailing: true
+    });
+    assert.deepEqual(trace, {
+        category: 'TRACE',
+        blocked: true,
+        errors: 1,
+        byRuleId: { 'TRACE-BLOCKED': 1 },
+        findingRefs: []
+    });
+    assert.equal(card.blocked, true);
+    assert.equal(card.errors, 1);
+    assert.deepEqual(card.byRuleId, { 'CARD-PARENT-MULTIPLE': 1 });
+    assert.deepEqual(card.findingRefs, [
+        {
+            ruleId: 'CARD-PARENT-MULTIPLE',
+            file: 'harness/docs/requirements/REQ-900-fixture.md',
+            line: 13,
+            requirements: ['REQ-900']
+        }
+    ]);
+});

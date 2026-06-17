@@ -157,7 +157,7 @@ function buildMarkdown(model) {
         if ((requirement.replacedByRequirementIds ?? []).length > 0) {
             lines.push(`Replaced by: ${requirement.replacedByRequirementIds.join(', ')}`);
         }
-        lines.push(`Card: ${path.relative(workspaceRoot, requirement.file)}`);
+        lines.push(`Card: ${requirement.file}`);
         lines.push('');
 
         if (requirement.redReasons.length > 0) {
@@ -286,7 +286,7 @@ function buildMarkdown(model) {
         for (const report of model.structureReports) {
             if (report.issues.length === 0) continue;
             lines.push(`### ${report.id}${report.title ? ' ' + report.title : ''}`);
-            lines.push(`Card: ${path.relative(workspaceRoot, report.file)}`);
+            lines.push(`Card: ${report.file}`);
             for (const issue of report.issues) lines.push(`- ${issue}`);
             lines.push('');
         }

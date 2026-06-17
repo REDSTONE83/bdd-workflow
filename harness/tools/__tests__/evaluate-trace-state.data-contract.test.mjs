@@ -84,6 +84,11 @@ describe('evaluate-trace-state — UI data contract fields', () => {
                 approved: true
             }),
             cardEntry({
+                id: 'REQ-902',
+                parentRequirementIds: ['REQ-900'],
+                location: { file: 'harness/docs/requirements/REQ-902-child.md', line: 0, identity: 'REQ-902' }
+            }),
+            cardEntry({
                 id: 'REQ-901',
                 parentRequirementIds: ['REQ-900'],
                 location: { file: 'harness/docs/requirements/REQ-901-child.md', line: 0, identity: 'REQ-901' }
@@ -95,7 +100,7 @@ describe('evaluate-trace-state — UI data contract fields', () => {
         const child = state.requirements.find((requirement) => requirement.id === 'REQ-901');
 
         assert.deepEqual(child.parentRequirementIds, ['REQ-900']);
-        assert.deepEqual(parent.childRequirementIds, ['REQ-901']);
+        assert.deepEqual(parent.childRequirementIds, ['REQ-901', 'REQ-902']);
         assert.equal(child.file, 'harness/docs/requirements/REQ-901-child.md');
         assert.equal(child.coverage[0].line, 42);
         assert.equal(child.state, 'RED');
