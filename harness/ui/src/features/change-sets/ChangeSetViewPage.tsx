@@ -38,7 +38,7 @@ function DetailList({ title, items, mono = false }: { title: string; items: stri
       <h2 className="text-sm font-semibold text-foreground">{title}</h2>
       {items.length > 0 ? (
         <ul className={mono ? "mt-2 space-y-1 font-mono text-xs text-muted-foreground" : "mt-2 space-y-1 text-sm text-muted-foreground"}>
-          {items.map((item) => <li key={item}>{item}</li>)}
+          {items.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
         </ul>
       ) : (
         <div className="mt-2 text-sm text-muted-foreground">없음</div>
