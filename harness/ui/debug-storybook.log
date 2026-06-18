@@ -1,0 +1,16 @@
+[20:39:37.027] [INFO] storybook v10.4.1
+[20:39:37.498] [DEBUG] Getting package.json info for /Users/redstone/Workspace/claude/bdd-workflow/harness/ui/package.json...
+[20:39:37.685] [INFO] Starting...
+[20:39:37.798] [DEBUG] Starting preview..
+[20:39:37.817] [DEBUG] Using tsconfig paths for react-docgen
+[20:39:37.874] [DEBUG] Change detection enabled.
+[20:39:37.874] [DEBUG] Change detection: snapshotting Vite resolve config (restart required if vite.config.ts changes)
+[20:39:37.874] [DEBUG] Change detection: ignored 12 regex alias(es); related modules tracked as opaque-leaf.
+[20:39:37.874] [DEBUG] ChangeDetectionResolverFactory: skipped regex aliases [/^@storybook\/global$/, /^storybook\/test$/, /^storybook\/actions$/, /^storybook\/preview-api$/, /^storybook\/internal\/channels$/, /^storybook\/internal\/client-logger$/, /^storybook\/internal\/core-events$/, /^storybook\/internal\/preview-errors$/, /^storybook\/internal\/types$/, /^storybook\/internal\/preview-api$/, /^\/?@vite\/env/, /^\/?@vite\/client/]
+[20:39:37.876] [ERROR] [38;2;241;97;97mError: listen EADDRINUSE: address already in use 127.0.0.1:6007[39m
+    at Server.setupListenHandle [as _listen2] (node:net:1948:16)
+    at listenInCluster (node:net:2005:12)
+    at node:net:2214:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+[20:39:37.877] [WARN] Broken build, fix the error above.
+You may need to refresh the browser.

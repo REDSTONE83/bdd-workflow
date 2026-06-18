@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "harness-ui",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "harness:ui"],
+      "port": 5180
+    }
+  ]
+}
