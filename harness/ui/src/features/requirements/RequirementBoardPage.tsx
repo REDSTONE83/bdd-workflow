@@ -5,14 +5,17 @@
  */
 import type { ReactNode } from "react";
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { requirementRows, requirementSummary } from "../../lib/harness-data/fixtures";
-import type { RequirementRow, RequirementSummary, TraceState } from "../../lib/harness-data/types";
+import { loadRequirementBoard } from "../../lib/harness-data/client";
+import type { HarnessScope, RequirementRow, RequirementSummary, TraceState } from "../../lib/harness-data/types";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { EmptyState } from "../../components/ui/empty-state";
+import { ErrorState } from "../../components/ui/ErrorState";
 import { Input } from "../../components/ui/input";
+import { LoadingState } from "../../components/ui/LoadingState";
 import { MetricCard } from "../../components/ui/metric-card";
 import { Select } from "../../components/ui/select";
 import { cn } from "../../lib/utils";
@@ -212,6 +215,14 @@ export function RequirementBoard({
   );
 }
 
-export function RequirementBoardPage() {
-  return <RequirementBoard rows={requirementRows} summary={requirementSummary} />;
+export function RequirementBoardPage({ scope }: { scope: HarnessScope }) {
+  const query = useQuery({
+    queryKey: ["harness-data", scope, "requirements"],
+    queryFn: () => loadRequirementBoard(scope),
+  });
+
+  if (query.isLoading) return <LoadingState label="요건 목록을 불러오는 중" />;
+  if (query.isError || !query.data) return <ErrorState message={query.error instanceof Error ? query.error.message : "요건 추적 산출물을 읽지 못했다."} />;
+
+  return <RequirementBoard rows={query.data.rows} summary={query.data.summary} />;
 }

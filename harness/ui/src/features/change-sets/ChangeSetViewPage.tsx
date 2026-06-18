@@ -4,10 +4,13 @@
  * @Route /change-sets
  */
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Search, X } from "lucide-react";
 import { Link } from "react-router-dom";
-import { changeSetRows } from "../../lib/harness-data/fixtures";
-import type { ChangeSetRow, RequirementRow, TraceState } from "../../lib/harness-data/types";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { LoadingState } from "../../components/ui/LoadingState";
+import { loadChangeSets } from "../../lib/harness-data/client";
+import type { ChangeSetRow, HarnessScope, RequirementRow, TraceState } from "../../lib/harness-data/types";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { Button, buttonVariants } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
@@ -35,7 +38,7 @@ function DetailList({ title, items, mono = false }: { title: string; items: stri
       <h2 className="text-sm font-semibold text-foreground">{title}</h2>
       {items.length > 0 ? (
         <ul className={mono ? "mt-2 space-y-1 font-mono text-xs text-muted-foreground" : "mt-2 space-y-1 text-sm text-muted-foreground"}>
-          {items.map((item) => <li key={item}>{item}</li>)}
+          {items.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
         </ul>
       ) : (
         <div className="mt-2 text-sm text-muted-foreground">없음</div>
@@ -267,6 +270,14 @@ export function ChangeSetView({
   );
 }
 
-export function ChangeSetViewPage() {
-  return <ChangeSetView rows={changeSetRows} />;
+export function ChangeSetViewPage({ scope }: { scope: HarnessScope }) {
+  const query = useQuery({
+    queryKey: ["harness-data", scope, "change-sets"],
+    queryFn: () => loadChangeSets(scope),
+  });
+
+  if (query.isLoading) return <LoadingState label="Change Set을 불러오는 중" />;
+  if (query.isError || !query.data) return <ErrorState message={query.error instanceof Error ? query.error.message : "Change Set 산출물을 읽지 못했다."} />;
+
+  return <ChangeSetView rows={query.data} />;
 }

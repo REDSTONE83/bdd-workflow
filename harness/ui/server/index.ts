@@ -2,6 +2,15 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  buildChangeSetRows,
+  buildCommandRunnerModel,
+  buildGateViewModel,
+  buildRequirementBoardModel,
+  buildRequirementDetailModel,
+  commandDefinitions,
+  defaultWorkspaceRoot,
+} from "../src/lib/harness-data/artifact-api.ts";
 
 export const harnessUiPort = Number(process.env.HARNESS_UI_PORT ?? 5180);
 export const harnessUiHost = "127.0.0.1";
@@ -15,16 +24,9 @@ const scopeDocDirs = {
   harness: "harness/docs",
 } as const;
 
-export const commandRegistry = [
-  { id: "harness:trace", supportsRequirement: true },
-  { id: "harness:validate", supportsRequirement: false },
-  { id: "harness:self-test", supportsRequirement: false },
-  { id: "app:trace", supportsRequirement: true },
-  { id: "app:validate", supportsRequirement: false },
-  { id: "repo:validate", supportsRequirement: false },
-] as const;
+export const commandRegistry = commandDefinitions;
 
-export const allowedCommands = commandRegistry.map((command) => command.id);
+export const allowedCommands = commandDefinitions.map((command) => command.id);
 
 type CommandRunValidation =
   | { ok: true; commandId: string; requirementId?: string }
@@ -136,7 +138,7 @@ export function buildTerminologyBrowserModel(indexPayload: unknown, scope: Harne
   };
 }
 
-export function readTerminologyBrowserModel(scope: HarnessUiScope = "harness", workspaceRoot = process.cwd()) {
+export function readTerminologyBrowserModel(scope: HarnessUiScope = "harness", workspaceRoot = defaultWorkspaceRoot) {
   const indexPath = path.join(workspaceRoot, "build", scopeOutputDirs[scope], "indexes", "terminology.index.json");
   return buildTerminologyBrowserModel(JSON.parse(fs.readFileSync(indexPath, "utf8")), scope);
 }
@@ -169,7 +171,7 @@ function collectSourceDocs(dir: string): string[] {
   return docs;
 }
 
-export function buildArtifactSummary(scope: HarnessUiScope, workspaceRoot = process.cwd()): ArtifactSummaryDto {
+export function buildArtifactSummary(scope: HarnessUiScope, workspaceRoot = defaultWorkspaceRoot): ArtifactSummaryDto {
   const traceFile = path.join(workspaceRoot, "build", scopeOutputDirs[scope], "state", "trace.state.json");
   let traceStat: fs.Stats | null = null;
   try {
@@ -204,10 +206,12 @@ export function buildArtifactSummary(scope: HarnessUiScope, workspaceRoot = proc
   return { scope, generatedAt, missing: false, stale: staleSources.length > 0, staleSources, autoRefresh: "idle" };
 }
 
-export function createHarnessUiServer(options: { workspaceRoot?: string } = {}) {
-  const workspaceRoot = options.workspaceRoot ?? process.cwd();
-
-  return http.createServer(async (request, response) => {
+export async function handleHarnessApiRequest(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: { workspaceRoot?: string } = {},
+) {
+    const workspaceRoot = options.workspaceRoot ?? defaultWorkspaceRoot;
     const url = new URL(request.url ?? "/", `http://${harnessUiHost}:${harnessUiPort}`);
     response.setHeader("content-type", "application/json; charset=utf-8");
 
@@ -217,7 +221,88 @@ export function createHarnessUiServer(options: { workspaceRoot?: string } = {}) 
     }
 
     if (url.pathname === "/api/commands") {
-      json(response, 200, { commands: allowedCommands });
+      json(response, 200, { commands: commandDefinitions });
+      return;
+    }
+
+    if (url.pathname === "/api/requirements") {
+      const scope = scopeFromParam(url.searchParams.get("scope"));
+      if (!scope) {
+        json(response, 400, { error: "지원하지 않는 범위다." });
+        return;
+      }
+
+      try {
+        json(response, 200, buildRequirementBoardModel(scope, workspaceRoot));
+      } catch {
+        json(response, 404, { error: "요건 추적 산출물을 읽을 수 없다." });
+      }
+      return;
+    }
+
+    const requirementMatch = url.pathname.match(/^\/api\/requirements\/([^/]+)$/);
+    if (requirementMatch) {
+      const scope = scopeFromParam(url.searchParams.get("scope"));
+      if (!scope) {
+        json(response, 400, { error: "지원하지 않는 범위다." });
+        return;
+      }
+
+      try {
+        const detail = buildRequirementDetailModel(scope, decodeURIComponent(requirementMatch[1]), workspaceRoot);
+        if (!detail) {
+          json(response, 404, { error: "요건 상세를 찾을 수 없다." });
+          return;
+        }
+        json(response, 200, detail);
+      } catch {
+        json(response, 404, { error: "요건 상세 산출물을 읽을 수 없다." });
+      }
+      return;
+    }
+
+    if (url.pathname === "/api/gate") {
+      const scope = scopeFromParam(url.searchParams.get("scope"));
+      if (!scope) {
+        json(response, 400, { error: "지원하지 않는 범위다." });
+        return;
+      }
+
+      try {
+        json(response, 200, buildGateViewModel(scope, workspaceRoot));
+      } catch {
+        json(response, 404, { error: "게이트 산출물을 읽을 수 없다." });
+      }
+      return;
+    }
+
+    if (url.pathname === "/api/change-sets") {
+      const scope = scopeFromParam(url.searchParams.get("scope"));
+      if (!scope) {
+        json(response, 400, { error: "지원하지 않는 범위다." });
+        return;
+      }
+
+      try {
+        json(response, 200, { rows: buildChangeSetRows(scope, workspaceRoot) });
+      } catch {
+        json(response, 404, { error: "Change Set 산출물을 읽을 수 없다." });
+      }
+      return;
+    }
+
+    if (url.pathname === "/api/command-runner") {
+      const scope = scopeFromParam(url.searchParams.get("scope"));
+      if (!scope) {
+        json(response, 400, { error: "지원하지 않는 범위다." });
+        return;
+      }
+
+      try {
+        json(response, 200, buildCommandRunnerModel(scope, workspaceRoot));
+      } catch {
+        json(response, 404, { error: "명령 실행 화면 데이터를 읽을 수 없다." });
+      }
       return;
     }
 
@@ -324,6 +409,11 @@ export function createHarnessUiServer(options: { workspaceRoot?: string } = {}) 
     }
 
     json(response, 404, { error: "not found" });
+}
+
+export function createHarnessUiServer(options: { workspaceRoot?: string } = {}) {
+  return http.createServer((request, response) => {
+    void handleHarnessApiRequest(request, response, options);
   });
 }
 

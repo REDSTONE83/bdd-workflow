@@ -2,8 +2,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { RequirementBoard } from "./RequirementBoardPage";
-import { RequirementDetailPage } from "./RequirementDetailPage";
-import { requirementRows, requirementSummary } from "../../lib/harness-data/fixtures";
+import { RequirementDetailView } from "./RequirementDetailView";
+import { requirementDetail, requirementRows, requirementSummary } from "../../lib/harness-data/fixtures";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { ErrorState } from "../../components/ui/ErrorState";
 
@@ -178,7 +178,7 @@ export const DetailNavigation: Story = {
       <Routes>
         <Route path="/" element={<RequirementBoard {...args} />} />
         <Route path="/requirements" element={<RequirementBoard {...args} />} />
-        <Route path="/requirements/:requirementId" element={<RequirementDetailPage />} />
+        <Route path="/requirements/:requirementId" element={<RequirementDetailView detail={requirementDetail} />} />
       </Routes>
       <LocationProbe />
     </>

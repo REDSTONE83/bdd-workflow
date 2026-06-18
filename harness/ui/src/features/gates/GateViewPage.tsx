@@ -4,8 +4,11 @@
  * @Route /gate
  */
 import { useState, type FormEvent } from "react";
-import { findingRows, gateCategories } from "../../lib/harness-data/fixtures";
-import type { FindingRow, GateCategory } from "../../lib/harness-data/types";
+import { useQuery } from "@tanstack/react-query";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { LoadingState } from "../../components/ui/LoadingState";
+import { loadGateView } from "../../lib/harness-data/client";
+import type { FindingRow, GateCategory, HarnessScope } from "../../lib/harness-data/types";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
@@ -104,6 +107,14 @@ export function GateView({ categories, findings }: { categories: GateCategory[];
   );
 }
 
-export function GateViewPage() {
-  return <GateView categories={gateCategories} findings={findingRows} />;
+export function GateViewPage({ scope }: { scope: HarnessScope }) {
+  const query = useQuery({
+    queryKey: ["harness-data", scope, "gate"],
+    queryFn: () => loadGateView(scope),
+  });
+
+  if (query.isLoading) return <LoadingState label="게이트 결과를 불러오는 중" />;
+  if (query.isError || !query.data) return <ErrorState message={query.error instanceof Error ? query.error.message : "게이트 산출물을 읽지 못했다."} />;
+
+  return <GateView categories={query.data.categories} findings={query.data.findings} />;
 }
