@@ -3,7 +3,7 @@
 요건 ID: REQ-032
 제목: 하네스 UI 요건 상세 추적
 우선순위: 높음
-상태: Skeleton 검토중
+상태: 승인
 요건 종류: 하네스
 명세 역할: 원자 요건
 대상 시스템: harness
@@ -144,6 +144,16 @@
   리뷰자: REDSTONE
   확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
+
+- 리뷰일: 2026-06-17
+  리뷰자: REDSTONE
+  확인: `harness/ui/src/features/requirements/RequirementDetail.stories.tsx`의 Storybook Vitest play 검증이 요건 상세 머리 영역, 탭 구분, 개요 섹션, AC 카드와 연결 테스트/시나리오, GWT 표시, RED/BLUE 사유, 산출물/소스 링크, API Request/Response 중첩 펼침, Entity 컬럼 펼침, UI 표면 Storybook 검토, 요건 목록 복귀 query 보존을 확인한다. `npm run test:storybook`과 `npm run harness:trace -- --requirement REQ-032`가 통과했고 REQ-032 trace state는 GREEN이다.
+  결과: 승인
+
+- 리뷰일: 2026-06-18
+  리뷰자: REDSTONE
+  확인: AC ID 글꼴을 본문보다 한 단계 큰 `text-base`로 바로잡아 "한 단계 큰 글꼴" 수용 기준과 구현을 일치시켰고, 시나리오 탭의 커버리지 판정(연결됨)과 연결 테스트 단언을 보강했다.
+  결과: 승인
 
 ## 열린 질문
 

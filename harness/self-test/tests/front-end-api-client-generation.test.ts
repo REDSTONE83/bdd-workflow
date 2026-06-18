@@ -184,7 +184,7 @@ harnessTest({
         `--openapi-index=${fixtureOpenApiIndex(tmp)}`,
         `--generated-meta=${staleMeta}`,
         `--out=${outFindings}`
-    ]);
+    ], { env: { HARNESS_SCOPE: 'application' } });
 
     const findings = readJson(outFindings).findings ?? [];
     assert.ok(findings.some((finding: any) => finding.ruleId === 'FE-API-CLIENT-STALE'));

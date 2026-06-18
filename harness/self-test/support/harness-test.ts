@@ -83,11 +83,12 @@ export function tempDir(prefix = 'harness-self-test-'): string {
 export function runCommand(
     command: string,
     args: string[],
-    options: { cwd?: string; timeoutMs?: number; allowNonZero?: boolean } = {}
+    options: { cwd?: string; timeoutMs?: number; allowNonZero?: boolean; env?: Record<string, string> } = {}
 ): CommandResult {
     const result = spawnSync(command, args, {
         cwd: options.cwd ?? workspaceRoot,
         encoding: 'utf8',
+        env: { ...process.env, ...(options.env ?? {}) },
         timeout: options.timeoutMs ?? 30_000,
         maxBuffer: 20 * 1024 * 1024
     });
@@ -102,11 +103,16 @@ export function runCommand(
     return { status, output };
 }
 
-export function runNodeTool(toolName: string, args: string[] = [], options: { allowNonZero?: boolean; timeoutMs?: number } = {}) {
+export function runNodeTool(
+    toolName: string,
+    args: string[] = [],
+    options: { allowNonZero?: boolean; timeoutMs?: number; env?: Record<string, string> } = {}
+) {
     return runCommand(process.execPath, [path.join(workspaceRoot, 'harness', 'tools', toolName), ...args], {
         cwd: workspaceRoot,
         allowNonZero: options.allowNonZero,
-        timeoutMs: options.timeoutMs
+        timeoutMs: options.timeoutMs,
+        env: options.env
     });
 }
 

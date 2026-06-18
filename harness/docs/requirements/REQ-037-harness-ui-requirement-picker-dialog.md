@@ -3,7 +3,7 @@
 요건 ID: REQ-037
 제목: 하네스 UI 요건 검색/선택 대화상자
 우선순위: 중간
-상태: Skeleton 검토중
+상태: 승인
 요건 종류: 하네스
 명세 역할: 원자 요건
 대상 시스템: harness
@@ -81,7 +81,7 @@
 
 ## Storybook 계약
 
-- Harness/Requirements/RequirementPickerDialog: Open, Hierarchy, SearchResults, ParentSearchIncludesChildren, WithSelection, ScrollableList, EmptyResult
+- Harness/Requirements/RequirementPickerDialog: Open, DocsClosedFrame, Hierarchy, SearchResults, ParentSearchIncludesChildren, WithSelection, ScrollableList, EmptyResult
 
 ## 의사결정 로그
 
@@ -124,7 +124,7 @@
 - 설계일: 2026-06-12
   검증 설계: `.feature`의 6개 Scenario가 카드 수용 기준 8개를 `Covers:`로 연결한다. 모든 AC는 사용자가 관찰하는 대화상자 UI 결과이므로 `(UI)`로 검증한다.
   UI Skeleton: `RequirementPickerDialog`는 호출 화면이 전달한 `RequirementRow` 후보 목록을 기준으로 요건 ID와 제목을 한 줄에 표시하고, 추적 상태는 우측 끝 뱃지로, 명세 역할과 상위/하위 요건 구조는 같은 줄의 보조 뱃지로 축약 표시한다. 상위 검색 하위 포함, 검색, 단일 선택, 선택 해제, 검색 결과 수와 무관한 viewport 기준 고정 높이, 긴 후보 목록 스크롤, 빈 결과 상태를 제공한다. 현재 선택 요약은 두지 않고 선택 후보만 강조한다. 호출 화면별 제목·설명 문구는 props로 바꿀 수 있지만 후보 목록과 선택값의 의미 적용은 부모 화면이 소유한다.
-  Storybook 계약: `Harness/Requirements/RequirementPickerDialog`의 `Open`, `Hierarchy`, `SearchResults`, `ParentSearchIncludesChildren`, `WithSelection`, `ScrollableList`, `EmptyResult` 상태가 있어야 한다. Docs에서는 열린 portal이 문서 본문을 가리지 않도록 닫힌 호출 화면 프레임으로 렌더링한다.
+  Storybook 계약: `Harness/Requirements/RequirementPickerDialog`의 `Open`, `DocsClosedFrame`, `Hierarchy`, `SearchResults`, `ParentSearchIncludesChildren`, `WithSelection`, `ScrollableList`, `EmptyResult` 상태가 있어야 한다. Docs에서는 열린 portal이 문서 본문을 가리지 않도록 닫힌 호출 화면 프레임으로 렌더링한다.
   서버 Skeleton: 해당 없음. 대화상자는 부모 화면 DTO의 요건 후보 목록을 받는다.
   추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다.
   검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-037`로 카드/시나리오 정합성을 확인한다.
@@ -136,6 +136,16 @@
   리뷰자: REDSTONE
   확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
+
+- 리뷰일: 2026-06-17
+  리뷰자: REDSTONE
+  확인: Storybook Vitest play 검증으로 후보 요건 카드 표시, 하위 요건 들여쓰기와 세로선, 검색 대상 필드, 상위 검색 하위 포함, 단일 선택과 선택 해제, viewport 기준 고정 높이와 목록 스크롤, 빈 결과, Docs 닫힌 호출 프레임과 Canvas 열린 대화상자 상태를 확인했다. `cd harness/ui && npm run test:storybook`, `npm run harness:trace -- --requirement REQ-037`를 통과했고 REQ-037 추적 상태는 GREEN이다.
+  결과: 승인
+
+- 리뷰일: 2026-06-18
+  리뷰자: REDSTONE
+  확인: `SearchResults`를 8개 검색 대상별로 기대 후보 present/비후보 absent로 보강하고, `WithSelection`을 미선택→단일 선택→해제 흐름으로 다시 작성했다. 들여쓰기·선택 강조·스크롤은 CSS class 단언 대신 `aria-label`/`aria-selected`/실측 스크롤로 검증하도록 구현과 함께 바꿨다.
+  결과: 승인
 
 ## 열린 질문
 

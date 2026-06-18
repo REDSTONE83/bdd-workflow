@@ -3,7 +3,7 @@
 요건 ID: REQ-036
 제목: 하네스 UI 표준 용어 조회
 우선순위: 중간
-상태: Skeleton 검토중
+상태: 승인
 요건 종류: 하네스
 명세 역할: 원자 요건
 대상 시스템: harness
@@ -114,6 +114,16 @@
   리뷰자: REDSTONE
   확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
+
+- 리뷰일: 2026-06-17
+  리뷰자: REDSTONE
+  확인: Storybook Vitest play 검증으로 AppShell 표준 용어 메뉴 이동, 전체 term key 목록 표시, 검색, 도메인/승인 상태 필터, 표준 용어 상세, 빈 결과 상태를 확인했다. `harness/self-test/tests/harness-ui-terminology-browser.test.ts`는 UI 서버가 `terminology.index.json`의 term key, status, sourceFile, meaning, allow, ban, names 값을 DTO로 보존하는지 검증한다. `cd harness/ui && npm run test:storybook`, `npm run harness:self-test`, `npm run harness:trace -- --requirement REQ-036`를 통과했고 REQ-036 추적 상태는 GREEN이다.
+  결과: 승인
+
+- 리뷰일: 2026-06-18
+  리뷰자: REDSTONE
+  확인: `SearchResults` play를 term key뿐 아니라 허용 표현·금지 표현 같은 비-key 필드 검색으로 좁힘을 검증하도록 보강했다.
+  결과: 승인
 
 ## 열린 질문
 

@@ -3,7 +3,7 @@
 요건 ID: REQ-030
 제목: 하네스 UI 앱셸
 우선순위: 높음
-상태: Skeleton 검토중
+상태: 승인
 요건 종류: 하네스
 명세 역할: 원자 요건
 대상 시스템: harness
@@ -43,6 +43,7 @@
 ## 수용 기준
 
 - (STATIC) 하네스 UI 서버는 localhost 요청만 수신하고 다른 호스트 주소로는 접근을 받지 않는다
+- (STATIC) 하네스 UI 서버는 선택한 scope의 산출물 요약(생성 시각·산출물 없음·오래된 원본)을 제공하고 산출물 파일이 바뀌면 갱신 이벤트로 통지한다
 - (UI) 하네스 UI는 모든 화면에서 요건, 표준 용어, 게이트, Change Set, 실행 화면으로 이동하는 좌측 LNB를 표시한다
 - (UI) scope 전환으로 애플리케이션과 하네스 산출물을 오갈 수 있고, 현재 선택한 scope가 화면에 표시된다
 - (UI) 선택한 scope의 검증 산출물이 없으면 산출물 생성 명령 안내가 표시된다
@@ -77,7 +78,7 @@
 
 ## Storybook 계약
 
-- Harness/Shell/AppShell: DefaultArtifacts, MissingArtifacts, StaleArtifacts, ScopeSwitch
+- Harness/Shell/AppShell: DefaultArtifacts, MissingArtifacts, StaleArtifacts, ScopeSwitch, AutoRefreshUpdated
 
 ## 의사결정 로그
 
@@ -126,6 +127,16 @@
   리뷰자: REDSTONE
   확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
+
+- 리뷰일: 2026-06-17
+  리뷰자: REDSTONE
+  확인: Storybook Vitest play 검증으로 좌측 LNB, 생성 시각, 산출물 없음 안내, 오래된 데이터 경고, scope 표시, 자동 갱신 후 generatedAt/상태 반영을 확인했다. `harness/self-test/tests/harness-ui-app-shell.test.ts`는 `harness:ui` dev 서버, Storybook, Vite preview, API 서버가 loopback 주소에만 바인딩되는지 검증한다. `cd harness/ui && npm run test:storybook`, `npm run harness:self-test`, `npm run harness:trace -- --requirement REQ-030`를 통과했고 REQ-030 추적 상태는 GREEN이다.
+  결과: 승인
+
+- 리뷰일: 2026-06-18
+  리뷰자: REDSTONE
+  확인: 자동 갱신/scope 전환을 라이브 백엔드로 구현했다. `/api/artifact-summary`와 `/api/events` SSE, `useArtifactSummary` 훅, `AppRouter` 컨테이너, 제어형 scope 전환을 추가하고, `harness-ui-app-shell.test.ts`가 산출물 요약(생성 시각·산출물 없음·오래된 원본)과 파일 변경 SSE 이벤트를 검증한다. `ScopeSwitch` story가 실제 범위 전환을 구동한다. 신규 (STATIC) 수용 기준이 GREEN이다.
+  결과: 승인
 
 ## 열린 질문
 

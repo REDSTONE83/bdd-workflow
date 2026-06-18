@@ -9,7 +9,7 @@ import { Link } from "react-router-dom";
 import { changeSetRows } from "../../lib/harness-data/fixtures";
 import type { ChangeSetRow, RequirementRow, TraceState } from "../../lib/harness-data/types";
 import { StatusBadge } from "../../components/ui/StatusBadge";
-import { Button } from "../../components/ui/button";
+import { Button, buttonVariants } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../components/ui/collapsible";
 import { EmptyState } from "../../components/ui/empty-state";
@@ -17,6 +17,7 @@ import { Input } from "../../components/ui/input";
 import { Select } from "../../components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
 import { RequirementPickerDialog } from "../requirements/RequirementPickerDialog";
+import { cn } from "../../lib/utils";
 
 const ALL_STATUSES = "ALL_STATUSES";
 const ALL_REQUIREMENTS = "ALL_REQUIREMENTS";
@@ -85,6 +86,7 @@ export function ChangeSetView({
   );
   const affectedRequirements = useMemo(() => uniqueRequirements(rows), [rows]);
   const selectedAffectedRequirement = affectedRequirements.find((requirement) => requirement.id === affectedRequirementFilter);
+  const initiallyExpandedTitle = rows[0]?.title;
   const filteredRows = useMemo(() => {
     const normalizedTitleQuery = normalize(titleQuery.trim());
     return rows.filter((row) => {
@@ -130,6 +132,7 @@ export function ChangeSetView({
             <span>영향 요건</span>
             <div className="flex h-9 min-w-0 items-center rounded-md border border-input bg-background pl-3 shadow-sm">
               <span
+                aria-label="선택된 영향 요건 필터"
                 className={
                   selectedAffectedRequirement
                     ? "min-w-0 flex-1 truncate font-mono text-sm font-semibold text-foreground"
@@ -182,9 +185,9 @@ export function ChangeSetView({
         <EmptyState className="p-6">조건에 맞는 Change Set이 없다.</EmptyState>
       ) : null}
       <div className="grid gap-3">
-        {filteredRows.map((row, index) => (
+        {filteredRows.map((row) => (
           <Card key={row.title} className="overflow-hidden">
-            <Collapsible defaultOpen={index === 0} className="rounded-none border-0">
+            <Collapsible defaultOpen={row.title === initiallyExpandedTitle} className="rounded-none border-0">
               <CollapsibleTrigger className="px-5 py-4 hover:bg-muted/40 [&[data-panel-open]_.collapsible-icon]:rotate-180" hideIcon>
                 <div className="w-full min-w-0">
                   <div className="flex items-start justify-between gap-3">
@@ -207,6 +210,10 @@ export function ChangeSetView({
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent className="px-5 py-4">
+                <section className="mb-4">
+                  <h2 className="text-sm font-semibold text-foreground">요청 요약</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">{row.summary}</p>
+                </section>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <DetailList title="작업 범위" items={row.scopeItems} />
                   <DetailList title="완료 조건" items={row.completionCriteria} />
@@ -218,16 +225,18 @@ export function ChangeSetView({
                   {row.affectedRequirements.length > 0 ? (
                     <div className="mt-2 grid gap-2">
                       {row.affectedRequirements.map((req) => (
-                        <Button key={req.id} asChild className="h-auto justify-between px-3 py-2" variant="outline">
-                          <Link to={`/requirements/${req.id}`}>
-                            <span className="min-w-0 break-words text-left">
-                              <span className="font-mono">{req.id}</span>
-                              <span className="mx-1 text-muted-foreground">·</span>
-                              {req.title}
-                            </span>
-                            <StatusBadge label={req.traceState} tone={toneForTraceState(req.traceState)} />
-                          </Link>
-                        </Button>
+                        <Link
+                          key={req.id}
+                          className={cn(buttonVariants({ variant: "outline" }), "h-auto justify-between px-3 py-2")}
+                          to={`/requirements/${req.id}`}
+                        >
+                          <span className="min-w-0 break-words text-left">
+                            <span className="font-mono">{req.id}</span>
+                            <span className="mx-1 text-muted-foreground">·</span>
+                            {req.title}
+                          </span>
+                          <StatusBadge label={req.traceState} tone={toneForTraceState(req.traceState)} />
+                        </Link>
                       ))}
                     </div>
                   ) : (

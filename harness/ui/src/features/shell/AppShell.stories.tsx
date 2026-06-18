@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MemoryRouter } from "react-router-dom";
+import { useState } from "react";
+import { MemoryRouter, useLocation } from "react-router-dom";
+import { expect, userEvent, within } from "storybook/test";
 import { AppShell } from "./AppShell";
 import { appShellDefault, appShellMissing, appShellStale } from "../../lib/harness-data/fixtures";
+import type { ArtifactSummary } from "../../lib/harness-data/types";
+import { Button } from "../../components/ui/button";
 
 const meta = {
   title: "Harness/Shell/AppShell",
@@ -29,6 +33,51 @@ type Story = StoryObj<typeof meta>;
 
 const body = <div className="harness-panel p-6 text-sm text-slate-700">route content</div>;
 
+function RouteProbe() {
+  const location = useLocation();
+  return <div aria-label="현재 route">{location.pathname}</div>;
+}
+
+function AutoRefreshFrame({ initialModel }: { initialModel: ArtifactSummary }) {
+  const [model, setModel] = useState(initialModel);
+
+  return (
+    <AppShell model={model}>
+      <div className="harness-panel p-6 text-sm text-slate-700">
+        <div aria-label="산출물 버전">{model.generatedAt}</div>
+        <Button
+          size="sm"
+          onClick={() =>
+            setModel({
+              ...model,
+              generatedAt: "2026-06-10T14:31:20.000Z",
+              autoRefresh: "updated",
+            })
+          }
+        >
+          산출물 파일 갱신 이벤트
+        </Button>
+      </div>
+    </AppShell>
+  );
+}
+
+function ScopeSwitchFrame() {
+  const [scope, setScope] = useState<ArtifactSummary["scope"]>("harness");
+  const model: ArtifactSummary =
+    scope === "harness"
+      ? appShellDefault
+      : { ...appShellDefault, scope: "application", generatedAt: "2026-06-11T09:00:00.000Z" };
+
+  return (
+    <AppShell model={model} onScopeChange={setScope}>
+      <div className="harness-panel p-6 text-sm text-slate-700">
+        <div aria-label="현재 범위 본문">{scope}</div>
+      </div>
+    </AppShell>
+  );
+}
+
 export const DefaultArtifacts: Story = {
   args: { model: appShellDefault, children: body },
   parameters: {
@@ -44,6 +93,42 @@ export const DefaultArtifacts: Story = {
       },
     },
   },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("BDD Harness")).toBeVisible();
+    for (const linkName of ["요건", "표준 용어", "게이트", "Change Set", "실행 화면"]) {
+      await expect(canvas.getByRole("link", { name: new RegExp(linkName) })).toBeVisible();
+    }
+    await expect(canvas.getByText("generatedAt: 2026-06-10T14:25:52.986Z")).toBeVisible();
+  },
+};
+
+export const TerminologyNavigation: Story = {
+  args: {
+    model: appShellDefault,
+    children: (
+      <div className="harness-panel p-6 text-sm text-slate-700">
+        <RouteProbe />
+      </div>
+    ),
+  },
+  parameters: {
+    harness: {
+      requirements: ["REQ-036"],
+      covers: ["AppShell 좌측 LNB에서 표준 용어 화면으로 이동할 수 있다"],
+    },
+    docs: {
+      description: {
+        story: "좌측 LNB의 표준 용어 메뉴가 /terminology route로 이동하는 상태다.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByLabelText("현재 route")).toHaveTextContent("/requirements");
+    await userEvent.click(canvas.getByRole("link", { name: /표준 용어/ }));
+    await expect(canvas.getByLabelText("현재 route")).toHaveTextContent("/terminology");
+  },
 };
 
 export const MissingArtifacts: Story = {
@@ -57,6 +142,11 @@ export const MissingArtifacts: Story = {
         story: "선택한 범위의 산출물이 없을 때 생성 명령 안내가 표시되는 상태다. 빈 화면 대신 다음 검증 행동이 드러나야 한다.",
       },
     },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText(/선택한 범위의 검증 산출물이 없다/)).toBeVisible();
+    await expect(canvas.getByText(/npm run harness:validate/)).toBeVisible();
   },
 };
 
@@ -72,19 +162,62 @@ export const StaleArtifacts: Story = {
       },
     },
   },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("오래된 데이터 경고")).toBeVisible();
+    await expect(canvas.getByText("harness/docs/requirements/REQ-030-harness-ui-app-shell.md")).toBeVisible();
+  },
 };
 
 export const ScopeSwitch: Story = {
-  args: { model: { ...appShellDefault, scope: "application", autoRefresh: "updated" }, children: body },
+  args: { model: { ...appShellDefault, scope: "application" }, children: body },
+  render: () => <ScopeSwitchFrame />,
   parameters: {
     harness: {
       covers: ["scope 전환으로 애플리케이션과 하네스 산출물을 오갈 수 있고, 현재 선택한 scope가 화면에 표시된다"],
     },
     docs: {
       description: {
-        story: "범위 전환 후 application 범위가 선택된 상태다. 현재 범위 라벨과 자동 갱신 상태가 충돌 없이 표시되어야 한다.",
+        story: "범위 선택 컨트롤로 harness와 application 산출물을 오가는 상태다. 현재 선택한 범위와 그 범위의 산출물 생성 시각이 화면에 반영되는지 확인한다.",
       },
     },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const documentBody = within(canvasElement.ownerDocument.body);
+    // 현재 선택한 scope(harness)가 화면에 표시된다
+    await expect(canvas.getByRole("combobox", { name: "범위 선택" })).toHaveTextContent("harness");
+    await expect(canvas.getByLabelText("현재 범위 본문")).toHaveTextContent("harness");
+    // scope 전환으로 application 산출물로 오간다
+    await userEvent.click(canvas.getByRole("combobox", { name: "범위 선택" }));
+    await userEvent.click(await documentBody.findByRole("option", { name: "application" }));
+    await expect(canvas.getByRole("combobox", { name: "범위 선택" })).toHaveTextContent("application");
+    await expect(canvas.getByLabelText("현재 범위 본문")).toHaveTextContent("application");
+    await expect(canvas.getByText("generatedAt: 2026-06-11T09:00:00.000Z")).toBeVisible();
+  },
+};
+
+export const AutoRefreshUpdated: Story = {
+  args: { model: appShellDefault, children: body },
+  render: (args) => <AutoRefreshFrame initialModel={args.model} />,
+  parameters: {
+    harness: {
+      covers: ["산출물 파일이 바뀌면 새로 고침 없이 화면 내용이 갱신된다"],
+    },
+    docs: {
+      description: {
+        story: "산출물 파일 변경 이벤트가 들어온 뒤 같은 화면 안에서 generatedAt과 자동 갱신 상태가 갱신되는 상태다.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByLabelText("산출물 버전")).toHaveTextContent("2026-06-10T14:25:52.986Z");
+    await expect(canvas.getByText("자동 갱신 대기")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "산출물 파일 갱신 이벤트" }));
+    await expect(canvas.getByLabelText("산출물 버전")).toHaveTextContent("2026-06-10T14:31:20.000Z");
+    await expect(canvas.getByText("generatedAt: 2026-06-10T14:31:20.000Z")).toBeVisible();
+    await expect(canvas.getByText("자동 갱신됨")).toBeVisible();
   },
 };
 

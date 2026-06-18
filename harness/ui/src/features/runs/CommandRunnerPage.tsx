@@ -19,6 +19,14 @@ function toneForState(state: TraceState) {
   return "inactive" as const;
 }
 
+function labelForRunStatus(status: CommandRunState["status"]) {
+  if (status === "ready") return "준비";
+  if (status === "running") return "실행 중";
+  if (status === "succeeded") return "성공";
+  if (status === "failed") return "실패";
+  return "거절";
+}
+
 export function CommandRunner({
   commands,
   run,
@@ -33,12 +41,17 @@ export function CommandRunner({
   const [selectedCommand, setSelectedCommand] = useState(run.selectedCommand);
   const [selectedRequirementId, setSelectedRequirementId] = useState<string | undefined>(run.requirementId);
   const [requirementDialogOpen, setRequirementDialogOpen] = useState(initialRequirementDialogOpen);
+  const [runRequest, setRunRequest] = useState<{ commandId: string; requirementId?: string } | null>(null);
   const selectedCommandDefinition = commands.find((command) => command.id === selectedCommand) ?? commands[0];
   const selectedRequirement = requirements.find((requirement) => requirement.id === selectedRequirementId);
   const requiresRequirement = selectedCommandDefinition?.supportsRequirement ?? false;
   const executeButton = (
     <div className="border-t border-border bg-background/70 p-3">
-      <Button className="w-full" disabled={run.status === "running"}>
+      <Button
+        className="w-full"
+        disabled={run.status === "running"}
+        onClick={() => setRunRequest({ commandId: selectedCommand, requirementId: requiresRequirement ? selectedRequirement?.id : undefined })}
+      >
         {run.status === "running" ? "실행 중" : "실행"}
       </Button>
     </div>
@@ -102,6 +115,7 @@ export function CommandRunner({
                 <Button
                   className="h-auto w-full justify-start rounded-none border-0 px-3 py-3 text-left shadow-none"
                   variant={selected ? "secondary" : "ghost"}
+                  disabled={run.status === "running" && !selected}
                   onClick={() => setSelectedCommand(command.id)}
                 >
                   <div className="w-full min-w-0">
@@ -128,7 +142,7 @@ export function CommandRunner({
       <Card className="p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">실행 상태</h2>
-          <StatusBadge label={run.status} tone={run.status === "failed" || run.status === "rejected" ? "red" : run.status === "succeeded" ? "green" : "neutral"} />
+          <StatusBadge label={labelForRunStatus(run.status)} tone={run.status === "failed" || run.status === "rejected" ? "red" : run.status === "succeeded" ? "green" : "neutral"} />
         </div>
         <dl className="mt-4 grid grid-cols-3 gap-3 text-sm">
           <div><dt className="text-muted-foreground">명령</dt><dd className="mt-1 font-mono">{selectedCommand}</dd></div>
@@ -139,6 +153,13 @@ export function CommandRunner({
           <div className="mt-4 rounded-md border border-border bg-muted/40 p-3 text-sm">
             <span className="text-muted-foreground">실행 대상 요건</span>
             <span className="ml-2 font-mono text-foreground">{selectedRequirement?.id ?? "-"}</span>
+          </div>
+        ) : null}
+        {runRequest ? (
+          <div className="mt-4 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950" role="status">
+            실행 요청: <span className="font-mono">{runRequest.commandId}</span>
+            {" "}
+            <span className="ml-2">요건 인자 {runRequest.requirementId ?? "없음"}</span>
           </div>
         ) : null}
         {run.rejectionReason ? <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">{run.rejectionReason}</div> : null}

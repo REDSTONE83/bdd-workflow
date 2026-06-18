@@ -3,7 +3,7 @@
 요건 ID: REQ-033
 제목: 하네스 UI 게이트 현황 조회
 우선순위: 중간
-상태: Skeleton 검토중
+상태: 승인
 요건 종류: 하네스
 명세 역할: 원자 요건
 대상 시스템: harness
@@ -15,7 +15,7 @@
 
 ## 사용자/목적
 
-하네스 작업자는 scope 게이트가 어떤 카테고리에서 막히는지와 그 근거가 된 검사 결과를 화면에서 확인하고, 고칠 파일 위치로 바로 이동할 수 있어야 한다.
+하네스 작업자는 범위 게이트가 어떤 카테고리에서 막히는지와 그 근거가 된 검사 결과를 화면에서 확인하고, 고칠 파일 위치로 바로 이동할 수 있어야 한다.
 
 ## 범위
 
@@ -100,6 +100,16 @@
   리뷰자: REDSTONE
   확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
+
+- 리뷰일: 2026-06-17
+  리뷰자: REDSTONE
+  확인: `harness/ui/src/features/gates/GateView.stories.tsx`의 Storybook Vitest play 검증이 8개 게이트 카테고리의 차단 여부와 검사 결과 수, 규칙/심각도/요건/파일 경로 필터 동작, finding 메시지/파일 위치/근거/권고 조치 펼침을 확인한다. `npm run test:storybook`과 `npm run harness:trace -- --requirement REQ-033`가 통과했고 REQ-033 trace state는 GREEN이다.
+  결과: 승인
+
+- 리뷰일: 2026-06-18
+  리뷰자: REDSTONE
+  확인: `Filtered` play를 규칙뿐 아니라 심각도·요건·파일 경로 4종 필터로 좁힘을 검증하도록 보강하고, `FindingExpanded`를 기본 펼침이 아니라 펼침 토글 상호작용으로 검증한다.
+  결과: 승인
 
 ## 열린 질문
 

@@ -3,7 +3,7 @@
 요건 ID: REQ-035
 제목: 하네스 UI 검증 명령 실행
 우선순위: 높음
-상태: Skeleton 검토중
+상태: 승인
 요건 종류: 하네스
 명세 역할: 원자 요건
 대상 시스템: harness
@@ -141,6 +141,16 @@
   리뷰자: REDSTONE
   확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
+
+- 리뷰일: 2026-06-17
+  리뷰자: REDSTONE
+  확인: `harness/ui/src/features/runs/CommandRunner.stories.tsx`의 Storybook Vitest play 검증이 허용 명령 목록, 명령 선택과 실행 요청, 단일 요건 초기 미선택/검색 선택/선택 해제, 실행 중 잠금, 실행 로그와 성공 결과 표시를 확인한다. `harness/self-test/tests/harness-ui-command-runner.test.ts`는 UI를 거치지 않은 직접 서버 요청으로 허용 목록 밖 명령이 거절되는지 검증한다. `npm run test:storybook`, `npm run harness:self-test`, `npm run harness:trace -- --requirement REQ-035`가 통과했고 REQ-035 trace state는 GREEN이다.
+  결과: 승인
+
+- 리뷰일: 2026-06-18
+  리뷰자: REDSTONE
+  확인: `Failed` 스토리에 covers+play를 추가해 "성공 또는 실패"의 실패 표시·로그를 검증하고, `harness-ui-command-runner.test.ts`에 잘못된 요건 인자 형식과 미지원 명령의 요건 인자에 대한 서버 거절(400) 케이스를 추가했다.
+  결과: 승인
 
 ## 열린 질문
 

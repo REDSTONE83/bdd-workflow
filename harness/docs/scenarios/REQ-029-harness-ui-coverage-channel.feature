@@ -42,3 +42,11 @@ Feature: 하네스 UI 검증 채널
     Then 하네스는 harness/ui에서 수집한 story 인덱스와 계약을 대조한다
     And 선언한 표면이나 상태가 없으면 위반으로 보고된다
     And harness/ui Storybook build가 검증 과정에 포함된다
+
+  Scenario: covers를 선언한 하네스 story는 play 성공 조건을 요구받는다
+    Covers:
+      - 하네스 scope에서 (UI) 수용 기준을 covers하는 Storybook story는 play 성공 조건(expect assertion)이 없으면 위반으로 보고된다
+
+    Given 하네스 scope의 Storybook story가 (UI) 수용 기준을 covers로 선언한다
+    When 그 story에 play 성공 조건(expect assertion)이 없다
+    Then 하네스 front-end 표준 검사가 그 story를 위반으로 보고한다

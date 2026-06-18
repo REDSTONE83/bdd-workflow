@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { expect, userEvent, within } from "storybook/test";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { RequirementBoard } from "./RequirementBoardPage";
 import { RequirementDetailPage } from "./RequirementDetailPage";
 import { requirementRows, requirementSummary } from "../../lib/harness-data/fixtures";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { ErrorState } from "../../components/ui/ErrorState";
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output aria-label="현재 위치">{`${location.pathname}${location.search}`}</output>;
+}
 
 const meta = {
   title: "Harness/Requirements/RequirementBoard",
@@ -36,6 +42,21 @@ type Story = StoryObj<typeof meta>;
 
 export const AllRequirements: Story = {
   args: { rows: requirementRows, summary: requirementSummary },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // 요건 ID와 제목이 한 줄 카드로 보인다
+    await expect(canvas.getByRole("button", { name: "REQ-030" })).toBeVisible();
+    await expect(canvas.getByText("하네스 UI 앱셸")).toBeVisible();
+    // 카드 상태/제품 영역/우선순위는 접두 문자 없이 값만 담은 작은 뱃지로 보인다
+    await expect(canvas.getAllByText("초안").length).toBeGreaterThan(0);
+    await expect(canvas.queryByText("카드 초안")).not.toBeInTheDocument();
+    await expect(canvas.queryByText("우선 높음")).not.toBeInTheDocument();
+    await expect(canvas.queryByText("영역 harness")).not.toBeInTheDocument();
+    // 명세 역할 구조 뱃지와 추적 상태 뱃지가 같은 행에 보인다
+    const structure = canvas.getByLabelText("REQ-030 요건 구조");
+    await expect(within(structure).getByText("원자 요건")).toBeVisible();
+    await expect(canvas.getAllByText("RED").length).toBeGreaterThan(0);
+  },
   parameters: {
     harness: {
       covers: ["요건 보드는 선택한 scope의 모든 요건을 요건 ID, 제목, 카드 상태, 제품 영역, 우선순위, 명세 역할, 상위 요건 ID, 하위 요건 수가 한 줄에 있고 추적 상태 뱃지가 우측 끝에 있는 목록형 카드로 표시하며, 카드 상태, 제품 영역, 우선순위는 제목 바로 오른쪽에 접두 문자 없는 종류별 색상의 작은 뱃지로 표시한다"],
@@ -50,6 +71,17 @@ export const AllRequirements: Story = {
 
 export const Hierarchy: Story = {
   args: { rows: requirementRows.filter((row) => row.id === "REQ-021" || row.parentRequirementIds.includes("REQ-021")), summary: requirementSummary },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // 상위 요건과 하위 원자 요건이 함께 보인다
+    await expect(canvas.getByRole("button", { name: "REQ-021" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "REQ-022" })).toBeVisible();
+    // 상위 요건 카드는 하위 요건 수를, 하위 요건 카드는 상위 요건을 구조 뱃지로 보여준다
+    await expect(within(canvas.getByLabelText("REQ-021 요건 구조")).getByText(/하위 \d+/)).toBeVisible();
+    await expect(within(canvas.getByLabelText("REQ-022 요건 구조")).getByText("상위 REQ-021")).toBeVisible();
+    // 하위 요건 행은 좌측 들여쓰기·세로선으로 구분된 하위 그룹으로 표시된다
+    await expect(canvas.getAllByLabelText("하위 요건 행").length).toBeGreaterThan(0);
+  },
   parameters: {
     harness: {
       covers: ["하위 요건 카드는 좌측 들여쓰기와 세로선으로 하위 관계가 구분된다"],
@@ -74,7 +106,24 @@ export const Filtered: Story = {
 };
 
 export const FilteredByTitle: Story = {
-  args: { rows: requirementRows, summary: requirementSummary, initialTitleQuery: "요건 추적" },
+  args: { rows: requirementRows, summary: requirementSummary },
+  render: (args) => (
+    <>
+      <RequirementBoard {...args} />
+      <LocationProbe />
+    </>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // 처음에는 여러 요건이 보인다
+    await expect(canvas.getByRole("button", { name: "REQ-010" })).toBeVisible();
+    // 제목 검색어를 입력하면 목록이 좁혀진다
+    await userEvent.type(canvas.getByLabelText("요건 제목 검색"), "요건 추적");
+    await expect(canvas.getByRole("button", { name: "REQ-031" })).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "REQ-010" })).not.toBeInTheDocument();
+    // 필터 상태가 URL query에 반영된다
+    await expect(canvas.getByLabelText("현재 위치")).toHaveTextContent("title=");
+  },
   parameters: {
     harness: {
       covers: ["제목 검색어, 추적 상태, 카드 상태, 제품 영역으로 목록을 좁힐 수 있고 필터 상태는 URL query에 반영된다"],
@@ -100,6 +149,16 @@ export const EmptyResult: Story = {
 
 export const StateSummary: Story = {
   args: { rows: requirementRows, summary: requirementSummary },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // 보드 상단에 추적 상태별 요건 수 요약이 보인다
+    for (const state of ["RED", "GREEN", "BLUE", "INACTIVE"]) {
+      await expect(canvas.getAllByText(state).length).toBeGreaterThan(0);
+    }
+    // 요약 수치(RED 7, GREEN 0 등)가 보인다
+    await expect(canvas.getAllByText("7").length).toBeGreaterThan(0);
+    await expect(canvas.getAllByText("0").length).toBeGreaterThan(0);
+  },
   parameters: {
     harness: {
       covers: ["보드 상단에 추적 상태별 요건 수 요약이 표시된다"],
@@ -115,12 +174,25 @@ export const StateSummary: Story = {
 export const DetailNavigation: Story = {
   args: { rows: requirementRows.filter((row) => row.id === "REQ-031"), summary: requirementSummary },
   render: (args) => (
-    <Routes>
-      <Route path="/" element={<RequirementBoard {...args} />} />
-      <Route path="/requirements" element={<RequirementBoard {...args} />} />
-      <Route path="/requirements/:requirementId" element={<RequirementDetailPage />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<RequirementBoard {...args} />} />
+        <Route path="/requirements" element={<RequirementBoard {...args} />} />
+        <Route path="/requirements/:requirementId" element={<RequirementDetailPage />} />
+      </Routes>
+      <LocationProbe />
+    </>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // 필터가 적용된 보드에서 요건 ID를 선택한다
+    await expect(canvas.getByLabelText("현재 위치")).toHaveTextContent("/requirements");
+    await userEvent.click(canvas.getByRole("button", { name: "REQ-031" }));
+    // 그 요건의 상세 route로 이동하고 기존 필터 query가 유지된다
+    await expect(canvas.getByLabelText("현재 위치")).toHaveTextContent("/requirements/REQ-031");
+    await expect(canvas.getByLabelText("현재 위치")).toHaveTextContent("title=");
+    await expect(canvas.getByLabelText("현재 위치")).toHaveTextContent("productArea=harness");
+  },
   parameters: {
     harness: {
       covers: ["목록에서 요건 ID를 선택하면 현재 필터 query를 유지한 채 그 요건의 상세 화면 route로 이동한다"],

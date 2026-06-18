@@ -3,7 +3,7 @@
 요건 ID: REQ-034
 제목: 하네스 UI Change Set 진행 조회
 우선순위: 중간
-상태: Skeleton 검토중
+상태: 승인
 요건 종류: 하네스
 명세 역할: 원자 요건
 대상 시스템: harness
@@ -124,6 +124,16 @@
   리뷰자: REDSTONE
   확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
+
+- 리뷰일: 2026-06-17
+  리뷰자: REDSTONE
+  확인: `harness/ui/src/features/change-sets/ChangeSetView.stories.tsx`의 Storybook Vitest play 검증이 Change Set 목록 요약, 카드 펼침 상세의 요청 요약/작업 범위/완료 조건/검증 명령/열린 논의/영향 요건 추적 상태, 제목·상태·영향 요건 필터와 요건 검색 대화상자 호출, 영향 요건 상세 route 이동을 확인한다. `npm run test:storybook`과 `npm run harness:trace -- --requirement REQ-034`가 통과했고 REQ-034 trace state는 GREEN이다.
+  결과: 승인
+
+- 리뷰일: 2026-06-18
+  리뷰자: REDSTONE
+  확인: `FilteredByAffectedRequirement` play를 사전 주입이 아니라 돋보기 대화상자에서 요건을 선택해 목록이 좁혀지고 필터 칩에 요건 ID만 남는 흐름으로 보강하고, `Detail`의 영향 요건 추적 상태를 REQ-010 행에 고정해 검증한다.
+  결과: 승인
 
 ## 열린 질문
 

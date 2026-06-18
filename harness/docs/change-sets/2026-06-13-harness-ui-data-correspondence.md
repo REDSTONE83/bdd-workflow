@@ -25,7 +25,7 @@
 ## 제외 범위
 
 - 하네스 scope API/데이터 표면(`apiSurfaces`/`dataShapes`) 수집기 신설. 하네스 UI 서버 코드를 인덱싱하는 collector는 본 Change Set 범위 밖이며, 해당 탭은 비어 있는 상태를 정상으로 본다.
-- 하네스 UI 서버의 명령 실행 라우트 구현. `/api/commands/run`은 계속 골격 상태(405)다.
+- 하네스 UI 서버의 실제 child process 실행 backend 구현. `/api/commands/run`의 허용 목록 검사는 REQ-035 범위에서 수행하지만, 명령 실행 backend는 계속 골격 상태다.
 - 시나리오/UI surface의 `status` 표시값 같은 표현 전용 파생값의 신규 산출물화.
 
 ## 완료 조건

@@ -163,8 +163,13 @@ export function RequirementPickerDialog({
                 const selected = selectedRequirement?.id === requirement.id;
                 const childRequirement = requirement.parentRequirementIds.length > 0;
                 return (
-                  <div key={requirement.id} className={cn(childRequirement && "ml-6 border-l-2 border-sky-200 pl-3")}>
+                  <div
+                    key={requirement.id}
+                    className={cn(childRequirement && "ml-6 border-l-2 border-sky-200 pl-3")}
+                    aria-label={childRequirement ? "하위 후보 요건" : undefined}
+                  >
                     <Button
+                      aria-selected={selected}
                       className={cn(
                         "h-auto w-full justify-start rounded-md border border-border bg-background px-3 py-2 text-left shadow-sm",
                         selected && "border-sky-300 bg-sky-50/70",

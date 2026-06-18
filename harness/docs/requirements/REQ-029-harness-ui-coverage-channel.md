@@ -3,7 +3,7 @@
 요건 ID: REQ-029
 제목: 하네스 UI 검증 채널
 우선순위: 높음
-상태: Skeleton 검토중
+상태: 승인
 요건 종류: 하네스
 명세 역할: 원자 요건
 대상 시스템: harness
@@ -22,6 +22,7 @@
 - harness/ui Storybook Vitest story 테스트의 요건·수용 기준 메타데이터(`harness.requirements`/`harness.covers`)를 하네스 scope 인덱스로 수집한다.
 - harness/ui Storybook Vitest 실행 결과 JUnit을 하네스 scope 테스트 결과 인덱스에 병합한다.
 - 하네스 scope 추적 판정이 (UI) 마커 수용 기준을 front-end 테스트 채널로 판정한다.
+- covers를 선언한 하네스 scope story가 play 성공 조건(expect assertion)을 갖는지 front-end 표준 검사로 강제한다.
 - `npm run harness:validate`가 harness/ui Storybook Vitest 테스트 실행과 결과 수집을 포함한다.
 - harness/ui Storybook story 메타데이터(표면 title, named export 상태, 요건 연결)를 하네스 scope 인덱스로 수집한다.
 - `npm run harness:validate`가 harness/ui Storybook build를 실행한다.
@@ -48,6 +49,7 @@
 - (STATIC) `npm run harness:validate`는 harness/ui Storybook Vitest 테스트를 실행해 최신 결과로 판정한다
 - (STATIC) harness/ui 테스트나 결과가 없는 (UI) 마커 수용 기준은 RED로 보고된다
 - (STATIC) Storybook 계약을 선언한 하네스 scope 요건은 harness/ui에서 수집한 story 인덱스와 대조되어, 선언한 표면이나 상태가 없으면 위반으로 보고된다
+- (STATIC) 하네스 scope에서 (UI) 수용 기준을 covers하는 Storybook story는 play 성공 조건(expect assertion)이 없으면 위반으로 보고된다
 - (STATIC) `npm run harness:validate`는 harness/ui Storybook build를 실행해 Skeleton 검토 표면이 빌드 가능한지 확인한다
 
 ## 검증 대상
@@ -89,6 +91,12 @@
   결정자: REDSTONE
   영향: REQ-030~REQ-036과 이후 하네스 UI 카드의 Skeleton 승인이 Storybook 계약 대조를 받는다. `harness:validate` 실행 시간이 Storybook build만큼 늘어난다.
 
+- 결정일: 2026-06-17
+  결정: 하네스 scope의 `validate-front-end-standards.mjs`는 harness/ui source index와 요건 카드의 Storybook 계약을 직접 대조한다. 앱 API 계약 fixture는 `HARNESS_SCOPE=application`을 명시해 하네스 UI 계약 검사와 분리한다.
+  이유: 하네스 UI 카드의 Storybook 계약을 실제 story 산출물로 검증하면서도, 애플리케이션 FE API 계약 검증의 기존 의미가 실행 환경 변수에 흔들리지 않아야 한다.
+  결정자: REDSTONE
+  영향: REQ-029의 Storybook 계약 AC가 self-test와 `harness:validate` 산출물에서 GREEN으로 판정된다. 기존 앱 FE API 계약 self-test와 도구 테스트는 application scope fixture로 고정된다.
+
 ## BDD 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-029-harness-ui-coverage-channel.feature`
@@ -109,6 +117,16 @@
   리뷰자: REDSTONE
   확인: Skeleton 검토중 단계. source-indexer Skeleton과 하네스 UI 검증 채널 설계를 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
+
+- 리뷰일: 2026-06-17
+  리뷰자: REDSTONE
+  확인: `harness/self-test/tests/harness-ui-coverage-channel.test.ts`가 harness/ui Storybook Vitest 메타데이터 수집, JUnit 결과 병합, (UI) AC PASS/RED 판정, `harness:validate` 실행 순서, Storybook 계약 대조, Storybook build 포함을 검증한다. `npm run harness:self-test`, `npm run harness:tool-test`, `npm run harness:validate`가 통과했고 REQ-029 trace state는 GREEN이다.
+  결과: 승인
+
+- 리뷰일: 2026-06-18
+  리뷰자: REDSTONE
+  확인: harness scope에서 covers를 가진 render-only story가 play 성공 조건을 갖도록 `FE-STORY-COVER-NO-PLAY` 강제를 확장하고, `harness-ui-coverage-channel.test.ts`에 렌더 전용/​play 보유 대조 케이스를 추가했다. 신규 (STATIC) 수용 기준과 시나리오가 GREEN으로 판정된다.
+  결과: 승인
 
 ## 열린 질문
 

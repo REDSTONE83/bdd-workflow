@@ -168,7 +168,11 @@ export function RequirementBoard({
           const childRequirement = row.parentRequirementIds.length > 0;
 
           return (
-            <div key={row.id} className={cn(childRequirement && "ml-8 border-l-2 border-sky-200 pl-4")}>
+            <div
+              key={row.id}
+              aria-label={childRequirement ? "하위 요건 행" : undefined}
+              className={cn(childRequirement && "ml-8 border-l-2 border-sky-200 pl-4")}
+            >
               <Card className={cn("px-3 py-1.5", childRequirement && "bg-sky-50/20")}>
                 <div className="flex min-w-0 items-center gap-2">
                   <Button

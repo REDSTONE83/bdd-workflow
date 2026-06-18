@@ -25,7 +25,15 @@ const scopeOptions = [
   { value: "application", label: "application" },
 ];
 
-export function AppShell({ model, children }: { model: ArtifactSummary; children: ReactNode }) {
+export function AppShell({
+  model,
+  children,
+  onScopeChange,
+}: {
+  model: ArtifactSummary;
+  children: ReactNode;
+  onScopeChange?: (scope: ArtifactSummary["scope"]) => void;
+}) {
   return (
     <div className="harness-surface">
       <header className="border-b border-border bg-card">
@@ -36,7 +44,12 @@ export function AppShell({ model, children }: { model: ArtifactSummary; children
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-sm text-foreground">
               <span>범위</span>
-              <Select defaultValue={model.scope} options={scopeOptions} aria-label="범위 선택" />
+              <Select
+                value={model.scope}
+                onValueChange={(value) => onScopeChange?.(value as ArtifactSummary["scope"])}
+                options={scopeOptions}
+                aria-label="범위 선택"
+              />
             </div>
             <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
               generatedAt: {model.generatedAt ?? "산출물 없음"}

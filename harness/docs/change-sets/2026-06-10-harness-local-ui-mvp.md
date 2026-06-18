@@ -72,6 +72,14 @@
 - 2026-06-10: 하네스 UI 데이터 조회는 TanStack Query를 유지한다. 표준이 요구하는 query cache 무효화 기반 자동 갱신, 화면 공통 로딩/조회 실패 상태, 화면 간 산출물 공유 캐시, scope 전환 경합 차단을 자체 store로 재구현하지 않기 위해서이고, `app/front-end`와 같은 라이브러리라 패턴 재학습이 없다. (사용자가 권장안 채택)
 - 2026-06-12: AppShell 좌측 LNB에 표준 용어 메뉴를 추가하고, 전체 표준 용어 목록 조회/검색 화면을 REQ-036으로 분리한다. 표준 용어 화면은 `terminology.index.json` 산출물을 표시하고 원본 용어 사전 편집은 다루지 않는다.
 - 2026-06-12: 실행 화면과 Change Set 화면이 함께 쓰는 요건 검색/선택 대화상자를 REQ-037로 분리한다. 부모 화면은 선택값 적용만 소유하고, 후보 표시·검색·단일 선택·선택 해제·빈 결과 UI 계약은 공용 요건에서 검증한다.
+- 2026-06-17: 하네스 scope의 front-end standards 검사는 harness/ui source index와 요건 카드의 Storybook 계약을 직접 대조한다. 앱 FE API 계약 fixture는 `HARNESS_SCOPE=application`을 명시해 하네스 UI Storybook 계약 검사와 분리한다.
+- 2026-06-17: REQ-030 앱셸의 UI 수용 기준은 Storybook Vitest play 검증으로 고정하고, localhost 전용 바인딩은 하네스 self-test가 `harness:ui` dev script, Storybook, Vite config, API 서버 bind host를 함께 검증한다. 자동 갱신은 같은 화면에서 산출물 summary DTO가 바뀌면 generatedAt과 자동 갱신 상태가 새로 고침 없이 갱신되는 관찰 결과로 검증한다.
+- 2026-06-17: REQ-031 요건 추적 보드의 UI 수용 기준은 Storybook Vitest play 검증으로 고정한다. 목록형 카드의 한 줄 표시, 종류별 작은 뱃지, 계층 들여쓰기, 상태 요약, 제목/상태 필터와 URL query 반영, 상세 route 이동을 사용자 관찰 결과로 검증하고, 요건 계층 DTO의 trace state 판정 보존은 하네스 self-test가 검증한다.
+- 2026-06-17: REQ-033 게이트 화면의 UI 수용 기준은 Storybook Vitest play 검증으로 고정한다. 카테고리 요약은 8개 게이트 카테고리와 차단/통과 상태, 검사 결과 수를 확인하고, finding 목록은 규칙/심각도/요건/파일 경로 필터 적용과 메시지/파일 위치/근거/권고 조치 펼침을 사용자 관찰 결과로 검증한다.
+- 2026-06-17: REQ-034 Change Set 화면의 UI 수용 기준은 Storybook Vitest play 검증으로 고정한다. 카드 요약, 펼침 상세, 제목·상태·영향 요건 필터, 요건 검색/선택 대화상자 호출, 영향 요건 상세 route 이동을 사용자 관찰 결과로 검증한다.
+- 2026-06-17: REQ-035 실행 화면의 UI 수용 기준은 Storybook Vitest play 검증으로 고정하고, 허용 목록 밖 명령 거절은 하네스 self-test가 `/api/commands/run` 직접 요청으로 검증한다. 실행 backend는 여전히 Skeleton 상태지만 서버는 명령 ID와 단일 요건 인자를 먼저 검증한다.
+- 2026-06-17: REQ-036 표준 용어 조회 화면의 UI 수용 기준은 Storybook Vitest play 검증으로 고정한다. AppShell LNB 진입, 목록 필드 표시, 검색, 도메인/승인 상태 필터, 상세 정보 확인은 사용자 관찰 결과로 검증하고, UI 서버의 `/api/terminology` DTO는 하네스 self-test가 `terminology.index.json` 필드 보존으로 검증한다.
+- 2026-06-17: REQ-037 요건 검색/선택 대화상자의 UI 수용 기준은 Storybook Vitest play 검증으로 고정한다. 후보 카드 표시, 하위 요건 구조, 검색 대상 필드, 상위 검색 하위 포함, 단일 선택/해제, 고정 높이와 스크롤, 빈 결과, Docs 닫힌 호출 프레임을 사용자 관찰 결과로 검증한다.
 
 ## 열린 논의
 

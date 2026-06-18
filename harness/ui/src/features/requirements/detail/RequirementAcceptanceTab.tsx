@@ -28,7 +28,7 @@ export function RequirementAcceptanceTab({ detail }: { detail: RequirementDetail
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <div className="font-mono text-sm font-semibold text-foreground">{criterion.id}</div>
+                        <div className="font-mono text-base font-semibold text-foreground">{criterion.id}</div>
                         <StatusBadge label={channel} tone={channelTone(channel)} />
                       </div>
                       <div className="mt-2 break-words text-sm font-medium text-foreground">{criterion.text}</div>

@@ -3,7 +3,7 @@
 요건 ID: REQ-031
 제목: 하네스 UI 요건 추적 보드
 우선순위: 높음
-상태: Skeleton 검토중
+상태: 승인
 요건 종류: 하네스
 명세 역할: 원자 요건
 대상 시스템: harness
@@ -125,6 +125,16 @@
   리뷰자: REDSTONE
   확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
+
+- 리뷰일: 2026-06-17
+  리뷰자: REDSTONE
+  확인: Storybook Vitest play 검증으로 요건 목록형 카드의 한 줄 표시, 종류별 작은 뱃지, 추적 상태 뱃지 우측 정렬, 하위 요건 들여쓰기와 세로선, 상태 요약, 제목/상태 필터, URL query 반영, 상세 route 이동을 확인했다. `harness/self-test/tests/ui-data-contract-integration.test.ts`는 UI 서버가 제공하는 요건 계층 데이터가 `trace.state.json`의 판정과 parent/child 값을 보존하는지 검증한다. `cd harness/ui && npm run test:storybook`, `npm run harness:self-test`, `npm run harness:trace -- --requirement REQ-031`를 통과했고 REQ-031 추적 상태는 GREEN이다.
+  결과: 승인
+
+- 리뷰일: 2026-06-18
+  리뷰자: REDSTONE
+  확인: 보드 5개 (UI) 수용 기준에 play 성공 조건을 작성했다(한 줄 카드·접두 문자 없는 메타 뱃지·추적 상태 뱃지, 하위 들여쓰기, 상태 요약, 제목 필터의 URL query 반영, 상세 route 이동). 이전 리뷰가 언급한 play 검증이 실제 play 함수로 갖춰졌고, 하위 관계는 `aria-label`로 관찰가능하게 만들었다.
+  결과: 승인
 
 ## 열린 질문
 

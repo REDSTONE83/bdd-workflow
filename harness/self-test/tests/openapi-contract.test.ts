@@ -49,7 +49,7 @@ function fixtureOpenApiIndex(tmp: string) {
 }
 
 function runValidator(args: string[]) {
-    runNodeTool('validate-front-end-standards.mjs', args);
+    runNodeTool('validate-front-end-standards.mjs', args, { env: { HARNESS_SCOPE: 'application' } });
 }
 
 harnessTest({

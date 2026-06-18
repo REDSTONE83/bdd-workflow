@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { terminologyBrowser } from "../../lib/harness-data/fixtures";
@@ -33,6 +34,16 @@ export const AllTerms: Story = {
       },
     },
   },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("표준 용어 목록")).toBeVisible();
+    await expect(canvas.getAllByText("harness.standardTerm")[0]).toBeVisible();
+    await expect(canvas.getAllByText("approved")[0]).toBeVisible();
+    await expect(canvas.getAllByText("표준 용어")[0]).toBeVisible();
+    await expect(canvas.getAllByText(/standard term/)[0]).toBeVisible();
+    await expect(canvas.getAllByText(/하네스 용어 사전에 등록되어/)[0]).toBeVisible();
+    await expect(canvas.getAllByText("harness/docs/terminology/domains/harness.json")[0]).toBeVisible();
+  },
 };
 
 export const SearchResults: Story = {
@@ -43,9 +54,34 @@ export const SearchResults: Story = {
     },
     docs: {
       description: {
-        story: "코드 이름 검색 결과 상태다. names에 포함된 값으로도 목록이 좁혀지는지 확인한다.",
+        story: "term key 외 의미, 허용 표현, 금지 표현으로도 목록이 좁혀지는지 확인한다. 코드 이름을 포함한 7개 검색 대상이 모두 동작해야 한다.",
       },
     },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const search = canvas.getByLabelText("표준 용어 검색");
+
+    // term key로 검색: "traceState"는 harness.traceState key의 부분 문자열이다.
+    await userEvent.clear(search);
+    await userEvent.type(search, "traceState");
+    await expect(search).toHaveValue("traceState");
+    await expect(canvas.getAllByText("harness.traceState")[0]).toBeVisible();
+    await expect(canvas.queryByText("ui.dialog")).not.toBeInTheDocument();
+
+    // 허용 표현(allow)으로 검색: "표준어"는 harness.standardTerm의 allow에만 있고 key/이름에는 없다.
+    await userEvent.clear(search);
+    await userEvent.type(search, "표준어");
+    await expect(search).toHaveValue("표준어");
+    await expect(canvas.getAllByText("harness.standardTerm")[0]).toBeVisible();
+    await expect(canvas.queryByText("harness.traceState")).not.toBeInTheDocument();
+
+    // 금지 표현(ban)으로 검색: "데드라인"은 todo.dueDate의 ban에만 있고 key/이름에는 없다.
+    await userEvent.clear(search);
+    await userEvent.type(search, "데드라인");
+    await expect(search).toHaveValue("데드라인");
+    await expect(canvas.getAllByText("todo.dueDate")[0]).toBeVisible();
+    await expect(canvas.queryByText("harness.standardTerm")).not.toBeInTheDocument();
   },
 };
 
@@ -61,6 +97,14 @@ export const FilteredByDomain: Story = {
       },
     },
   },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("combobox", { name: "도메인 필터" })).toHaveTextContent("ui");
+    await expect(canvas.getByText(/결과 2개/)).toBeVisible();
+    await expect(canvas.getAllByText("ui.appShell")[0]).toBeVisible();
+    await expect(canvas.getAllByText("ui.dialog")[0]).toBeVisible();
+    await expect(canvas.queryByText("harness.standardTerm")).not.toBeInTheDocument();
+  },
 };
 
 export const FilteredByStatus: Story = {
@@ -74,6 +118,13 @@ export const FilteredByStatus: Story = {
         story: "승인 상태 필터 적용 상태다. draft 용어만 남고 상태 뱃지가 명확히 보여야 한다.",
       },
     },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("combobox", { name: "승인 상태 필터" })).toHaveTextContent("draft");
+    await expect(canvas.getByText(/결과 1개/)).toBeVisible();
+    await expect(canvas.getAllByText("todo.dueDate")[0]).toBeVisible();
+    await expect(canvas.queryByText("harness.standardTerm")).not.toBeInTheDocument();
   },
 };
 
@@ -89,6 +140,15 @@ export const TermDetail: Story = {
       },
     },
   },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { name: "대화상자" })).toBeVisible();
+    await expect(canvas.getAllByText("ui.dialog")[0]).toBeVisible();
+    await expect(canvas.getAllByText(/dialog/)[0]).toBeVisible();
+    await expect(canvas.getByText("모달")).toBeVisible();
+    await expect(canvas.getByText(/본문 어휘 통제용 등록이다/)).toBeVisible();
+    await expect(canvas.getByText(/요건 본문에서 대화상자 표현을 정규화/)).toBeVisible();
+  },
 };
 
 export const EmptyResult: Story = {
@@ -99,6 +159,11 @@ export const EmptyResult: Story = {
         story: "검색 결과가 없는 상태다. 목록 영역에 빈 결과 안내가 표시되고 상세 영역은 선택 없음으로 남아야 한다.",
       },
     },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("조건에 맞는 표준 용어가 없다.")).toBeVisible();
+    await expect(canvas.getByText("선택한 표준 용어가 없다.")).toBeVisible();
   },
 };
 

@@ -332,9 +332,8 @@ function findingsForStorybookContracts(stories, requirementCards) {
 }
 
 function findingsForStorybookVitestSuccessConditions(frontEndTests) {
-    // 앱 scope의 Storybook Vitest는 mock Playwright를 대체하는 BDD 채널이다.
+    // Storybook Vitest는 app·harness 양쪽에서 (UI) 수용 기준의 BDD 채널이다.
     // covers가 있으면 story 렌더 smoke가 아니라 play 안의 expect assertion으로 성공 조건을 드러낸다.
-    if (scope !== 'application') return [];
     const findings = [];
     for (const test of frontEndTests ?? []) {
         if (test.runtime !== 'storybook-vitest') continue;
@@ -879,20 +878,6 @@ function writePayload(findings, outPath) {
 
 function main(argv) {
     const cfg = parseCliArgs(argv);
-    if (scope === 'harness' && !argv.some((arg) => arg.startsWith('--fe-source-index='))) {
-        const payload = {
-            generatedAt: new Date().toISOString(),
-            schemaVersion: '1',
-            owner: 'front-end-standards',
-            summary: { error: 0, warning: 0, info: 0, byRuleId: {} },
-            findings: []
-        };
-        fs.mkdirSync(path.dirname(cfg.out), { recursive: true });
-        fs.writeFileSync(cfg.out, `${JSON.stringify(payload, null, 2)}\n`);
-        console.log('front-end-standards.findings.json: 0 finding(s) (harness scope)');
-        return;
-    }
-
     if (!fs.existsSync(cfg.feSourceIndex)) {
         // FE 소스 인덱스가 없으면 검사할 게 없으므로 빈 findings로 종료.
         // (back-end-only 프로젝트에서도 이 validator를 무해하게 실행할 수 있게 한다.)
@@ -906,6 +891,18 @@ function main(argv) {
     const stories = index.stories ?? [];
     const tests = index.tests ?? [];
     const requirementsIndex = safeReadJson(cfg.requirementsIndex, { entries: [] });
+    if (scope === 'harness') {
+        const findings = [
+            ...issues.map(findingFromIssue),
+            ...findingsForStorybookContracts(stories, requirementsIndex.entries ?? []),
+            ...findingsForStorybookVitestSuccessConditions(tests)
+        ];
+        const payload = writePayload(findings, cfg.out);
+        const byRule = Object.entries(payload.summary.byRuleId).map(([k, v]) => `${k}=${v}`).join(', ') || 'none';
+        console.log(`front-end-standards.findings.json: ${findings.length} finding(s) (harness scope, error=${payload.summary.error}, warning=${payload.summary.warning}) [${byRule}]`);
+        return;
+    }
+
     const findings = [
         ...issues.map(findingFromIssue),
         ...findingsForMissingStoryStates(stories),
