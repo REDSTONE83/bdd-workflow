@@ -14,3 +14,10 @@ harness/**/build/
 build/
 
 *.class
+
+# Claude Code 로컬 설정 (공유 안 함)
+.claude/settings.local.json
+.claude/launch.json
+
+# 로컬 디버그 로그
+harness/ui/debug-storybook.log
