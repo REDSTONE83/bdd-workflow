@@ -39,6 +39,7 @@ export function useArtifactSummary(scope: HarnessScope) {
       }
       setLiveUpdated(true);
       void queryClient.invalidateQueries({ queryKey: ["artifact-summary", scope] });
+      void queryClient.invalidateQueries({ queryKey: ["harness-data", scope] });
     };
     source.addEventListener("artifacts-changed", handler);
 

@@ -4,15 +4,18 @@
  * @Route /terminology
  */
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { terminologyBrowser } from "../../lib/harness-data/fixtures";
+import { loadTerminology } from "../../lib/harness-data/client";
 import { filterTerminologyTerms, terminologyDomains } from "../../lib/harness-data/terminology";
-import type { TermStatus, TerminologyBrowserModel, TerminologyTerm } from "../../lib/harness-data/types";
+import type { HarnessScope, TermStatus, TerminologyBrowserModel, TerminologyTerm } from "../../lib/harness-data/types";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { EmptyState } from "../../components/ui/empty-state";
+import { ErrorState } from "../../components/ui/ErrorState";
 import { Input } from "../../components/ui/input";
+import { LoadingState } from "../../components/ui/LoadingState";
 import { MetricCard } from "../../components/ui/metric-card";
 import { Select } from "../../components/ui/select";
 
@@ -239,6 +242,14 @@ export function TerminologyBrowser({
   );
 }
 
-export function TerminologyBrowserPage() {
-  return <TerminologyBrowser model={terminologyBrowser} />;
+export function TerminologyBrowserPage({ scope }: { scope: HarnessScope }) {
+  const query = useQuery({
+    queryKey: ["harness-data", scope, "terminology"],
+    queryFn: () => loadTerminology(scope),
+  });
+
+  if (query.isLoading) return <LoadingState label="표준 용어를 불러오는 중" />;
+  if (query.isError || !query.data) return <ErrorState message={query.error instanceof Error ? query.error.message : "표준 용어 산출물을 읽지 못했다."} />;
+
+  return <TerminologyBrowser model={query.data} />;
 }

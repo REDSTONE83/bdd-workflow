@@ -22,12 +22,12 @@ export function AppRouter() {
     <AppShell model={model ?? loadingSummary(scope)} onScopeChange={setScope}>
       <Routes>
         <Route path="/" element={<Navigate to="/requirements" replace />} />
-        <Route path="/requirements" element={<RequirementBoardPage />} />
-        <Route path="/requirements/:requirementId" element={<RequirementDetailPage />} />
-        <Route path="/terminology" element={<TerminologyBrowserPage />} />
-        <Route path="/gate" element={<GateViewPage />} />
-        <Route path="/change-sets" element={<ChangeSetViewPage />} />
-        <Route path="/runs" element={<CommandRunnerPage />} />
+        <Route path="/requirements" element={<RequirementBoardPage scope={scope} />} />
+        <Route path="/requirements/:requirementId" element={<RequirementDetailPage scope={scope} />} />
+        <Route path="/terminology" element={<TerminologyBrowserPage scope={scope} />} />
+        <Route path="/gate" element={<GateViewPage scope={scope} />} />
+        <Route path="/change-sets" element={<ChangeSetViewPage scope={scope} />} />
+        <Route path="/runs" element={<CommandRunnerPage scope={scope} />} />
       </Routes>
     </AppShell>
   );

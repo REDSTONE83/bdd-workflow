@@ -16,7 +16,7 @@ describe("RequirementAcceptanceTab", () => {
 
     const html = renderToStaticMarkup(createElement(RequirementAcceptanceTab, { detail }));
 
-    expect(html).toContain("font-mono text-sm font-semibold text-foreground");
+    expect(html).toContain("font-mono text-base font-semibold text-foreground");
     expect(html).toContain("border-sky-200 bg-sky-50 text-sky-800");
     expect(html).toContain("grid-cols-[6rem_minmax(0,1fr)] items-start");
     expect(html).toContain('text-xs font-semibold leading-5 text-muted-foreground">연결 테스트');
