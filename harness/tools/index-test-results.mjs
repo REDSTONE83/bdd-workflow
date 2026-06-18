@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Layer 1 collector: read JUnit XML (back-end) and Playwright JSON (front-end)
+// Layer 1 collector: read JUnit XML, Playwright JSON, and Storybook Vitest JUnit
 // → indexes/test-results.index.json.
 // 인덱스 단계에서는 어느 요건/AC에 속하는지 알지 못한다. 매칭은 Layer 3(trace)이 한다.
 // identity + alternateIdentities 두 키를 emit해 line 변동에도 매칭이 유지되게 한다.
@@ -9,10 +9,12 @@ import { backendRoot, currentScope, frontEndRoot, outputRootFor, workspaceRoot }
 
 const scope = currentScope();
 const outputRoot = outputRootFor(scope);
+const harnessUiRoot = path.join(workspaceRoot, 'harness', 'ui');
 const frontEndTestResultPaths = [
-    path.join(frontEndRoot, 'test-results', 'e2e-results.json'),
     path.join(frontEndRoot, 'test-results', 'e2e-live-results.json')
 ];
+const appStorybookVitestJunitPath = path.join(frontEndRoot, 'test-results', 'storybook-junit.xml');
+const harnessStorybookVitestJunitPath = path.join(harnessUiRoot, 'test-results', 'storybook-junit.xml');
 const outDir = path.join(outputRoot, 'indexes');
 const outFile = path.join(outDir, 'test-results.index.json');
 
@@ -39,6 +41,10 @@ function walk(dir, predicate = () => true) {
         }
         return predicate(fullPath) ? [fullPath] : [];
     });
+}
+
+function unique(values) {
+    return [...new Set(values.filter(Boolean))];
 }
 
 function normalizeRepoPath(filePath) {
@@ -239,8 +245,72 @@ function collectPlaywright() {
     return frontEndTestResultPaths.flatMap((reportPath) => collectPlaywrightReport(reportPath));
 }
 
+function normalizeStorybookPath(filePath, storybookRoot, defaultResultPath) {
+    if (!filePath) {
+        return path.relative(workspaceRoot, defaultResultPath).replace(/\\/g, '/');
+    }
+    if (path.isAbsolute(filePath)) {
+        return path.relative(workspaceRoot, filePath).replace(/\\/g, '/');
+    }
+    const normalized = filePath.replace(/\\/g, '/');
+    const storybookPrefix = path.relative(workspaceRoot, storybookRoot).replace(/\\/g, '/');
+    if (normalized.startsWith(`${storybookPrefix}/`)) {
+        return normalized;
+    }
+    if (normalized.startsWith('src/')) {
+        return `${storybookPrefix}/${normalized}`;
+    }
+    return `${storybookPrefix}/${normalized}`;
+}
+
+function collectStorybookVitestJUnit() {
+    const config = scope === 'application'
+        ? { scope: 'application', root: frontEndRoot, junitPath: appStorybookVitestJunitPath }
+        : { scope: 'harness', root: harnessUiRoot, junitPath: harnessStorybookVitestJunitPath };
+    if (!fs.existsSync(config.junitPath)) {
+        return [];
+    }
+    const entries = [];
+    const content = fs.readFileSync(config.junitPath, 'utf8');
+    const testcaseRegex = /<testcase\b([^>]*)\/>|<testcase\b([^>]*)>([\s\S]*?)<\/testcase>/g;
+    for (const match of content.matchAll(testcaseRegex)) {
+        const attr = parseAttributes(match[1] ?? match[2] ?? '');
+        const body = match[3] ?? '';
+        const name = attr.name;
+        if (!name) continue;
+        let status = 'PASS';
+        if (body.includes('<failure') || body.includes('<error')) status = 'FAIL';
+        else if (body.includes('<skipped')) status = 'SKIP';
+        const className = attr.classname ?? '';
+        const file = normalizeStorybookPath(attr.file, config.root, config.junitPath);
+        const line = Number(attr.line ?? 0);
+        const identity = className ? `${className} > ${name}` : name;
+        entries.push({
+            kind: 'test-result',
+            requirements: [],
+            runtime: 'storybook-vitest',
+            scope: config.scope,
+            status,
+            identity,
+            alternateIdentities: unique([
+                name,
+                className ? `${className} / ${name}` : '',
+                className ? `${className}.${name}` : '',
+                className,
+                `${file} > ${name}`
+            ]),
+            location: {
+                file,
+                line,
+                identity
+            }
+        });
+    }
+    return entries;
+}
+
 function main() {
-    const entries = [...collectJUnit(), ...collectNodeJUnit(), ...collectPlaywright()];
+    const entries = [...collectJUnit(), ...collectNodeJUnit(), ...collectPlaywright(), ...collectStorybookVitestJUnit()];
     const payload = {
         generatedAt: new Date().toISOString(),
         schemaVersion: '1',

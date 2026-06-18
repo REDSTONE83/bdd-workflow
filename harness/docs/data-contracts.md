@@ -42,6 +42,7 @@ build/{app|harness}/
     requirement-schema-report.json
     change-set-report.md
     change-set-report.json
+    gate-report.json                           # REQ-033 도입 후: UI용 게이트 카테고리 요약
     back-end-standards-report.md
     terminology-report.md
   test-results/                                # scope별 테스트 결과 XML
@@ -50,7 +51,7 @@ build/{app|harness}/
   schema-preview.sql                           # Entity DDL 미리보기 (백엔드 단독)
 ```
 
-하네스 scope에서는 `backend.source-index.json`, `front-end.source-index.json`, `openapi.index.json`, `generateOpenApiIndex/`, `schema-preview.sql`을 기본 입력으로 요구하지 않는다. 필요한 계약은 self-test fixture가 직접 만든다.
+하네스 scope에서는 `backend.source-index.json`, `openapi.index.json`, `generateOpenApiIndex/`, `schema-preview.sql`을 기본 입력으로 요구하지 않는다. `harness/ui` 도입 이후 `front-end.source-index.json`은 하네스 UI page/story/Storybook Vitest 테스트 메타데이터를 담는 하네스 scope 입력으로 사용한다. 필요한 비-UI 계약은 self-test fixture가 직접 만든다.
 
 모든 산출물은 `indexes/`, `findings/`, `state/`, `reports/`, `test-results/` 하위로 정리되어 있다. 평탄 경로(`build/app/*.json`, `build/harness/*.json`, `*.md`)에 직접 쓰지 않는다.
 
@@ -104,18 +105,92 @@ build/{app|harness}/
 - `dto`: `className`, `fields[]`, `patchBody`
 - `page`: `name`, `route`
 - `route`: `path`, `component`
-- `story`: `title`, `story`, `component`
+- `story`: `title`, `story`, `component`, `hasPlay`, `hasAssertion`. `hasPlay`는 story export가 `play` 함수를 가진다는 뜻이고, `hasAssertion`은 해당 `play` 본문 또는 참조 helper에서 `expect(...)`/assertion 호출이 발견됐다는 뜻이다.
 - `scenario`: `title`, `featureTitle`, `featureTags[]`, `covers[]`, `steps[]`
-- `test`: `source` (`back-end` | `front-end` | `harness`), `runtime` (`junit` | `playwright` | `node`), `displayName`, `titlePath[]`, `covers[]`, `resultKeys[]`
-- `card`: `id`, `title`, `status`, `priority`, `requirementType`, `specRole`, `targetSystem`, `productArea`, `qualityAttributes[]`, `verificationLevel`, `relatedRequirementIds[]`, `replacedByRequirementIds[]`, `acceptanceCriteria[]`, `verificationTargets`, `apiSkeleton[]`, `dbSkeleton[]`, `uiSkeleton[]`, `storybookContract[]`, `openQuestions[]`, `terms[]`, `sectionPresent`, `approved`, `bddReviewResult`, `bddReviewIncomplete`, `bddReviewApproved`. `acceptanceCriteria[]`는 `string`이 아니라 `{ text, target, invalidMarker? }` 객체 배열이다. `text`는 bullet 시작의 마커 토큰을 제거한 원문, `target`은 `API | UI | E2E | STATIC | null`, `invalidMarker`는 bullet 시작에 마커처럼 보이는 토큰이 있으나 허용 목록 밖일 때만 채워진다. 같은 카드의 `@Covers`, FE BDD `Covers`, `.feature` `Covers:` 매칭은 모두 `text` 값으로 한다. `verificationTargets`는 `API`, `DB`, `UI`, `Storybook`, `E2E`, `STATIC` 같은 키를 `{ required: boolean | null, raw: string }`으로 둔다. `storybookContract[]`는 `{ title, states[], raw }` 형태이며 `title`은 Storybook sidebar title, `states[]`는 named export 이름이다. `bddReviewResult`는 `BDD 테스트 리뷰` 섹션에서 최신 `결과:` 라인만 추출한 `{ line, status, normalizedStatus } | null`이며, `Skeleton 결과:`와 자유 텍스트는 제외한다. `bddReviewIncomplete`/`bddReviewApproved`는 이 최신 결과 라인에서 계산한다.
+- `test`: `source` (`back-end` | `front-end` | `harness`), `runtime` (`junit` | `playwright` | `node` | `storybook-vitest`), `displayName`, `titlePath[]`, `covers[]`, `resultKeys[]`, `hasPlay`, `hasAssertion`. Storybook Vitest test 엔트리는 story 엔트리와 같은 `hasPlay`/`hasAssertion` 값을 보존한다.
+- `card`: `id`, `title`, `status`, `priority`, `requirementType`, `specRole`, `targetSystem`, `productArea`, `qualityAttributes[]`, `verificationLevel`, `parentRequirementIds[]`, `relatedRequirementIds[]`, `replacedByRequirementIds[]`, `purpose`, `scopeItems[]`, `acceptanceCriteria[]`, `verificationTargets`, `apiSkeleton[]`, `dbSkeleton[]`, `uiSkeleton[]`, `storybookContract[]`, `openQuestions[]`, `terms[]`, `outOfScopeItems[]`, `decisionLogs[]`, `sectionPresent`, `approved`, `bddReviewResult`, `bddReviewIncomplete`, `bddReviewApproved`. `purpose`는 `사용자/목적` 섹션의 본문 문자열이다. `scopeItems[]`, `outOfScopeItems[]`, `terms[]`는 각 섹션의 bullet 목록이다. `decisionLogs[]`는 `의사결정 로그` 섹션의 `{ date, decision, reason, decisionMaker, impact }` 목록이다. `parentRequirementIds[]`는 카드 헤더의 `상위 요건`에서 온 단일 소스이며, `없음`이면 빈 배열이다. `acceptanceCriteria[]`는 `string`이 아니라 `{ text, target, invalidMarker?, line }` 객체 배열이다. `line`은 카드 본문 전체 기준 1-based AC bullet 줄 번호다. `text`는 bullet 시작의 마커 토큰을 제거한 원문, `target`은 `API | UI | E2E | STATIC | null`, `invalidMarker`는 bullet 시작에 마커처럼 보이는 토큰이 있으나 허용 목록 밖일 때만 채워진다. 같은 카드의 `@Covers`, Storybook Vitest `covers`, live Playwright `Covers`, `.feature` `Covers:` 매칭은 모두 `text` 값으로 한다. `verificationTargets`는 `API`, `DB`, `UI`, `Storybook`, `E2E`, `STATIC` 같은 키를 `{ required: boolean | null, raw: string }`으로 둔다. `storybookContract[]`는 `{ title, states[], raw }` 형태이며 `title`은 Storybook sidebar title, `states[]`는 named export 이름이다. `bddReviewResult`는 `BDD 테스트 리뷰` 섹션에서 최신 `결과:` 라인만 추출한 `{ line, status, normalizedStatus } | null`이며, `Skeleton 결과:`와 자유 텍스트는 제외한다. `bddReviewIncomplete`/`bddReviewApproved`는 이 최신 결과 라인에서 계산한다.
 - `change-set`: `title`, `status`, `requestedDate`, `changeTypes[]`, `affectedRequirementIds[]`, `discussionStatus`, `requestSummary[]`, `scopeItems[]`, `outOfScopeItems[]`, `completionCriteria[]`, `verificationCommands[]`, `decisions[]`, `openDiscussions[]`, `sectionPresent`, `referencedRequirementIds[]`. Change Set은 별도 사람이 관리하는 ID를 만들지 않으므로 `location.identity`는 repo-relative 파일 경로다. `requirements[]`에는 `affectedRequirementIds[]`를 그대로 둔다.
 - `term`: `key`, `surfaces[]`, `mode`
-- `test-result`: `identity`, `alternateIdentities[]`, `status` (`PASS` | `FAIL` | `SKIP` | `NOT_RUN`), `runtime` (`junit` | `playwright` | `node`). 엔트리 `kind`는 항상 `"test-result"`이고, runner 구분은 `runtime` 필드를 쓴다.
+- `test-result`: `identity`, `alternateIdentities[]`, `status` (`PASS` | `FAIL` | `SKIP` | `NOT_RUN`), `runtime` (`junit` | `playwright` | `node` | `storybook-vitest`). 엔트리 `kind`는 항상 `"test-result"`이고, runner 구분은 `runtime` 필드를 쓴다.
 - `api-operation` (REQ-006, `indexes/openapi.index.json`): `method` (대문자), `path` (OpenAPI paths 키 그대로 — 예: `/users/{id}`), `operationId`. `location.identity`는 `METHOD path`. 인덱스 최상위에 `sha256` (`rawOpenApi`를 객체 키 정렬 canonical JSON으로 직렬화한 값의 SHA-256), `rawOpenApi` (원본 `/v3/api-docs` JSON)을 함께 둔다. 이 인덱스는 `entries[]`와 함께 두 필드를 추가로 갖는 점에서 다른 source index와 다르다.
 - `api-call` (REQ-006, `front-end.source-index.json`의 `apiCalls[]`): 실제 FE 정적 API 호출. `method` (대문자), `path` (정규화된 URL 표현), `callee`, `apiModule`, `requirements[]`. FE `src/**`의 `apiClient.METHOD("/path", ...)` literal 호출과 `src/api/**` 내부의 literal `fetch("/path", ...)`에서 추출된다. payload 최상위에 `apiCalls: [...]`로 둔다.
 - `api-usage` (`front-end.source-index.json`의 `apiUsages[]`): 파일 상단 JSDoc `@UsesApi METHOD /path [trigger]` 선언에서 추출한 화면/API 사용 계약. `method`, `path`, `trigger`, `route`, `page`, `surfaceType`, `requirements[]`, `file`, `line`을 가진다. 정적 validator는 같은 요건 안에서 `apiUsages[]`와 `apiCalls[]`의 method+path 집합을 비교한다.
 - `front-end.source-index.json`의 `issues[]`: source index가 AST 스캔 중 발견한 FE 정적 위반을 담는다. REQ-008부터 `DIRECT_FETCH_OUTSIDE_API`는 `front-end/src/**` 중 `src/api/**` 밖 직접 `fetch` 호출을 의미하며, Layer 2에서 `FE-API-DIRECT-FETCH` finding으로 정규화된다.
 - `scenarios.index.json`의 `issues[]` (REQ-009): 전역 `issues[]`와 각 feature의 `issues[]`에 `{ line, message, kind }` 형태로 담긴다. `kind`는 다음 7개 enum 중 하나이며, Layer 2 validator(`validate-scenarios.mjs`)가 같은 이름의 SCN-* finding으로 정규화한다. `SCN-DIALECT-FORBIDDEN`, `SCN-FEATURE-HEADER-MISSING`, `SCN-REQ-TAG-MISSING`, `SCN-UNSUPPORTED-KEYWORD`, `SCN-STRAY-LINE`, `SCN-COVERS-OUTSIDE-SCENARIO`, `SCN-STEP-OUTSIDE-SCENARIO`. feature에 속한 issue의 SCN-* finding은 `requirements`로 feature의 `@REQ-XXX` 태그를 그대로 옮기고, 전역 issue 또는 태그가 없는 feature의 issue는 `requirements: []`로 두어 scope 전체 게이트만 차단한다.
+
+## 표준 용어 인덱스
+
+`build/{app|harness}/indexes/terminology.index.json`은 표준 용어 검증과 하네스 UI 표준 용어 조회 화면의 입력이다. 이 파일은 일반 `entries[]` source index와 달리 key 기반 객체를 최상위에 둔다.
+
+최소 형태:
+
+```jsonc
+{
+  "generatedAt": "2026-06-12T00:00:00.000Z",
+  "counts": {
+    "approved": 0,
+    "draft": 0
+  },
+  "terms": {
+    "harness.standardTerm": {
+      "status": "approved" | "draft",
+      "sourceFile": "harness/docs/terminology/domains/harness.json",
+      "ko": "표준 용어",
+      "en": "standard term",
+      "meaning": "...",
+      "allow": ["용어"],
+      "ban": ["..."],
+      "names": {
+        "java": ["..."],
+        "method": ["..."],
+        "field": ["..."],
+        "column": ["..."],
+        "table": ["..."],
+        "json": ["..."],
+        "path": ["..."]
+      },
+      "note": "...",
+      "reason": "..."
+    }
+  },
+  "surfaceIndex": {},
+  "codeNameIndex": {},
+  "nameDuplicates": []
+}
+```
+
+`terms`의 객체 key가 term key다. 하네스 UI 서버가 화면 DTO를 만들 때 `status`, `sourceFile`, `ko`, `en`, `meaning`, `allow`, `ban`, `names`, `note`, `reason` 값을 보존해야 한다. 검색과 필터는 이 DTO 위에서 수행하되, 용어 사전 원본 파일을 UI 컴포넌트가 직접 읽지 않는다.
+
+## 게이트 요약 리포트 (Layer 4)
+
+REQ-033 구현 이후 통합 게이트 도구는 실행할 때마다 UI가 읽을 수 있는 `build/{app|harness}/reports/gate-report.json`을 만든다. 이 파일은 화면용 캐시일 뿐이며, 카테고리 판정의 원천은 여전히 `harness/tools/gate.mjs`다.
+
+최소 형태:
+
+```jsonc
+{
+  "generatedAt": "2026-06-10T00:00:00.000Z",
+  "schemaVersion": "1",
+  "source": "gate",
+  "scope": "harness",
+  "summary": {
+    "passed": false,
+    "traceFailing": true,
+    "categoryFailing": true
+  },
+  "categories": [
+    {
+      "category": "TRACE",
+      "blocked": true,
+      "errors": 3,
+      "byRuleId": { "TRACE-BLOCKED": 3 },
+      "findingRefs": []
+    }
+  ]
+}
+```
+
+`categories[]`는 `TRACE`, `CARD`, `REF`, `TRC`, `BE`, `FE`, `SCN`, `TRM` 순서를 유지한다. `blocked`, `errors`, `byRuleId`, `findingRefs`는 게이트 도구가 계산한 값을 그대로 둔다. TRACE 카테고리의 `TRACE-BLOCKED` 카운트는 게이트가 만든 차단 사유 그룹 수(`red=3`, `green=1` 같은 요약 사유)이며, AC 단위 RED 상세 사유는 `trace.state.json`의 `requirements[].redReasons`를 본다. `summary.passed`는 해당 gate 실행의 exit code가 0인지 나타낸다. `--check` 없이 실행하면 카테고리 오류가 있어도 exit code 기준으로 true일 수 있으므로 UI는 `categoryFailing`/`traceFailing`과 각 카테고리 `blocked`를 함께 표시한다. 하네스 UI는 이 파일을 읽어 표시할 수 있지만 카테고리 분류나 차단 여부를 자체 계산하지 않는다.
 
 ## 텍스트 채널 (선택 추가 필드)
 
@@ -205,6 +280,7 @@ build/{app|harness}/
     {
       "id": "REQ-005",
       "title": "애플리케이션 기본 앱 셸",
+      "file": "app/docs/requirements/REQ-005-app-shell.md",
       "status": "검토중",
       "requirementType": "기능",
       "specRole": "원자 요건",
@@ -212,6 +288,8 @@ build/{app|harness}/
       "productArea": "platform",
       "qualityAttributes": ["usability"],
       "verificationLevel": "mixed",
+      "parentRequirementIds": [],
+      "childRequirementIds": [],
       "state": "RED" | "GREEN" | "BLUE" | "INACTIVE",
       "redReasons": [
         {
@@ -228,6 +306,7 @@ build/{app|harness}/
         {
           "criterion": "애플리케이션 기본 앱 셸이 표시된다",
           "target": "API" | "UI" | "E2E" | "STATIC" | null,
+          "line": 42,
           "status": "PASS" | "FAIL" | "SKIP" | "NOT_RUN" | "MISSING",
           "requiredChecks": [{ "target": "api" | "ui" | "e2e" | "static" | "unknown", "status": "PASS" }],
           "tests": [/* 연결된 test 인덱스 항목 + result */],
@@ -242,14 +321,16 @@ build/{app|harness}/
 coverage row의 `target`은 AC 단위 마커(`API`/`UI`/`E2E`/`STATIC`/`null`)이고, 같은 row의 `requiredChecks[].target`은 evaluator가 실제로 요구하는 검증 단위 라벨이다.
 
 - `api`: 백엔드 Acceptance Test 커버만 요구한다.
-- `ui`: Playwright FE BDD 테스트 커버만 요구한다.
-- `e2e`: Playwright 사용자 여정 테스트 커버만 요구한다.
-- `static`: 백엔드 Acceptance Test 또는 FE BDD 테스트 어느 쪽이든 커버를 인정한다.
+- `ui`: application scope와 harness scope 모두 Storybook Vitest 테스트 커버를 요구한다.
+- `e2e`: 프런트엔드 사용자 여정 테스트 커버를 요구한다. 애플리케이션 상위 요건의 `E2E`는 별도 정적 규칙으로 live Playwright 위치를 강제한다.
+- `static`: 백엔드 Acceptance Test, Storybook Vitest 테스트, live Playwright 테스트 중 요건 scope와 검증 대상에 맞는 커버를 인정한다.
 - `unknown`: AC 마커가 없거나 인식되지 않아 검증 채널을 계산할 수 없다. 카드 구조 오류와 TRACE RED가 함께 발생한다.
 
 AC marker가 `null`일 때의 카드 단위 fallback은 없다.
 
 `redReasons[]`는 `{ ruleId, message, evidence }` 객체 배열이다. `ruleId`는 [`rule-namespaces.md`](./rule-namespaces.md)의 `TRACE-*` prefix 중 하나(`TRACE-AC-EMPTY` / `TRACE-AC-MISSING` / `TRACE-AC-FAIL` / `TRACE-AC-NO-FEATURE`)다. `message`는 리포트에 사람 친화적으로 노출되는 한 줄 문자열이고, `evidence`는 ruleId별로 의미 있는 보조 데이터(예: AC 문장, status, 대상 카드 ID)를 담는다. 리포터(`render-trace-report.mjs`)는 `- [{ruleId}] {message}` 형태로 prefix를 노출한다.
+
+하네스 UI 요건 상세 DTO는 `coverage[]`, scenario index의 scenario 항목, `apis[]`, `entities[]`, `frontEnd.pages/routes/stories/apiUsages/apiCalls[]`와 각 source index 원본을 얇게 정리해 AC 목록, BDD 시나리오 목록, API 작업, Request, Response, Entity, UI surface 연결을 표시할 수 있다. 이 DTO는 새 판정을 만들지 않으며, 원천 항목의 AC 문장/channel/status/tests/scenarios, scenario title/covers/steps/file/line, method/path/operationId, parameters/returnType, DTO className/fields, Entity table/className/listeners/columns, story title/story/file/line을 화면에 맞게 묶는다. API 계약 탭의 `dataShapes[]`는 Request/Response와 참조 객체용 DTO shape를 담고, Entity 탭의 `entitySurfaces[]`는 trace state `entities[]`의 DB table과 JPA Entity/column 메타데이터를 담는다. Entity 화면 표현은 DB table과 columnName, PK 여부, nullable, unique, updatable, length를 우선하고 JPA className, listener, fieldName, javaType, annotation은 보조 정보로 둔다. 요건 상세 화면에서 테스트 정보는 별도 테스트 탭이 아니라 AC 항목과 BDD 시나리오 항목에 포함한다. AC 항목은 같은 AC 문장의 `coverage[]` row에서 테스트를 가져오고, BDD 시나리오 항목은 scenario `covers[]`와 일치하는 `coverage[]` row들의 테스트를 중복 제거해 보여준다. 연결 산출물 항목은 `card`, `scenario` 두 종류만 사용한다. 소스코드 항목은 연결 산출물 파일을 제외하고 `api:{operationId}`, `Request:{name}`, `Response:{name}`, `Entity:{table}`, `Page:{name}`, `Route:{name}`, `Story:{name}`처럼 종류와 세부 이름을 분리할 수 있는 값을 권장한다. 화면 뱃지는 `Page`/`Route`/`Story`를 `UI Page`/`UI Route`/`UI Story`로 표시한다. UI surface는 카드별 `description`을 선택 필드로 가질 수 있으며, Storybook URL은 story title과 named export에서 파생한 검토 링크로 제공할 수 있고, 파일 위치는 구현 확인용 보조 링크로 유지한다.
 
 ## 리포터 출력 (Layer 4)
 

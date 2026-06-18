@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { userEvent, within } from "storybook/test"
+import { expect, userEvent, waitFor } from "storybook/test"
+
+import { withinCurrentAlertDialog } from "@/test/storybook-dialog"
 
 import { TodoDeleteDialog } from "./TodoDeleteDialog"
 
@@ -40,7 +42,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   args: {
     open: true,
     onOpenChange: noop,
@@ -53,13 +55,36 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-const confirmDelete = async () => {
-  const body = within(document.body)
-  await userEvent.click(body.getByRole("button", { name: "삭제" }))
+const activeDeleteDialog = async () => {
+  return withinCurrentAlertDialog("‘분기 보고서 초안’ 할 일을 삭제할까요?")
+}
+
+const assertDefaultDeleteDialog = async () => {
+  const dialog = await activeDeleteDialog()
+  await waitFor(() => expect(dialog.getByText("‘분기 보고서 초안’ 할 일을 삭제할까요?")).toBeVisible())
+  await expect(dialog.getByText(/되돌릴 수 없습니다/)).toBeVisible()
+  await expect(dialog.getByRole("button", { name: "삭제" })).toBeVisible()
+}
+
+const assertDeleteSubmitting = async () => {
+  const dialog = await activeDeleteDialog()
+  await userEvent.click(dialog.getByRole("button", { name: "삭제" }))
+  await expect(dialog.getByRole("button", { name: "삭제 중..." })).toBeDisabled()
+}
+
+const assertDeleteFailure = async () => {
+  const dialog = await activeDeleteDialog()
+  await userEvent.click(dialog.getByRole("button", { name: "삭제" }))
+  await waitFor(() => expect(dialog.getByText("삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.")).toBeVisible())
 }
 
 export const Default: Story = {
   parameters: {
+    harness: {
+      covers: [
+        "할 일을 삭제하려고 하면 삭제 확인 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -80,6 +105,7 @@ export const Default: Story = {
       },
     },
   },
+  play: assertDefaultDeleteDialog,
 }
 
 export const Submitting: Story = {
@@ -104,12 +130,17 @@ export const Submitting: Story = {
       },
     },
   },
-  play: confirmDelete,
+  play: assertDeleteSubmitting,
 }
 
 export const DeleteFailure: Story = {
   args: { onConfirm: failingConfirm },
   parameters: {
+    harness: {
+      covers: [
+        "할 일 삭제 요청이 실패하면 실패 안내가 보이고 사용자가 다시 시도할 수 있다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -129,5 +160,5 @@ export const DeleteFailure: Story = {
       },
     },
   },
-  play: confirmDelete,
+  play: assertDeleteFailure,
 }

@@ -76,7 +76,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   args: {
     onLoadMore: noop,
     onEdit: noop,

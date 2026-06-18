@@ -112,7 +112,7 @@ function runValidator({ stories = [], apiUsages = [], apiCalls = [], issues = []
         `--openapi-index=${openApiIndex}`,
         `--generated-meta=${generatedMeta}`,
         `--out=${out}`
-    ], { cwd: repoRoot });
+    ], { cwd: repoRoot, env: { ...process.env, HARNESS_SCOPE: 'application' } });
 
     return JSON.parse(fs.readFileSync(out, 'utf8'));
 }

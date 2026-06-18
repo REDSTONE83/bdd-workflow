@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const gradleWrapper = path.join(backendRoot, 'gradlew');
 const harnessRoot = path.join(workspaceRoot, 'harness');
+const harnessUiRoot = path.join(harnessRoot, 'ui');
 const appOutputRoot = outputRootFor('application');
 const harnessOutputRoot = outputRootFor('harness');
 
@@ -122,6 +123,20 @@ function frontEndSourceIndex() {
     ], { scope: 'application' });
 }
 
+function harnessFrontEndSourceIndex() {
+    const sourceIndexTool = path.join(harnessUiRoot, 'tools', 'source-index.mjs');
+    if (!fs.existsSync(sourceIndexTool)) {
+        console.log('[harness:front-end-source-index] harness/ui source indexer not present');
+        return;
+    }
+    run('harness:front-end-source-index', process.execPath, [
+        sourceIndexTool,
+        `--front-end-root=${harnessUiRoot}`,
+        `--repo-root=${workspaceRoot}`,
+        `--out=${path.join(harnessOutputRoot, 'indexes', 'front-end.source-index.json')}`
+    ], { scope: 'harness' });
+}
+
 function scenarioIndex(scope) {
     runNodeTool(scope, `${scope === 'harness' ? 'harness' : 'app'}:scenario-index`, 'scenario-index.mjs');
 }
@@ -157,6 +172,7 @@ function collectHarnessStaticInputs() {
     for (const stale of ['backend.source-index.json', 'front-end.source-index.json', 'openapi.index.json']) {
         fs.rmSync(path.join(indexesDir, stale), { force: true });
     }
+    harnessFrontEndSourceIndex();
     harnessSelfTestIndex();
     scenarioIndex('harness');
     requirementIndex('harness');
@@ -206,15 +222,38 @@ function frontEndNpm(label, script) {
 }
 
 function frontEndE2e() {
-    frontEndNpm('front-end:e2e', 'e2e');
+    frontEndStorybookTest();
 }
 
 function frontEndLiveE2e() {
     frontEndNpm('front-end:e2e:live', 'e2e:live');
 }
 
+function frontEndStorybookTest() {
+    fs.rmSync(path.join(frontEndRoot, 'test-results', 'storybook-junit.xml'), { force: true });
+    fs.rmSync(path.join(frontEndRoot, 'test-results', 'e2e-results.json'), { force: true });
+    frontEndNpm('front-end:test-storybook', 'test:storybook');
+}
+
 function frontEndBuildStorybook() {
     frontEndNpm('front-end:build-storybook', 'build-storybook');
+}
+
+function harnessUiNpm(label, script, args = []) {
+    run(label, 'npm', ['run', script, ...args], { cwd: harnessUiRoot, scope: 'harness' });
+}
+
+function harnessUi() {
+    harnessUiNpm('harness:ui', 'dev');
+}
+
+function harnessUiBuildStorybook() {
+    harnessUiNpm('harness:ui:build-storybook', 'build-storybook');
+}
+
+function harnessUiStorybookTest() {
+    fs.rmSync(path.join(harnessUiRoot, 'test-results', 'storybook-junit.xml'), { force: true });
+    harnessUiNpm('harness:ui:test-storybook', 'test:storybook');
 }
 
 function selfTest() {
@@ -247,9 +286,9 @@ function appTrace(args) {
 
 function appValidate(args) {
     collectAppStaticInputs();
+    frontEndStorybookTest();
     frontEndBuildStorybook();
     backEndTest();
-    frontEndE2e();
     frontEndLiveE2e();
     indexTestResults('application');
     emitFindingsAndReports('application');
@@ -278,6 +317,8 @@ function harnessTrace(args) {
 function harnessValidate(args) {
     toolTest();
     collectHarnessStaticInputs();
+    harnessUiStorybookTest();
+    harnessUiBuildStorybook();
     selfTest();
     indexTestResults('harness');
     emitFindingsAndReports('harness');
@@ -287,6 +328,7 @@ function harnessValidate(args) {
 function harnessTest() {
     toolTest();
     collectHarnessStaticInputs();
+    harnessUiStorybookTest();
     selfTest();
 }
 
@@ -302,7 +344,7 @@ Commands:
   app:validate [trace args...]       Run application tests, application indexes, validators, and app gate.
   app:trace [trace args...]          Refresh application indexes/findings/reports and render app trace.
   app:test                           Run application back-end JUnit tests.
-  app:e2e                            Run application front-end mock Playwright E2E tests.
+  app:e2e                            Run application front-end Storybook Vitest tests.
   app:e2e:live                       Run application live Playwright integration smoke tests.
   app:source-index                   Generate build/app/indexes/backend.source-index.json.
   app:front-end-source-index         Generate build/app/indexes/front-end.source-index.json.
@@ -314,6 +356,8 @@ Commands:
   harness:validate [trace args...]   Run harness tool tests, self-tests, validators, and harness gate.
   harness:trace [trace args...]      Refresh harness indexes/findings/reports and render harness trace.
   harness:test                       Run Node tool tests and harness self-test.
+  harness:front-end-source-index     Generate build/harness/indexes/front-end.source-index.json from harness/ui.
+  harness:ui                         Start the local harness UI dev server.
   harness:change-sets                Render harness change set report.
   harness:terminology [args...]       Run terminology tool in harness scope.
   harness:standards                  Emit harness standards findings.
@@ -380,6 +424,12 @@ switch (command) {
         break;
     case 'harness:self-test-index':
         harnessSelfTestIndex();
+        break;
+    case 'harness:front-end-source-index':
+        harnessFrontEndSourceIndex();
+        break;
+    case 'harness:ui':
+        harnessUi();
         break;
     case 'harness:change-sets':
         changeSetsReport('harness');

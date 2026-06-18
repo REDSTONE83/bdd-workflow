@@ -18,6 +18,8 @@
     "harness:validate": "node harness/tools/run.mjs harness:validate",
     "harness:trace": "node harness/tools/run.mjs harness:trace",
     "harness:self-test-index": "node harness/tools/run.mjs harness:self-test-index",
+    "harness:front-end-source-index": "node harness/tools/run.mjs harness:front-end-source-index",
+    "harness:ui": "node harness/tools/run.mjs harness:ui",
     "harness:change-sets": "node harness/tools/run.mjs harness:change-sets",
     "harness:terminology": "node harness/tools/run.mjs harness:terminology",
     "harness:standards": "node harness/tools/run.mjs harness:standards",

@@ -65,19 +65,38 @@ const AC_TARGET_TOKENS = ['API', 'UI', 'E2E', 'STATIC'];
 // 공백이 있으면 자연어로 간주해 마커 후보에서 제외한다.
 const AC_MARKER_VALID_PATTERN = /^\(([^()\s]+)\)\s+/;
 const AC_MARKER_LOOSE_PATTERN = /^\(([^()\s]+)\)/;
+const BULLET_PATTERN = /^\s*-\s+(?:\[[ xX]\]\s*)?(.+?)\s*$/;
+
+function parseAcMarker(raw) {
+    const validMatch = raw.match(AC_MARKER_VALID_PATTERN);
+    if (validMatch && AC_TARGET_TOKENS.includes(validMatch[1])) {
+        return { text: raw.slice(validMatch[0].length), target: validMatch[1] };
+    }
+    const looseMatch = raw.match(AC_MARKER_LOOSE_PATTERN);
+    if (looseMatch) {
+        return { text: raw, target: null, invalidMarker: looseMatch[1] };
+    }
+    return { text: raw, target: null };
+}
 
 function acceptanceCriterionItems(markdown) {
-    return bulletItems(markdown).map((raw) => {
-        const validMatch = raw.match(AC_MARKER_VALID_PATTERN);
-        if (validMatch && AC_TARGET_TOKENS.includes(validMatch[1])) {
-            return { text: raw.slice(validMatch[0].length), target: validMatch[1] };
-        }
-        const looseMatch = raw.match(AC_MARKER_LOOSE_PATTERN);
-        if (looseMatch) {
-            return { text: raw, target: null, invalidMarker: looseMatch[1] };
-        }
-        return { text: raw, target: null };
-    });
+    return bulletItems(markdown).map(parseAcMarker);
+}
+
+// 카드 본문 전체를 줄 단위로 훑어 `## 수용 기준` 섹션의 각 AC bullet에 1-based 줄
+// 번호를 부여한다. section() 부분 문자열은 절대 줄 번호를 잃으므로 본문을 직접 스캔한다.
+function acceptanceCriteriaWithLines(content) {
+    const lines = content.split('\n');
+    const headingIndex = lines.findIndex((line) => /^## 수용 기준\s*$/.test(line));
+    if (headingIndex < 0) return [];
+    const items = [];
+    for (let i = headingIndex + 1; i < lines.length; i += 1) {
+        if (/^## /.test(lines[i])) break;
+        const bullet = lines[i].match(BULLET_PATTERN);
+        if (!bullet) continue;
+        items.push({ ...parseAcMarker(bullet[1]), line: i + 1 });
+    }
+    return items;
 }
 
 function normalizeApprovalStatus(status) {
@@ -175,6 +194,50 @@ function bddReviewResultSummary(markdown) {
     };
 }
 
+function decisionLogItems(markdown) {
+    const fields = {
+        '결정일': 'date',
+        '결정': 'decision',
+        '이유': 'reason',
+        '결정자': 'decisionMaker',
+        '영향': 'impact'
+    };
+    const logs = [];
+    let current = null;
+
+    for (const line of markdown.split('\n')) {
+        const match = line.match(/^[ \t]*(?:-\s*)?(결정일|결정|이유|결정자|영향)[ \t]*[:：][ \t]*(.+?)\s*$/);
+        if (!match) continue;
+
+        const [, label, value] = match;
+        if (label === '결정일') {
+            if (current) logs.push(current);
+            current = {
+                date: value,
+                decision: '',
+                reason: '',
+                decisionMaker: '',
+                impact: ''
+            };
+            continue;
+        }
+
+        if (!current) {
+            current = {
+                date: '',
+                decision: '',
+                reason: '',
+                decisionMaker: '',
+                impact: ''
+            };
+        }
+        current[fields[label]] = value;
+    }
+
+    if (current) logs.push(current);
+    return logs.filter((log) => log.date || log.decision || log.reason || log.decisionMaker || log.impact);
+}
+
 function firstNonEmptySection(content, headings) {
     for (const heading of headings) {
         const value = section(content, heading).trim();
@@ -198,10 +261,15 @@ function parseCard(file) {
     const verificationLevel = headerValue(content, '검증 수준');
     const relatedRequirementIds = requirementRefs(headerValue(content, '관련 요건'));
     const replacedByRequirementIds = requirementRefs(headerValue(content, '대체 요건'));
-    const acceptanceCriteria = acceptanceCriterionItems(section(content, '수용 기준'));
+    const parentRequirementIds = requirementRefs(headerValue(content, '상위 요건'));
+    const acceptanceCriteria = acceptanceCriteriaWithLines(content);
+    const purpose = section(content, '사용자/목적').trim();
+    const scopeItems = bulletItems(section(content, '범위'));
     const openQuestions = bulletItems(section(content, '열린 질문'))
         .filter((item) => !/^없음$/.test(item.trim()));
     const terms = bulletItems(section(content, '표준 용어'));
+    const outOfScopeItems = bulletItems(section(content, '제외 범위'));
+    const decisionLogs = decisionLogItems(section(content, '의사결정 로그'));
     const verificationTargets = verificationTargetItems(section(content, '검증 대상'));
     const apiSkeleton = bulletItems(section(content, 'API Skeleton'));
     const dbSkeleton = bulletItems(section(content, 'DB Skeleton'));
@@ -236,10 +304,15 @@ function parseCard(file) {
         verificationLevel,
         relatedRequirementIds,
         replacedByRequirementIds,
+        parentRequirementIds,
         approved: normalizeApprovalStatus(status),
+        purpose,
+        scopeItems,
         acceptanceCriteria,
         openQuestions,
         terms,
+        outOfScopeItems,
+        decisionLogs,
         verificationTargets,
         apiSkeleton,
         dbSkeleton,
@@ -275,10 +348,15 @@ function toEntry(card) {
         verificationLevel: card.verificationLevel,
         relatedRequirementIds: card.relatedRequirementIds,
         replacedByRequirementIds: card.replacedByRequirementIds,
+        parentRequirementIds: card.parentRequirementIds,
         approved: card.approved,
+        purpose: card.purpose,
+        scopeItems: card.scopeItems,
         acceptanceCriteria: card.acceptanceCriteria,
         openQuestions: card.openQuestions,
         terms: card.terms,
+        outOfScopeItems: card.outOfScopeItems,
+        decisionLogs: card.decisionLogs,
         verificationTargets: card.verificationTargets,
         apiSkeleton: card.apiSkeleton,
         dbSkeleton: card.dbSkeleton,
@@ -310,8 +388,11 @@ function main() {
 
 export {
     acceptanceCriterionItems,
+    acceptanceCriteriaWithLines,
+    parseAcMarker,
     bddReviewResultItems,
     bddReviewResultSummary,
+    decisionLogItems,
     verificationTargetItems,
     storybookContractItems,
     AC_TARGET_TOKENS,

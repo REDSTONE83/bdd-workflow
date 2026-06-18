@@ -32,7 +32,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   argTypes: {
     variant: {
       control: "select",

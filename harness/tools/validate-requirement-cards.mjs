@@ -102,7 +102,8 @@ const UI_PRIMITIVE_DENY_LIST = new Set([
     'ui.modal',
     'ui.dropdown',
     'ui.tab',
-    'ui.toggle'
+    'ui.toggle',
+    'ui.badge'
 ]);
 const scenariosDir = path.join(repoRoot, 'docs', 'scenarios');
 // 카드의 "시나리오 문서:" 줄이 아직 작성 예정으로 남아 있는지 판단하는 표기.
@@ -264,11 +265,32 @@ function verificationContractFindings(card) {
     return findings;
 }
 
+function parentCycleFor(card, cardById) {
+    if (!card.id) return null;
+    if ((card.parentRequirementIds ?? []).includes(card.id)) return null;
+    const visited = new Set([card.id]);
+    let current = card;
+    while ((current.parentRequirementIds ?? []).length > 0) {
+        // Multiple parents are already rejected by CARD-PARENT-MULTIPLE. Follow the
+        // canonical first parent here only to detect cycles in the supported shape.
+        const parentId = current.parentRequirementIds[0];
+        if (visited.has(parentId)) {
+            return [...visited, parentId];
+        }
+        visited.add(parentId);
+        const parent = cardById.get(parentId);
+        if (!parent) return null;
+        current = parent;
+    }
+    return null;
+}
+
 function validateCard(card, allCards, terminologyIndex) {
     const findings = [];
     const fname = path.basename(card.location?.file ?? '');
     const fnameMatch = fname.match(REQUIREMENT_FILENAME_PATTERN);
     const knownIds = new Set(allCards.map((c) => c.id).filter(Boolean));
+    const cardById = new Map(allCards.filter((c) => c.id).map((c) => [c.id, c]));
 
     if (!card.idRaw) {
         findings.push(findingForCard(card, 'CARD-ID-MISSING', '요건 ID 누락'));
@@ -374,6 +396,46 @@ function validateCard(card, allCards, terminologyIndex) {
         findings.push(findingForCard(card, 'CARD-REPLACED-BY-UNKNOWN',
             `대체 요건이 존재하지 않음: ${replacement}`,
             { replacedByRequirementId: replacement }));
+    }
+
+    // 상위 요건은 계층의 단일 소스다. 자식이 부모를 명시 선언하고, 부모는 실재하며
+    // 명세 역할이 '상위 요건'이어야 한다. 자식 목록(childRequirementIds)은 추적 판정기가 역산한다.
+    const parentRequirementIds = card.parentRequirementIds ?? [];
+    if (parentRequirementIds.length > 1) {
+        findings.push(findingForCard(card, 'CARD-PARENT-MULTIPLE',
+            '상위 요건은 하나만 적을 수 있음',
+            { parentRequirementIds }));
+    }
+    if (['대체됨', '폐기'].includes(card.status) && parentRequirementIds.length > 0) {
+        findings.push(findingForCard(card, 'CARD-PARENT-INACTIVE-FORBIDDEN',
+            `상태=${card.status}인 카드는 상위 요건을 가질 수 없음`,
+            { status: card.status, parentRequirementIds }));
+    }
+    const parentCycle = parentCycleFor(card, cardById);
+    if (parentCycle) {
+        findings.push(findingForCard(card, 'CARD-PARENT-CYCLE',
+            `상위 요건 관계에 순환이 있음: ${parentCycle.join(' -> ')}`,
+            { cycle: parentCycle }));
+    }
+    for (const parent of parentRequirementIds) {
+        if (parent === card.id) {
+            findings.push(findingForCard(card, 'CARD-PARENT-SELF',
+                '상위 요건이 자기 자신을 가리킴',
+                { parentRequirementId: parent }));
+            continue;
+        }
+        const parentCard = cardById.get(parent);
+        if (!parentCard) {
+            findings.push(findingForCard(card, 'CARD-PARENT-REQ-UNKNOWN',
+                `상위 요건이 존재하지 않음: ${parent}`,
+                { parentRequirementId: parent }));
+            continue;
+        }
+        if (parentCard.specRole !== '상위 요건') {
+            findings.push(findingForCard(card, 'CARD-PARENT-REQ-NOT-PARENT',
+                `상위 요건 ${parent}의 명세 역할이 '상위 요건'이 아님: "${parentCard.specRole || '미기재'}"`,
+                { parentRequirementId: parent, parentSpecRole: parentCard.specRole }));
+        }
     }
 
     if (card.status === '대체됨' && (card.replacedByRequirementIds ?? []).length === 0) {

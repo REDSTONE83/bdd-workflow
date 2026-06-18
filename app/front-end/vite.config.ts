@@ -1,7 +1,7 @@
 import path from "node:path"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vitest/config"
+import { defineConfig } from "vite"
 
 // REQ-011: dev server는 BE 8080을 같은 origin으로 proxy 한다.
 // HttpOnly Cookie 가 cross-origin SameSite=Strict 제약 없이 전달되도록 한다.
@@ -47,11 +47,5 @@ export default defineConfig({
   },
   server: {
     proxy,
-  },
-  test: {
-    environment: "jsdom",
-    include: ["src/**/*.test.{ts,tsx}"],
-    setupFiles: ["./src/test/setup.ts"],
-    css: true,
   },
 })

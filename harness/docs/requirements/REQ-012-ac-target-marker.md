@@ -20,11 +20,11 @@
 ## 범위
 
 - 카드의 수용 기준 bullet 시작 직후에 `(API)`, `(UI)`, `(E2E)`, `(STATIC)` 중 하나를 검증 채널 마커로 둔다. 예: `- (API) 어떤 결과 문장`.
-- 마커는 카드 정적 검증과 추적용으로만 사용한다. 마커는 백엔드 `@Covers`와 FE BDD `Covers` 값에 포함하지 않으며, 테스트 식별자로 사용하는 AC 문장은 마커를 제외한 원문이다.
+- 마커는 카드 정적 검증과 추적용으로만 사용한다. 마커는 백엔드 `@Covers`, Storybook Vitest `covers`, live Playwright `Covers` 값에 포함하지 않으며, 테스트 식별자로 사용하는 AC 문장은 마커를 제외한 원문이다.
 - 마커가 없는 AC는 `CARD-AC-MARKER-MISSING` 카드 구조 오류로 차단한다.
 - 마커 유효값은 `API`, `UI`, `E2E`, `STATIC` 네 가지뿐이며, 다른 토큰은 `CARD-AC-MARKER-INVALID` 카드 구조 오류로 차단한다.
 - 카드 파서는 각 AC에 `target` 필드를 부여해 trace 인덱스와 추적 리포트에 노출한다.
-- 통합 게이트(`gate.mjs`, REQ-010)는 TRACE 카테고리에서 AC 단위 커버 요구를 적용한다. `API` AC는 백엔드 Acceptance Test 커버가 있어야 하고, `UI` AC와 `E2E` AC는 Playwright FE BDD 테스트 커버가 있어야 하며, `STATIC` AC는 백엔드 Acceptance Test 또는 FE BDD 테스트 어느 쪽이든 실행 검증 커버가 있으면 통과한다.
+- 통합 게이트(`gate.mjs`, REQ-010)는 TRACE 카테고리에서 AC 단위 커버 요구를 적용한다. `API` AC는 백엔드 Acceptance Test 커버가 있어야 하고, `UI` AC는 Storybook Vitest 커버가 있어야 하며, `E2E` AC는 프런트엔드 사용자 여정 테스트 커버가 있어야 한다. 애플리케이션 상위 요건의 `E2E`는 별도 정적 규칙으로 live Playwright 위치를 강제한다. `STATIC` AC는 백엔드 Acceptance Test, Storybook Vitest, live Playwright, 하네스 self-test 중 검증 대상에 맞는 실행 검증 커버가 있으면 통과한다.
 - 추적 리포트(`build/harness/reports/trace-report.md`)는 AC별 target 마커와 검증 상태를 함께 표시한다.
 - 표준 문서 `harness/docs/standards/requirement-card.md`의 수용 기준 절에 마커 작성 규칙, 유효값, 필수 작성 규칙, 누락/오류 ruleId를 명시한다.
 
@@ -45,10 +45,10 @@
 - (STATIC) 카드 파서는 수용 기준 bullet 시작에 위치한 `(API)`, `(UI)`, `(E2E)`, `(STATIC)` 마커를 인식해 해당 AC의 target으로 부여한다
 - (STATIC) 마커가 없는 AC는 카드 구조 오류로 차단한다
 - (STATIC) AC 마커가 `API`, `UI`, `E2E`, `STATIC` 외 값을 가지면 카드 정적 검증이 오류로 차단한다
-- (STATIC) AC 마커는 백엔드 `@Covers`와 FE BDD `Covers` 값에 포함되지 않는다
+- (STATIC) AC 마커는 백엔드 `@Covers`, Storybook Vitest `covers`, live Playwright `Covers` 값에 포함되지 않는다
 - (STATIC) 통합 게이트는 target이 `API`인 AC에 백엔드 Acceptance Test 커버가 없으면 차단한다
-- (STATIC) 통합 게이트는 target이 `UI`인 AC에 FE BDD 테스트 커버가 없으면 차단한다
-- (STATIC) 통합 게이트는 target이 `E2E`인 AC에 Playwright 사용자 여정 테스트 커버가 없으면 차단한다
+- (STATIC) 통합 게이트는 target이 `UI`인 AC에 Storybook Vitest 테스트 커버가 없으면 차단한다
+- (STATIC) 통합 게이트는 target이 `E2E`인 AC에 프런트엔드 사용자 여정 테스트 커버가 없으면 차단한다
 - (STATIC) 추적 리포트는 각 AC의 target 마커와 검증 상태를 함께 표시한다
 - (STATIC) 표준 문서에는 마커 작성 규칙, 유효값, 오류 규칙이 명시된다
 
@@ -76,7 +76,7 @@
   결정: 통합 게이트(`gate.mjs`)의 TRACE 카테고리가 AC 단위 커버 요구를 적용한다. 기존 카드 단위 BE/FE 커버 요구는 AC target의 합으로 자연스럽게 표현된다.
   이유: REQ-010의 통합 게이트가 이미 BE/FE/SCN 카테고리를 단일 판정기에서 차단하고 있으므로, AC target도 같은 진입점에서 처리하는 편이 일관적이다.
   결정자: Tech Lead
-  영향: TRACE 카테고리에 AC target × 테스트 종류 매트릭스가 추가된다. `(API)`는 백엔드 Acceptance Test, `(UI)`와 `(E2E)`는 Playwright FE BDD 테스트, `(STATIC)`은 하네스/정적 검사 실행 테스트 커버로 판정한다.
+  영향: TRACE 카테고리에 AC target × 테스트 종류 매트릭스가 추가된다. `(API)`는 백엔드 Acceptance Test, `(UI)`는 Storybook Vitest, `(E2E)`는 프런트엔드 사용자 여정 테스트, `(STATIC)`은 하네스/정적 검사 실행 테스트 커버로 판정한다. 상위 요건의 `(E2E)`는 별도 정적 규칙으로 live Playwright 위치를 강제한다.
 
 ## BDD 테스트 리뷰
 
@@ -97,9 +97,9 @@
     - Cross-artifact validator (`harness/tools/validate-cross-artifact.mjs`): TRC-COV-02 매칭이 `.text`로 비교하도록 어댑트.
     - Trace report renderer (`harness/tools/render-trace-report.mjs`): `Acceptance Criteria Coverage` 행에 `(target)` 마커를 함께 표시.
   표준 용어: `harness.requirementCard`, `harness.acceptanceCriteria` 두 후보를 `harness/docs/terminology/domains/harness.json`에 approved로 추가. 카드 정적 검증과 통합 게이트 모두 통과.
-  추적 정책: 마커가 없는 AC는 카드 구조 오류다. `API`는 백엔드 Acceptance Test, `UI`와 `E2E`는 FE BDD 테스트, `STATIC`은 하네스/정적 검사 실행 테스트 커버를 요구한다.
+  추적 정책: 마커가 없는 AC는 카드 구조 오류다. `API`는 백엔드 Acceptance Test, `UI`는 Storybook Vitest, `E2E`는 프런트엔드 사용자 여정 테스트, `STATIC`은 하네스/정적 검사 실행 테스트 커버를 요구한다. 상위 요건의 `E2E`는 live Playwright smoke 위치 규칙을 추가로 따른다.
   Gradle 실행 순서: 기존 task 그래프 그대로. `indexRequirements` → `validateRequirementCards`/`validateCrossArtifact`/`evaluateTraceState` → `renderTraceReport`/`gate` 순서 유지.
-  검증: `./gradlew traceRequirementCard -Preq=REQ-012` 성공(카드/시나리오/용어 finding 0건, redReasons 1건=TRACE-AC-MISSING). `./gradlew validateRequirementCard -Preq=REQ-012`는 RED(테스트 미작성)로 차단되는 것이 정상이며, 이 카드의 통합 게이트 통과는 다음 구현 단계에서 Acceptance Test/FE BDD 테스트가 추가된 뒤로 미룬다. `./gradlew validateHarness`는 REQ-011·REQ-012 두 카드의 TRACE RED 두 건 외 finding 0건이며, 기존 REQ-001~REQ-010 카드는 회귀 없이 BLUE 유지.
+  검증: `./gradlew traceRequirementCard -Preq=REQ-012` 성공(카드/시나리오/용어 finding 0건, redReasons 1건=TRACE-AC-MISSING). `./gradlew validateRequirementCard -Preq=REQ-012`는 RED(테스트 미작성)로 차단되는 것이 정상이며, 이 카드의 통합 게이트 통과는 다음 구현 단계에서 Acceptance Test/Storybook Vitest/live Playwright 테스트가 추가된 뒤로 미룬다. `./gradlew validateHarness`는 REQ-011·REQ-012 두 카드의 TRACE RED 두 건 외 finding 0건이며, 기존 REQ-001~REQ-010 카드는 회귀 없이 BLUE 유지.
   승인자: Product Owner, Tech Lead
   Skeleton 결과: 승인
 

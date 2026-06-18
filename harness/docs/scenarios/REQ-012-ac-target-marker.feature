@@ -27,11 +27,11 @@ Feature: AC 단위 검증 채널 마커와 하네스 게이트
 
   Scenario: AC 마커는 @Covers와 Covers 값에 포함되지 않는다
     Covers:
-      - AC 마커는 백엔드 `@Covers`와 FE BDD `Covers` 값에 포함되지 않는다
+      - AC 마커는 백엔드 `@Covers`, Storybook Vitest `covers`, live Playwright `Covers` 값에 포함되지 않는다
 
     Given 카드의 AC가 "- (API) 어떤 결과 문장"으로 작성되어 있다
-    When 백엔드 Acceptance Test와 FE BDD 테스트가 같은 AC를 커버한다
-    Then 각 테스트의 @Covers와 Covers 값은 마커를 제외한 "어떤 결과 문장"과 정확히 일치한다
+    When 백엔드 Acceptance Test, Storybook Vitest story, live Playwright 테스트가 같은 AC를 커버한다
+    Then 각 테스트의 Covers 값은 마커를 제외한 "어떤 결과 문장"과 정확히 일치한다
 
   Scenario: API target AC는 백엔드 Acceptance Test 커버가 없으면 차단된다
     Covers:
@@ -41,19 +41,19 @@ Feature: AC 단위 검증 채널 마커와 하네스 게이트
     When 개발자가 scope별 validate 또는 gate.mjs --check를 실행한다
     Then 통합 게이트가 TRACE 카테고리 실패로 차단한다
 
-  Scenario: UI target AC는 FE BDD 테스트 커버가 없으면 차단된다
+  Scenario: UI target AC는 Storybook Vitest 테스트 커버가 없으면 차단된다
     Covers:
-      - 통합 게이트는 target이 `UI`인 AC에 FE BDD 테스트 커버가 없으면 차단한다
+      - 통합 게이트는 target이 `UI`인 AC에 Storybook Vitest 테스트 커버가 없으면 차단한다
 
-    Given target이 UI인 AC가 있고 같은 카드 ID를 가진 FE BDD 테스트가 그 AC를 커버하지 않는다
+    Given target이 UI인 AC가 있고 같은 카드 ID를 가진 Storybook Vitest 테스트가 그 AC를 커버하지 않는다
     When 개발자가 scope별 validate 또는 gate.mjs --check를 실행한다
     Then 통합 게이트가 TRACE 카테고리 실패로 차단한다
 
-  Scenario: E2E target AC는 사용자 여정 테스트 커버가 없으면 차단된다
+  Scenario: E2E target AC는 프런트엔드 사용자 여정 테스트 커버가 없으면 차단된다
     Covers:
-      - 통합 게이트는 target이 `E2E`인 AC에 Playwright 사용자 여정 테스트 커버가 없으면 차단한다
+      - 통합 게이트는 target이 `E2E`인 AC에 프런트엔드 사용자 여정 테스트 커버가 없으면 차단한다
 
-    Given target이 E2E인 AC가 있고 같은 카드 ID를 가진 Playwright 사용자 여정 테스트가 그 AC를 커버하지 않는다
+    Given target이 E2E인 AC가 있고 같은 카드 ID를 가진 프런트엔드 사용자 여정 테스트가 그 AC를 커버하지 않는다
     When 개발자가 scope별 validate 또는 gate.mjs --check를 실행한다
     Then 통합 게이트가 TRACE 카테고리 실패로 차단한다
 

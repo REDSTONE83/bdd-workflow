@@ -1,8 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { useRef, useState } from "react"
 import { MemoryRouter } from "react-router-dom"
+import { expect, userEvent, waitFor, within } from "storybook/test"
 
 import { AuthContext, type AuthContextValue } from "@/features/auth/AuthContext"
+import {
+  expectCurrentPopupClosed,
+  withinCurrentAlertDialog,
+  withinCurrentDialog,
+} from "@/test/storybook-dialog"
 
 import { CategoriesPage } from "./CategoriesPage"
 import {
@@ -38,6 +44,7 @@ const many: CategoryView[] = Array.from({ length: 20 }, (_, i) => ({
 }))
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+const MOCK_MUTATION_DELAY_MS = 50
 
 // Skeleton 단계 page mock 의 상호작용 검토용 in-memory 호스트.
 // 구현 단계에서 이 콜백들이 카테고리 API + TanStack Query mutation 으로 대체된다.
@@ -53,14 +60,14 @@ function CategoriesPageMock({ initial }: { initial: CategoryView[] }) {
     )
 
   const handleCreate = async (input: CategoryInput) => {
-    await delay(400)
+    await delay(MOCK_MUTATION_DELAY_MS)
     if (isDuplicate(input.name)) throw new DuplicateCategoryNameError()
     idRef.current += 1
     setCategories((prev) => [...prev, { id: `new-${idRef.current}`, ...input }])
   }
 
   const handleUpdate = async (id: string, input: CategoryInput) => {
-    await delay(400)
+    await delay(MOCK_MUTATION_DELAY_MS)
     if (isDuplicate(input.name, id)) throw new DuplicateCategoryNameError()
     setCategories((prev) =>
       prev.map((category) =>
@@ -70,7 +77,7 @@ function CategoriesPageMock({ initial }: { initial: CategoryView[] }) {
   }
 
   const handleDelete = async (id: string) => {
-    await delay(400)
+    await delay(MOCK_MUTATION_DELAY_MS)
     setCategories((prev) => prev.filter((category) => category.id !== id))
   }
 
@@ -110,7 +117,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   args: {
     categories: sample,
     onCreate: okAsync,
@@ -132,9 +139,71 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
+const assertCategoryRouteFlow = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement)
+  await expect(canvas.getByRole("heading", { name: "카테고리" })).toBeVisible()
+  await expect(canvas.getByRole("link", { name: "할 일" })).toBeVisible()
+  await expect(canvas.getByText("업무")).toBeVisible()
+  await expect(canvas.getByText("개인")).toBeVisible()
+  await expect(canvas.getByLabelText("색상 #3b82f6")).toBeVisible()
+
+  await userEvent.click(canvas.getByRole("button", { name: "새 카테고리" }))
+  const createDialog = await withinCurrentDialog("새 카테고리")
+  await userEvent.type(createDialog.getByLabelText("이름"), "Travel")
+  await userEvent.click(createDialog.getByRole("button", { name: "만들기" }))
+  await expectCurrentPopupClosed("dialog", "새 카테고리")
+  await expect(await canvas.findByText("Travel")).toBeVisible()
+
+  await userEvent.click(canvas.getByRole("button", { name: "Travel 수정" }))
+  const editDialog = await withinCurrentDialog("카테고리 수정")
+  await expect(editDialog.getByRole("button", { name: "저장" })).toBeEnabled()
+  const editName = editDialog.getByLabelText("이름")
+  await userEvent.clear(editName)
+  await userEvent.type(editName, "Travel updated")
+  await userEvent.click(editDialog.getByRole("button", { name: "저장" }))
+  await expectCurrentPopupClosed("dialog", "카테고리 수정")
+  await expect(await canvas.findByText("Travel updated")).toBeVisible()
+
+  await userEvent.click(canvas.getByRole("button", { name: "Travel updated 삭제" }))
+  const deleteDialog = await withinCurrentAlertDialog("‘Travel updated’ 카테고리를 삭제할까요?")
+  await expect(deleteDialog.getByText("‘Travel updated’ 카테고리를 삭제할까요?")).toBeVisible()
+  await userEvent.click(deleteDialog.getByRole("button", { name: "삭제" }))
+  await expectCurrentPopupClosed("alertdialog", "‘Travel updated’ 카테고리를 삭제할까요?")
+  await waitFor(() => expect(canvas.queryByText("Travel updated")).not.toBeInTheDocument())
+}
+
+const assertEmptyCategories = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement)
+  await expect(canvas.getByText("아직 카테고리가 없습니다. 새 카테고리를 만들어 보세요.")).toBeVisible()
+  await expect(canvas.getByRole("button", { name: "새 카테고리" })).toBeVisible()
+}
+
+const assertManyCategories = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement)
+  await expect(canvas.getByText("카테고리 1")).toBeVisible()
+  await expect(canvas.getByTestId("category-scroll")).toBeVisible()
+  await expect(canvas.getByTestId("category-list-sentinel")).toHaveTextContent("스크롤하면 더 불러옵니다")
+}
+
 export const RouteCategories: Story = {
   name: "Route /categories",
   parameters: {
+    harness: {
+      covers: [
+        "`/categories` 경로에 접근하면 자신의 카테고리 목록이 보인다",
+        "카테고리 목록은 정해진 정렬 순서대로 보이며, 같은 순서면 먼저 등록한 카테고리가 위로 정렬되어 보인다",
+        "카테고리 목록의 각 항목은 이름과 색상을 함께 표시한다",
+        "카테고리 화면은 보호 화면 앱 셸 안에 보이고, 할 일 화면과 카테고리 화면을 오갈 수 있는 내비가 보인다",
+        "데스크톱 화면에서 카테고리 목록과 입력 영역의 주요 요소가 화면 밖으로 넘치지 않는다",
+        "카테고리 화면은 자동 접근성 검사에서 위반이 없어야 한다",
+        "유효한 정보로 카테고리를 만들면 새 카테고리가 목록에 나타난다",
+        "카테고리를 수정해 이름이나 색상을 바꾸면 변경된 이름과 색상이 목록에 반영된다",
+        "카테고리를 수정해 설명을 바꾼 뒤 수정 화면을 다시 열면 변경된 설명이 보인다",
+        "카테고리를 수정할 때 색상을 비우면 목록에서 그 카테고리의 색상 표시가 사라진다",
+        "카테고리를 수정할 때 설명을 비운 뒤 수정 화면을 다시 열면 설명이 비어 있다",
+        "삭제를 확인하면 그 카테고리가 목록에서 사라진다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -158,11 +227,17 @@ export const RouteCategories: Story = {
     },
   },
   render: () => <CategoriesPageMock initial={sample} />,
+  play: assertCategoryRouteFlow,
 }
 
 export const Empty: Story = {
   args: { categories: [] },
   parameters: {
+    harness: {
+      covers: [
+        "카테고리가 하나도 없으면 카테고리가 비어 있다는 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -182,11 +257,17 @@ export const Empty: Story = {
       },
     },
   },
+  play: assertEmptyCategories,
 }
 
 export const ManyItems: Story = {
   args: { categories: many, hasMore: true },
   parameters: {
+    harness: {
+      covers: [
+        "카테고리가 한 묶음(20개)보다 많으면, 처음에는 첫 묶음의 카테고리까지만 보여주고 목록을 아래로 스크롤하면 다음 묶음의 카테고리를 이어서 보여준다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -207,4 +288,5 @@ export const ManyItems: Story = {
       },
     },
   },
+  play: assertManyCategories,
 }

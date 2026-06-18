@@ -7,8 +7,10 @@ import assert from 'node:assert/strict';
 
 import {
     acceptanceCriterionItems,
+    acceptanceCriteriaWithLines,
     bddReviewResultItems,
     bddReviewResultSummary,
+    decisionLogItems,
     storybookContractItems,
     verificationTargetItems
 } from '../index-requirements.mjs';
@@ -97,6 +99,60 @@ describe('acceptanceCriterionItems — multi-bullet behavior', () => {
     });
 });
 
+describe('acceptanceCriteriaWithLines', () => {
+    it('assigns absolute 1-based card body lines to AC bullets', () => {
+        const card = [
+            '# REQ-900 fixture',
+            '',
+            '요건 ID: REQ-900',
+            '제목: fixture',
+            '',
+            '## 사용자/목적',
+            '',
+            '- 목적은 수용 기준이 아니다.',
+            '',
+            '## 수용 기준',
+            '',
+            '- (STATIC) 첫 번째 AC',
+            '- [ ] (UI) 체크박스 AC',
+            '- (BE) 허용되지 않은 마커도 원본 line을 유지한다.',
+            '',
+            '## 열린 질문',
+            '',
+            '- 이 bullet은 AC가 아니다.'
+        ].join('\n');
+
+        assert.deepEqual(acceptanceCriteriaWithLines(card), [
+            { text: '첫 번째 AC', target: 'STATIC', line: 12 },
+            { text: '체크박스 AC', target: 'UI', line: 13 },
+            { text: '(BE) 허용되지 않은 마커도 원본 line을 유지한다.', target: null, invalidMarker: 'BE', line: 14 }
+        ]);
+    });
+
+    it('matches acceptanceCriterionItems except for source line metadata', () => {
+        const criteria = [
+            '- (API) API 응답을 반환한다.',
+            '- [ ] (UI) 화면에 상태를 표시한다.',
+            '- (API): 잘못된 마커는 원문을 유지한다.',
+            '- 마커 없는 AC'
+        ].join('\n');
+        const card = [
+            '# REQ-900 fixture',
+            '',
+            '## 수용 기준',
+            criteria,
+            '',
+            '## 열린 질문',
+            '',
+            '- 없음'
+        ].join('\n');
+
+        const withLines = acceptanceCriteriaWithLines(card)
+            .map(({ line, ...criterion }) => criterion);
+        assert.deepEqual(withLines, acceptanceCriterionItems(criteria));
+    });
+});
+
 describe('verificationTargetItems', () => {
     it('parses required and not-required verification targets', () => {
         assert.deepEqual(verificationTargetItems([
@@ -126,6 +182,39 @@ describe('storybookContractItems', () => {
                 title: 'Todos/TodoFormDialog',
                 states: ['Create', 'Submitting'],
                 raw: '`Todos/TodoFormDialog`: `Create`, `Submitting`'
+            }
+        ]);
+    });
+});
+
+describe('decisionLogItems', () => {
+    it('parses requirement decision log blocks', () => {
+        assert.deepEqual(decisionLogItems([
+            '- 결정일: 2026-06-10',
+            '  결정: 추적 산출물 값을 그대로 표시한다.',
+            '  이유: CLI와 UI가 다른 답을 주면 안 된다.',
+            '  결정자: REDSTONE',
+            '  영향: 화면은 판정 값을 재계산하지 않는다.',
+            '',
+            '- 결정일: 2026-06-11',
+            '  결정: 개요 탭에 카드 요약 섹션을 표시한다.',
+            '  이유: 상세 진입 직후 요건 의도를 확인해야 한다.',
+            '  결정자: REDSTONE',
+            '  영향: 요구사항 인덱스가 카드 섹션 요약을 제공한다.'
+        ].join('\n')), [
+            {
+                date: '2026-06-10',
+                decision: '추적 산출물 값을 그대로 표시한다.',
+                reason: 'CLI와 UI가 다른 답을 주면 안 된다.',
+                decisionMaker: 'REDSTONE',
+                impact: '화면은 판정 값을 재계산하지 않는다.'
+            },
+            {
+                date: '2026-06-11',
+                decision: '개요 탭에 카드 요약 섹션을 표시한다.',
+                reason: '상세 진입 직후 요건 의도를 확인해야 한다.',
+                decisionMaker: 'REDSTONE',
+                impact: '요구사항 인덱스가 카드 섹션 요약을 제공한다.'
             }
         ]);
     });

@@ -1,5 +1,4 @@
 const E2E_PATH = "/tests/e2e/"
-const API_ROUTE_HELPER = "/tests/e2e/_helpers/apiRoute.ts"
 
 function normalizePath(filename) {
   return filename.replace(/\\/g, "/")
@@ -10,17 +9,17 @@ export default {
     type: "problem",
     docs: {
       description:
-        "Disallow raw Playwright page.route in E2E tests; use routeApi() for document fallback.",
+        "Disallow Playwright page.route in live E2E tests; live smoke must use the real back-end through the Vite proxy.",
     },
     schema: [],
     messages: {
-      useRouteApi:
-        "Use routeApi(page, ...) from tests/e2e/_helpers/apiRoute.ts so document navigation falls back to the SPA.",
+      noRouteMock:
+        "Do not mock routes in live E2E tests. Use the real back-end through the Vite proxy.",
     },
   },
   create(context) {
     const filename = normalizePath(context.filename ?? context.getFilename())
-    if (!filename.includes(E2E_PATH) || filename.endsWith(API_ROUTE_HELPER)) {
+    if (!filename.includes(E2E_PATH)) {
       return {}
     }
 
@@ -35,7 +34,7 @@ export default {
           callee.property.type === "Identifier" &&
           callee.property.name === "route"
         ) {
-          context.report({ node: callee.property, messageId: "useRouteApi" })
+          context.report({ node: callee.property, messageId: "noRouteMock" })
         }
       },
     }

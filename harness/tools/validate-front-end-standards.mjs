@@ -15,6 +15,7 @@
 //   FE-STORY-MISSING-SURFACE 요건 Storybook 계약의 story surface가 누락
 //   FE-STORY-MISSING-STATE   공통 UI primitive 또는 요건 Storybook 계약의 필수 상태가 누락
 //   FE-STORY-REQ-MISMATCH    Storybook 상태가 선언 요건 metadata와 연결되지 않음
+//   FE-STORY-COVER-NO-PLAY   Storybook Vitest covers가 있으나 play assertion이 없음
 //   FE-API-CONTRACT-MISSING  OpenAPI 계약 산출물 부재
 //   FE-API-UNKNOWN-OPERATION FE actual API 호출이 OpenAPI 계약의 method+path에 없음
 //   FE-API-USAGE-UNKNOWN-OPERATION FE @UsesApi 선언이 OpenAPI 계약의 method+path에 없음
@@ -82,6 +83,7 @@ const FE_API_PAGEABLE_WIRE_SHAPE_SEVERITY = 'error';
 const FE_API_PATCH_WIRE_SHAPE_SEVERITY = 'error';
 const FE_E2E_LIVE_LOCATION_SEVERITY = 'error';
 const FE_LIVE_MOCK_IMPORT_SEVERITY = 'error';
+const FE_STORY_COVER_NO_PLAY_SEVERITY = 'error';
 // FE generated client가 base OpenAPI hash를 기록해 두는 파일 경로(표시용).
 const FE_GENERATED_HASH_RELATIVE = repoRelative(path.join(workspaceFrontEndRoot, 'src', 'api', 'generated', '.openapi-source.sha256'));
 
@@ -329,8 +331,43 @@ function findingsForStorybookContracts(stories, requirementCards) {
     return findings;
 }
 
+function findingsForStorybookVitestSuccessConditions(frontEndTests) {
+    // Storybook Vitest는 app·harness 양쪽에서 (UI) 수용 기준의 BDD 채널이다.
+    // covers가 있으면 story 렌더 smoke가 아니라 play 안의 expect assertion으로 성공 조건을 드러낸다.
+    const findings = [];
+    for (const test of frontEndTests ?? []) {
+        if (test.runtime !== 'storybook-vitest') continue;
+        if ((test.covers ?? []).length === 0) continue;
+        if (test.hasPlay && test.hasAssertion) continue;
+        const missing = [
+            ...(test.hasPlay ? [] : ['play']),
+            ...(test.hasAssertion ? [] : ['expect assertion'])
+        ];
+        findings.push({
+            ruleId: 'FE-STORY-COVER-NO-PLAY',
+            severity: FE_STORY_COVER_NO_PLAY_SEVERITY,
+            strictSeverity: FE_STORY_COVER_NO_PLAY_SEVERITY,
+            kind: 'static',
+            message: `Storybook Vitest covers가 있는 story는 성공 조건을 play assertion으로 명시해야 함 — ${missing.join(', ')} 누락`,
+            requirements: test.requirements ?? [],
+            location: {
+                file: test.file ?? '',
+                line: test.line ?? 0,
+                identity: test.displayName ?? test.identity ?? ''
+            },
+            evidence: {
+                covers: test.covers ?? [],
+                hasPlay: Boolean(test.hasPlay),
+                hasAssertion: Boolean(test.hasAssertion)
+            },
+            remediation: REMEDIATION_TESTING
+        });
+    }
+    return findings;
+}
+
 // --- FE live E2E 경계 룰 ---
-// 상위 요건의 (E2E) AC는 mock E2E가 아니라 tests/e2e/live/**/*.live.spec.ts가 소유한다.
+// 상위 요건의 (E2E) AC는 Storybook Vitest가 아니라 tests/e2e/live/**/*.live.spec.ts가 소유한다.
 // live spec은 실 서버 결합 검증이어야 하므로 API mock helper import를 금지한다.
 
 function normalizePathForRule(file) {
@@ -411,7 +448,7 @@ function forbiddenLiveImportReason(source) {
     const normalized = normalizePathForRule(source);
     if (!normalized.includes('_helpers/')) return null;
     const basename = normalized.split('/').pop() ?? '';
-    if (/^apiRoute(?:\.[cm]?[tj]sx?)?$/.test(basename)) return 'routeApi helper';
+    if (/^apiRoute(?:\.[cm]?[tj]sx?)?$/.test(basename)) return 'API route helper';
     if (/mocks(?:\.[cm]?[tj]sx?)?$/.test(basename)) return 'API mock helper';
     return null;
 }
@@ -841,20 +878,6 @@ function writePayload(findings, outPath) {
 
 function main(argv) {
     const cfg = parseCliArgs(argv);
-    if (scope === 'harness' && !argv.some((arg) => arg.startsWith('--fe-source-index='))) {
-        const payload = {
-            generatedAt: new Date().toISOString(),
-            schemaVersion: '1',
-            owner: 'front-end-standards',
-            summary: { error: 0, warning: 0, info: 0, byRuleId: {} },
-            findings: []
-        };
-        fs.mkdirSync(path.dirname(cfg.out), { recursive: true });
-        fs.writeFileSync(cfg.out, `${JSON.stringify(payload, null, 2)}\n`);
-        console.log('front-end-standards.findings.json: 0 finding(s) (harness scope)');
-        return;
-    }
-
     if (!fs.existsSync(cfg.feSourceIndex)) {
         // FE 소스 인덱스가 없으면 검사할 게 없으므로 빈 findings로 종료.
         // (back-end-only 프로젝트에서도 이 validator를 무해하게 실행할 수 있게 한다.)
@@ -868,10 +891,23 @@ function main(argv) {
     const stories = index.stories ?? [];
     const tests = index.tests ?? [];
     const requirementsIndex = safeReadJson(cfg.requirementsIndex, { entries: [] });
+    if (scope === 'harness') {
+        const findings = [
+            ...issues.map(findingFromIssue),
+            ...findingsForStorybookContracts(stories, requirementsIndex.entries ?? []),
+            ...findingsForStorybookVitestSuccessConditions(tests)
+        ];
+        const payload = writePayload(findings, cfg.out);
+        const byRule = Object.entries(payload.summary.byRuleId).map(([k, v]) => `${k}=${v}`).join(', ') || 'none';
+        console.log(`front-end-standards.findings.json: ${findings.length} finding(s) (harness scope, error=${payload.summary.error}, warning=${payload.summary.warning}) [${byRule}]`);
+        return;
+    }
+
     const findings = [
         ...issues.map(findingFromIssue),
         ...findingsForMissingStoryStates(stories),
         ...findingsForStorybookContracts(stories, requirementsIndex.entries ?? []),
+        ...findingsForStorybookVitestSuccessConditions(tests),
         ...findingsForTopLevelE2eLiveLocation(tests, cfg.requirementsIndex),
         ...findingsForLiveMockImports(cfg.frontEndRoot),
         ...feApiFindings(index, cfg)

@@ -30,7 +30,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   argTypes: {
     type: {
       control: "select",

@@ -118,10 +118,12 @@ function frontEndIndexFixture(tests: any[]) {
     };
 }
 
-function frontEndTestFixture(identity: string, coversText: string, cardId: string) {
+function frontEndTestFixture(identity: string, coversText: string, cardId: string, runtime = 'playwright') {
     return {
         requirements: [cardId],
         identity,
+        kind: runtime === 'playwright' ? 'playwright' : undefined,
+        runtime,
         displayName: identity,
         covers: [coversText],
         resultKeys: []
@@ -321,8 +323,8 @@ harnessTest({
 
 harnessTest({
     requirement: 'REQ-012',
-    name: 'AC4 마커는 @Covers와 FE BDD Covers 값에 포함되지 않는다',
-    covers: ['AC 마커는 백엔드 `@Covers`와 FE BDD `Covers` 값에 포함되지 않는다']
+    name: 'AC4 마커는 @Covers와 Storybook/live Covers 값에 포함되지 않는다',
+    covers: ['AC 마커는 백엔드 `@Covers`, Storybook Vitest `covers`, live Playwright `Covers` 값에 포함되지 않는다']
 }, () => {
     for (const indexPath of [
         path.join(indexesDir, 'backend.source-index.json'),
@@ -373,8 +375,8 @@ harnessTest({
 
 harnessTest({
     requirement: 'REQ-012',
-    name: 'AC6 target=UI AC는 FE BDD 테스트 커버가 없으면 evaluator가 MISSING + RED를 산출한다',
-    covers: ['통합 게이트는 target이 `UI`인 AC에 FE BDD 테스트 커버가 없으면 차단한다']
+    name: 'AC6 target=UI AC는 Storybook Vitest 테스트 커버가 없으면 evaluator가 MISSING + RED를 산출한다',
+    covers: ['통합 게이트는 target이 `UI`인 AC에 Storybook Vitest 테스트 커버가 없으면 차단한다']
 }, () => {
     const reqIdx = requirementsFixture('REQ-FIXTURE', 'application', [acFixture('UI AC fixture', 'UI')]);
     const missingState = runEvaluateWithFixtures(
@@ -394,8 +396,8 @@ harnessTest({
     const passState = runEvaluateWithFixtures(
         reqIdx,
         backendIndexFixture([]),
-        frontEndIndexFixture([frontEndTestFixture('FixtureUiTest > acUi', 'UI AC fixture', 'REQ-FIXTURE')]),
-        testResultsFixture([testResultEntry('FixtureUiTest > acUi', 'PASS', 'playwright')])
+        frontEndIndexFixture([frontEndTestFixture('FixtureUiTest > acUi', 'UI AC fixture', 'REQ-FIXTURE', 'storybook-vitest')]),
+        testResultsFixture([testResultEntry('FixtureUiTest > acUi', 'PASS', 'storybook-vitest')])
     );
     const passRow = findReq(passState, 'REQ-FIXTURE').coverage[0];
     assert.equal(passRow.status, 'PASS');
@@ -404,8 +406,8 @@ harnessTest({
 
 harnessTest({
     requirement: 'REQ-012',
-    name: 'AC7 target=E2E AC는 Playwright 사용자 여정 테스트 커버가 없으면 evaluator가 MISSING + RED를 산출한다',
-    covers: ['통합 게이트는 target이 `E2E`인 AC에 Playwright 사용자 여정 테스트 커버가 없으면 차단한다']
+    name: 'AC7 target=E2E AC는 프런트엔드 사용자 여정 테스트 커버가 없으면 evaluator가 MISSING + RED를 산출한다',
+    covers: ['통합 게이트는 target이 `E2E`인 AC에 프런트엔드 사용자 여정 테스트 커버가 없으면 차단한다']
 }, () => {
     const reqIdx = requirementsFixture('REQ-FIXTURE', 'application', [acFixture('E2E AC fixture', 'E2E')]);
     const missingState = runEvaluateWithFixtures(

@@ -31,7 +31,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   args: {
     children: "이메일",
     htmlFor: "label-default",

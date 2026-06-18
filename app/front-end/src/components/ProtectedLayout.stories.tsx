@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { MemoryRouter } from "react-router-dom"
+import { expect, within } from "storybook/test"
 
 import { AuthContext, type AuthContextValue } from "@/features/auth/AuthContext"
 
@@ -41,7 +42,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   decorators: [
     (Story, { parameters }) => (
       <MemoryRouter initialEntries={parameters.initialEntries ?? ["/categories"]}>
@@ -57,6 +58,22 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
+const assertCategoriesLayout = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement)
+  await expect(canvas.getByText("BDD Workflow")).toBeVisible()
+  await expect(canvas.getByRole("link", { name: "카테고리" })).toBeVisible()
+  await expect(canvas.getByRole("link", { name: "할 일" })).toBeVisible()
+  await expect(canvas.getByText("화면 본문 영역")).toBeVisible()
+}
+
+const assertTodosLayout = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement)
+  await expect(canvas.getByText("BDD Workflow")).toBeVisible()
+  await expect(canvas.getByRole("link", { name: "할 일" })).toBeVisible()
+  await expect(canvas.getByRole("link", { name: "카테고리" })).toBeVisible()
+  await expect(canvas.getByText("화면 본문 영역")).toBeVisible()
+}
+
 export const CategoriesActive: Story = {
   args: {
     children: (
@@ -64,6 +81,15 @@ export const CategoriesActive: Story = {
     ),
   },
   parameters: {
+    harness: {
+      requirements: ["REQ-016", "REQ-011"],
+      covers: [
+        "카테고리 화면은 보호 화면 앱 셸 안에 보이고, 할 일 화면과 카테고리 화면을 오갈 수 있는 내비가 보인다",
+        "비인증 사용자가 카테고리 화면 경로에 접근하면 로그인 화면으로 이동한다",
+        "카테고리 화면 경로로 진입했다가 로그인하면 카테고리 화면으로 돌아온다",
+        "보호 화면을 처음 열거나 새로고침했을 때 인증 확인이 끝나기 전에는 헤더 골격과 본문 자리만 보이는 스켈레톤이 표시된다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -84,11 +110,20 @@ export const CategoriesActive: Story = {
       },
     },
   },
+  play: assertCategoriesLayout,
 }
 
 export const TodosActive: Story = {
   parameters: {
     initialEntries: ["/todos"],
+    harness: {
+      requirements: ["REQ-016", "REQ-023"],
+      covers: [
+        "할 일 화면은 보호 앱 셸 안에 보이고, 할 일 화면과 카테고리 화면을 오갈 수 있는 내비가 보인다",
+        "비인증 사용자가 할 일 화면 경로에 접근하면 로그인 화면으로 이동한다",
+        "할 일 화면 경로로 진입했다가 로그인하면 할 일 관리 화면으로 돌아온다",
+      ],
+    },
     docs: {
       description: {
         story: `
@@ -114,4 +149,5 @@ export const TodosActive: Story = {
       <div className="text-sm text-muted-foreground">화면 본문 영역</div>
     ),
   },
+  play: assertTodosLayout,
 }

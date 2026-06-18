@@ -28,7 +28,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   decorators: [
     (Story) => (
       <MemoryRouter initialEntries={["/unknown"]}>

@@ -7,6 +7,21 @@
             "en": "API operation",
             "meaning": "OpenAPI 계약 안의 한 엔드포인트. HTTP method와 path 쌍으로 식별한다."
         },
+        "api.request": {
+            "ko": "API 요청",
+            "en": "API request",
+            "meaning": "API 작업에 전달되는 path, query, header, body 입력 구조."
+        },
+        "api.response": {
+            "ko": "API 응답",
+            "en": "API response",
+            "meaning": "API 작업이 반환하는 상태 코드와 응답 본문 구조."
+        },
+        "api.entity": {
+            "ko": "API 연결 Entity",
+            "en": "API linked entity",
+            "meaning": "API 작업의 요청·응답 또는 저장소 흐름과 연결된 도메인 Entity 또는 화면 DTO."
+        },
         "api.client": {
             "ko": "API 클라이언트",
             "en": "API client",

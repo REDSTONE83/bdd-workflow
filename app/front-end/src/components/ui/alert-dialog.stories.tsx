@@ -41,7 +41,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
 } satisfies Meta<typeof AlertDialog>
 
 export default meta

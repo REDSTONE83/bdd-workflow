@@ -8,8 +8,9 @@
 app/front-end/
   package.json
   vite.config.ts
+  vitest.config.ts
   components.json
-  playwright.config.ts
+  playwright.live.config.ts
   tools/
     source-index.mjs
   .storybook/
@@ -34,6 +35,7 @@ app/front-end/
     test/
   tests/
     e2e/
+      live/
 ```
 
 ## 디렉터리 역할
@@ -115,19 +117,19 @@ Vitest/Testing Library 공통 setup, fixture, test helper를 둔다.
 - `builders/`: 테스트 입력 builder.
 - `fixtures/`: 도메인 중립 fixture.
 
-### `tests/e2e/`
+### `tests/e2e/live/`
 
-Playwright E2E와 접근성 smoke test를 둔다.
+상위 요건 live 통합 smoke test를 둔다.
 
-- 파일명은 사용자 흐름 단위로 `{feature}.spec.ts`를 쓴다.
-- FE BDD 테스트는 이 위치에서 시작한다.
+- 파일명은 사용자 흐름 단위로 `{feature}.live.spec.ts`를 쓴다.
+- live test는 실 백엔드와 Vite dev server를 함께 사용한다.
 - BDD 커버리지 대상 테스트는 `Requirement`와 `Covers` 메타데이터를 남긴다. 실제 형식은 [`front-end-testing.md`](./front-end-testing.md)를 따른다.
 
 ### `tools/`
 
 프런트엔드 하네스용 Node 도구를 둔다.
 
-- `source-index.mjs`: TypeScript AST로 FE page/route/story와 Playwright BDD 테스트 메타데이터를 수집한다.
+- `source-index.mjs`: TypeScript AST로 FE page/route/story, Storybook Vitest story, live Playwright 테스트 메타데이터를 수집한다.
 - 출력은 `build/app/indexes/front-end.source-index.json`이다.
 - 사람이 출력 JSON을 직접 수정하지 않는다.
 
@@ -138,7 +140,7 @@ PascalCase.tsx       # React component
 camelCase.ts         # utility, hook 내부 helper
 useSomething.ts      # hook
 Something.test.tsx   # Vitest component/unit test
-something.spec.ts    # Playwright E2E test
+something.live.spec.ts # live Playwright smoke test
 Something.stories.tsx # Storybook story
 ```
 
@@ -150,13 +152,13 @@ Something.stories.tsx # Storybook story
 
 ```text
 대상 시스템: application | harness
-- (UI) 화면/라우팅/FE BDD 테스트로 검증할 수용 기준
+- (UI) 화면/라우팅/Storybook Vitest 테스트로 검증할 수용 기준
 - (E2E) 여러 화면이나 기능을 관통하는 사용자 여정 수용 기준
 ```
 
-화면, 라우팅, 클라이언트 상태, 데스크톱 시각/접근성 품질은 `(UI)` 또는 `(E2E)` AC와 FE source index 메타데이터로 추적한다.
+화면, 라우팅, 클라이언트 상태, 데스크톱 시각/접근성 품질은 `(UI)` AC와 FE source index 메타데이터로 추적한다. 여러 기능을 결합해야 확인되는 상위 제품 성과만 `(E2E)` AC와 live Playwright smoke로 추적한다.
 
-화면 하나가 여러 업무 기능을 함께 다루면 화면 전용 REQ를 새로 만들지 않고 해당 기능 원자 요건들을 모두 연결한다. 예를 들어 목록 화면에서 생성, 수정, 삭제, 완료 상태 변경까지 조작하면 page/container와 Storybook metadata는 관련 원자 요건을 다중 `@Requirement`로 표시하고, FE BDD 테스트의 각 `Covers`는 실제 AC를 소유한 기능 요건을 가리킨다.
+화면 하나가 여러 업무 기능을 함께 다루면 화면 전용 REQ를 새로 만들지 않고 해당 기능 원자 요건들을 모두 연결한다. 예를 들어 목록 화면에서 생성, 수정, 삭제, 완료 상태 변경까지 조작하면 page/container와 Storybook metadata는 관련 원자 요건을 다중 `@Requirement`로 표시하고, Storybook Vitest story의 각 `covers`는 실제 AC를 소유한 기능 요건을 가리킨다.
 
 화면/route가 요건에 연결되어야 하는 경우 파일 상단 JSDoc 블록의 태그로 표시한다.
 요건 메타데이터는 JSDoc 단일 방식으로 통일하며, 컴포넌트/훅/유틸 어느 파일에도 별도
@@ -185,7 +187,7 @@ export function TodoListPage() {
 
 JSDoc 블록은 파일 상단 60줄 안에 있어야 `source-index.mjs` 가 인식한다. import 보다 위에 두는 것을 권장한다.
 
-Storybook story 는 컴포넌트가 아니므로 JSDoc 대신 default export 또는 story export 의 `parameters.harness.requirements` 객체 메타데이터로 요건을 연결한다.
+Storybook story 는 컴포넌트가 아니므로 JSDoc 대신 default export 또는 story export 의 `parameters.harness.requirements` 객체 메타데이터로 요건을 연결한다. UI AC를 커버하는 story는 `parameters.harness.covers`와 `tags: ["test"]`도 함께 둔다.
 
 ```ts
 export default {
@@ -193,6 +195,16 @@ export default {
   parameters: {
     harness: {
       requirements: ["REQ-002"],
+    },
+  },
+}
+
+export const Empty = {
+  tags: ["test"],
+  parameters: {
+    harness: {
+      requirements: ["REQ-023"],
+      covers: ["할 일이 없으면 빈 상태 안내가 보인다"],
     },
   },
 }
@@ -220,9 +232,11 @@ cd app/front-end
 npm run typecheck       # TypeScript 정적 검증
 npm run lint            # ESLint
 npm run test            # Vitest unit/component test
+npm run test:storybook  # Storybook Vitest
 npm run build           # production build
 npm run build-storybook # Storybook static build
-npm run e2e             # Playwright E2E/accessibility smoke
+npm run e2e             # Storybook Vitest alias
+npm run e2e:live        # live Playwright integration smoke
 npm run source-index    # FE source index 생성
 npm run validate        # 빠른 FE 게이트
 npm run validate:full   # Storybook/E2E 포함 전체 FE 게이트
@@ -230,10 +244,10 @@ npm run validate:full   # Storybook/E2E 포함 전체 FE 게이트
 
 ## 자동 검증 항목
 
-- `npm run validate`: typecheck, lint, Vitest, Vite build를 실행한다.
-- `npm run validate:full`: 빠른 게이트에 Storybook build와 Playwright E2E를 더한다.
-- `npm run source-index` 또는 루트 `npm run app:front-end-source-index`: route, page, story, FE BDD 테스트의 `Requirement`/`Covers` 메타데이터를 수집한다.
-- 루트 `npm run app:validate`: `(UI)` 또는 `(E2E)` AC의 FE BDD 커버리지와 테스트 결과를 RED/GREEN/BLUE 판정에 반영한다.
+- `npm run validate`: typecheck, lint, Vitest, Storybook Vitest, Vite build, source index를 실행한다.
+- `npm run validate:full`: 빠른 게이트에 Storybook build와 live Playwright smoke를 더한다.
+- `npm run source-index` 또는 루트 `npm run app:front-end-source-index`: route, page, story, Storybook Vitest, live Playwright 테스트의 `Requirement`/`Covers` 메타데이터를 수집한다.
+- 루트 `npm run app:validate`: `(UI)` Storybook Vitest와 `(E2E)` live Playwright 커버리지 및 테스트 결과를 RED/GREEN/BLUE 판정에 반영한다.
 
 ## 정적 검사 정책
 

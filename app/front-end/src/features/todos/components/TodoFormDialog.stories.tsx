@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { userEvent, within } from "storybook/test"
+import { expect, userEvent, waitFor } from "storybook/test"
 
 import type { CategoryView } from "@/features/categories/types"
+import {
+  type StoryScope,
+  withinCurrentDialog,
+} from "@/test/storybook-dialog"
 
 import { TodoFormDialog } from "./TodoFormDialog"
 import {
@@ -85,7 +89,7 @@ const meta = {
       },
     },
   },
-  tags: ["autodocs"],
+  tags: ["autodocs", "test"],
   args: {
     open: true,
     onOpenChange: noop,
@@ -99,9 +103,40 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-const submit = (name: string) => async () => {
-  const body = within(document.body)
-  await userEvent.click(body.getByRole("button", { name }))
+const expectVisibleText = async (
+  dialog: StoryScope,
+  message: string,
+) => {
+  await waitFor(() => expect(dialog.getByText(message)).toBeVisible())
+}
+
+const assertCreateForm = async () => {
+  const dialog = await withinCurrentDialog("새 할 일")
+  await waitFor(() => expect(dialog.getByRole("heading", { name: "새 할 일" })).toBeVisible())
+  await waitFor(() => expect(dialog.getByLabelText("제목")).toBeVisible())
+  await expect(dialog.getByLabelText("설명")).toBeVisible()
+  await expect(dialog.getByLabelText("마감일")).toBeVisible()
+  await expect(dialog.getByLabelText("우선순위")).toBeVisible()
+  await expect(dialog.getByLabelText("카테고리")).toBeVisible()
+  await expect(dialog.getByRole("button", { name: "만들기" })).toBeVisible()
+}
+
+const assertEditForm = async () => {
+  const dialog = await withinCurrentDialog("할 일 수정")
+  await waitFor(() => expect(dialog.getByRole("heading", { name: "할 일 수정" })).toBeVisible())
+  await expect(dialog.getByLabelText("제목")).toHaveValue("분기 보고서 초안")
+  await expect(dialog.getByLabelText("설명")).toHaveValue("목차와 주요 지표를 정리합니다.")
+  await expect(dialog.getByLabelText("마감일")).toHaveValue("2026-06-12")
+  await expect(dialog.getByLabelText("우선순위")).toHaveValue("HIGH")
+  await expect(dialog.getByLabelText("카테고리")).toHaveValue("cat-work")
+}
+
+const assertSubmitResult = (name: string, expectedMessages: string[]) => async () => {
+  const dialog = await withinCurrentDialog(name === "저장" ? "할 일 수정" : "새 할 일")
+  await userEvent.click(dialog.getByRole("button", { name }))
+  for (const message of expectedMessages) {
+    await expectVisibleText(dialog, message)
+  }
 }
 
 const formStory = (
@@ -124,6 +159,11 @@ ${observation}
 
 export const Create: Story = {
   parameters: {
+    harness: {
+      covers: [
+        "새 할 일 만들기를 열면 제목, 설명, 마감일, 우선순위, 카테고리를 입력하는 입력 영역과 만들기 버튼이 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -134,11 +174,18 @@ export const Create: Story = {
       },
     },
   },
+  play: assertCreateForm,
 }
 
 export const Edit: Story = {
   args: { mode: "edit", initialValue: editValue },
   parameters: {
+    harness: {
+      requirements: ["REQ-024"],
+      covers: [
+        "할 일 수정을 열면 기존 제목, 설명, 마감일, 우선순위, 카테고리가 입력 영역에 채워져 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -149,6 +196,7 @@ export const Edit: Story = {
       },
     },
   },
+  play: assertEditForm,
 }
 
 export const CategoriesLoading: Story = {
@@ -168,6 +216,11 @@ export const CategoriesLoading: Story = {
 
 export const TitleRequiredError: Story = {
   parameters: {
+    harness: {
+      covers: [
+        "할 일을 만들거나 수정할 때 제목을 비우거나 공백만 입력하면 제목 입력 아래에 입력이 필요하다는 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -178,7 +231,7 @@ export const TitleRequiredError: Story = {
       },
     },
   },
-  play: submit("만들기"),
+  play: assertSubmitResult("만들기", ["제목을 입력해 주세요."]),
 }
 
 export const TitleTooLongError: Story = {
@@ -194,12 +247,17 @@ export const TitleTooLongError: Story = {
       },
     },
   },
-  play: submit("만들기"),
+  play: assertSubmitResult("만들기", [`제목은 ${TODO_TITLE_MAX}자를 넘을 수 없습니다.`]),
 }
 
 export const DescriptionTooLongError: Story = {
   args: { initialValue: longDescription },
   parameters: {
+    harness: {
+      covers: [
+        "할 일을 만들거나 수정할 때 설명이 1000자를 넘으면 설명 입력 아래에 길이 제한 안내가 보인다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -210,7 +268,7 @@ export const DescriptionTooLongError: Story = {
       },
     },
   },
-  play: submit("만들기"),
+  play: assertSubmitResult("만들기", [`설명은 ${TODO_DESCRIPTION_MAX}자를 넘을 수 없습니다.`]),
 }
 
 export const Submitting: Story = {
@@ -226,12 +284,18 @@ export const Submitting: Story = {
       },
     },
   },
-  play: submit("만들기"),
+  play: assertSubmitResult("만들기", []),
 }
 
 export const SaveFailure: Story = {
   args: { initialValue: validValue, onSubmit: failingSubmit },
   parameters: {
+    harness: {
+      covers: [
+        "할 일 생성 요청이 실패하면 실패 안내가 보이고 사용자가 다시 시도할 수 있다",
+        "할 일 수정 요청이 실패하면 실패 안내가 보이고 사용자가 다시 시도할 수 있다",
+      ],
+    },
     docs: {
       description: {
         story: formStory(
@@ -242,5 +306,5 @@ export const SaveFailure: Story = {
       },
     },
   },
-  play: submit("만들기"),
+  play: assertSubmitResult("만들기", ["저장하지 못했습니다. 잠시 후 다시 시도해 주세요."]),
 }

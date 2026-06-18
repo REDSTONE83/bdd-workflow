@@ -134,6 +134,7 @@ function CategoryForm({
         color: color.trim() ? color.trim() : null,
         description: description.trim() ? description.trim() : null,
       })
+      setSubmitting(false)
       onSubmitted()
     } catch (error) {
       if (error instanceof DuplicateCategoryNameError) {

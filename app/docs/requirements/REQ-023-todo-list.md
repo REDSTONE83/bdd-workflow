@@ -10,6 +10,7 @@
 제품 영역: todo
 품질 속성: accessibility, security, usability
 검증 수준: mixed
+상위 요건: REQ-021
 관련 요건: REQ-021, REQ-004, REQ-011, REQ-015
 대체 요건: 없음
 
