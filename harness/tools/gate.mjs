@@ -169,10 +169,19 @@ function traceRedIsBlocking(requirement) {
     // Older fixture/state payloads did not include the requirement card workflow status.
     // Preserve the historical behavior for those inputs.
     if (!requirement.status) return true;
+    if (['설계 승인', '테스트 작성중', '테스트 승인', '구현중'].includes(requirement.status)
+        && hasBlockingDesignReadinessReason(requirement)) {
+        return true;
+    }
     if (['테스트 승인', '구현중'].includes(requirement.status)) {
         return hasBlockingTestReadinessReason(requirement);
     }
     return ['검증중', '승인'].includes(requirement.status);
+}
+
+function hasBlockingDesignReadinessReason(requirement) {
+    const reasons = Array.isArray(requirement.redReasons) ? requirement.redReasons : [];
+    return reasons.some((reason) => typeof reason?.ruleId === 'string' && reason.ruleId.startsWith('TRACE-DESIGN-'));
 }
 
 function hasBlockingTestReadinessReason(requirement) {

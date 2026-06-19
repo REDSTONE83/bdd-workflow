@@ -29,7 +29,7 @@ export function RequirementOverviewTab({
           ["Scenario", `${detail.scenarios.length}건`],
           ["UI", `${detail.uiSurfaces.length}건`],
           ["API", `${detail.apiSurfaces.length}건`],
-          ["Entity", `${detail.entitySurfaces.length}건`],
+          ["DB 설계", `${detail.entitySurfaces.length}건`],
           ["Test", `${detail.coverage.reduce((count, row) => count + row.tests.length, 0)}건`],
           ["Source", `${sourceLinks.length}건`],
           ["Trace", detail.traceState],

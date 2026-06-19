@@ -15,7 +15,7 @@
 
 ## 사용자/목적
 
-하네스 작업자는 하네스 UI 화면 요건의 `(UI)` 수용 기준과 Storybook 계약이 다른 요건과 같은 방식으로 RED/GREEN/BLUE 추적, 통합 게이트, Skeleton 검토에 포함되는지 확인할 수 있어야 한다.
+하네스 작업자는 하네스 UI 화면 요건의 `(UI)` 수용 기준과 UI 설계 검토 표면이 다른 요건과 같은 방식으로 RED/GREEN/BLUE 추적, 통합 게이트, 설계 검토에 포함되는지 확인할 수 있어야 한다.
 
 ## 범위
 
@@ -36,7 +36,7 @@
 
 ## 제외 범위
 
-- 애플리케이션 scope의 FE BDD 채널 동작 변경. 기존 동작을 유지한다.
+- 애플리케이션 scope의 FE 수용 테스트 채널 동작 변경. 기존 동작을 유지한다.
 - harness/ui에 대한 (E2E) live smoke 채널. 필요해지면 별도 요건으로 다룬다.
 - Vitest 단위 테스트의 AC 커버리지 포함. TDD 보조 테스트로만 사용한다.
 - Storybook 시각 회귀 baseline 도입.
@@ -48,32 +48,23 @@
 - (STATIC) 하네스 scope에서 (UI) 마커 수용 기준은 front-end 테스트의 커버와 결과로 PASS/FAIL이 판정된다
 - (STATIC) `npm run harness:validate`는 harness/ui Storybook Vitest 테스트를 실행해 최신 결과로 판정한다
 - (STATIC) harness/ui 테스트나 결과가 없는 (UI) 마커 수용 기준은 RED로 보고된다
-- (STATIC) Storybook 계약을 선언한 하네스 scope 요건은 harness/ui에서 수집한 story 인덱스와 대조되어, 선언한 표면이나 상태가 없으면 위반으로 보고된다
+- (STATIC) UI 설계 검토 표면이 있는 하네스 scope 요건은 harness/ui에서 수집한 story 인덱스와 대조되어, 선언한 표면이나 상태가 없으면 위반으로 보고된다
 - (STATIC) 하네스 scope에서 (UI) 수용 기준을 covers하는 Storybook story는 play 성공 조건(expect assertion)이 없으면 위반으로 보고된다
-- (STATIC) `npm run harness:validate`는 harness/ui Storybook build를 실행해 Skeleton 검토 표면이 빌드 가능한지 확인한다
+- (STATIC) `npm run harness:validate`는 harness/ui Storybook build를 실행해 UI 설계 검토 표면이 빌드 가능한지 확인한다
 
-## 검증 대상
-
-- API: 불필요
-- DB: 불필요
-- UI: 불필요
-- Storybook: 불필요
-- E2E: 불필요
-- STATIC: 필요
-
-## API Skeleton
+## API 설계
 
 - 해당 없음
 
-## DB Skeleton
+## DB 설계
 
 - 해당 없음
 
-## UI Skeleton
+## UI 설계
 
 - 해당 없음
 
-## Storybook 계약
+## UI 설계 검토 표면
 
 - 해당 없음
 
@@ -86,41 +77,41 @@
   영향: 하네스 scope collector 추가, 테스트 결과 병합, `run.mjs`의 `harness:validate` 단계 확장. REQ-030~REQ-036과 이후 하네스 UI 카드가 (UI) 마커를 쓸 수 있게 된다.
 
 - 결정일: 2026-06-10
-  결정: harness/ui Storybook 정적 검증을 하네스 scope 검증 채널에 와이어링한다. story 메타데이터를 수집해 카드 Storybook 계약과 대조하고, `harness:validate`가 Storybook build를 실행한다.
-  이유: Storybook 계약 검증이 없으면 하네스 UI 카드의 Skeleton 승인 게이트가 약해진다.
+  결정: harness/ui Storybook 정적 검증을 하네스 scope 검증 채널에 와이어링한다. story 메타데이터를 수집해 UI 설계 검토 표면과 대조하고, `harness:validate`가 Storybook build를 실행한다.
+  이유: UI 설계 검토 표면 검증이 없으면 하네스 UI 카드의 설계 승인 게이트가 약해진다.
   결정자: REDSTONE
-  영향: REQ-030~REQ-036과 이후 하네스 UI 카드의 Skeleton 승인이 Storybook 계약 대조를 받는다. `harness:validate` 실행 시간이 Storybook build만큼 늘어난다.
+  영향: REQ-030~REQ-036과 이후 하네스 UI 카드의 설계 승인이 UI 설계 검토 표면 대조를 받는다. `harness:validate` 실행 시간이 Storybook build만큼 늘어난다.
 
 - 결정일: 2026-06-17
-  결정: 하네스 scope의 `validate-front-end-standards.mjs`는 harness/ui source index와 요건 카드의 Storybook 계약을 직접 대조한다. 앱 API 계약 fixture는 `HARNESS_SCOPE=application`을 명시해 하네스 UI 계약 검사와 분리한다.
-  이유: 하네스 UI 카드의 Storybook 계약을 실제 story 산출물로 검증하면서도, 애플리케이션 FE API 계약 검증의 기존 의미가 실행 환경 변수에 흔들리지 않아야 한다.
+  결정: 하네스 scope의 `validate-front-end-standards.mjs`는 harness/ui source index와 요건의 UI 설계 검토 표면을 직접 대조한다. 앱 API 계약 fixture는 `HARNESS_SCOPE=application`을 명시해 하네스 UI 검토 표면 검사와 분리한다.
+  이유: 하네스 UI 카드의 UI 설계 검토 표면을 실제 story 산출물로 검증하면서도, 애플리케이션 FE API 계약 검증의 기존 의미가 실행 환경 변수에 흔들리지 않아야 한다.
   결정자: REDSTONE
-  영향: REQ-029의 Storybook 계약 AC가 self-test와 `harness:validate` 산출물에서 GREEN으로 판정된다. 기존 앱 FE API 계약 self-test와 도구 테스트는 application scope fixture로 고정된다.
+  영향: REQ-029의 UI 설계 검토 표면 AC가 self-test와 `harness:validate` 산출물에서 GREEN으로 판정된다. 기존 앱 FE API 계약 self-test와 도구 테스트는 application scope fixture로 고정된다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-029-harness-ui-coverage-channel.feature`
 
-### 요건 Skeleton 설계 이력
+### 요건 설계 승인 이력
 
 - 설계일: 2026-06-10
   검증 설계: `.feature`의 7개 Scenario가 카드 수용 기준 7개를 1:1 `Covers:`로 연결한다. 모든 AC는 `(STATIC)`이며 실행 테스트는 하네스 self-test로 작성한다.
-  검사기 Skeleton: `harness/ui/tools/source-index.mjs`가 page, route, story, Storybook Vitest story 테스트 메타데이터를 수집해 `build/harness/indexes/front-end.source-index.json`을 만든다. `index-test-results.mjs`는 `harness/ui/test-results/storybook-junit.xml`을 하네스 scope `front-end` 테스트 결과로 병합한다. `evaluate-trace-state.mjs`는 하네스 scope의 `(UI)` AC를 front-end 테스트 채널로 판정한다. `validate-front-end-standards.mjs`는 하네스 UI Storybook 계약과 story 인덱스를 대조한다.
-  실행 Skeleton: `run.mjs`는 REQ-029 구현 이후 `harness:validate`에서 harness/ui source index, Storybook Vitest 실행, Storybook build, 테스트 결과 인덱싱을 순차 실행한다. 부분 실행 결과는 canonical 결과 파일을 덮어쓰지 않는다.
+  검사기 설계: `harness/ui/tools/source-index.mjs`가 page, route, story, Storybook Vitest story 테스트 메타데이터를 수집해 `build/harness/indexes/front-end.source-index.json`을 만든다. `index-test-results.mjs`는 `harness/ui/test-results/storybook-junit.xml`을 하네스 scope `front-end` 테스트 결과로 병합한다. `evaluate-trace-state.mjs`는 하네스 scope의 `(UI)` AC를 front-end 테스트 채널로 판정한다. `validate-front-end-standards.mjs`는 하네스 UI 설계 검토 표면과 story 인덱스를 대조한다.
+  실행 설계: `run.mjs`는 REQ-029 구현 이후 `harness:validate`에서 harness/ui source index, Storybook Vitest 실행, Storybook build, 테스트 결과 인덱싱을 순차 실행한다. 부분 실행 결과는 canonical 결과 파일을 덮어쓰지 않는다.
   추적 정책: REQ-030~REQ-036과 이후 하네스 UI 카드의 `(UI)` AC는 harness/ui Storybook Vitest 결과가 생기기 전까지 RED가 정상이다. 이 카드의 `(STATIC)` AC는 self-test가 작성된 뒤 GREEN 판정한다.
-  검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-029`로 카드/시나리오/용어 정합성을 확인한다.
-  Skeleton 결과: 승인 대기
+  검증: 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-029`로 카드/시나리오/용어 정합성을 확인한다.
+  설계 결과: 승인 대기
 
 ### 테스트 리뷰
 
 - 리뷰일: 2026-06-10
   리뷰자: REDSTONE
-  확인: Skeleton 검토중 단계. source-indexer Skeleton과 하네스 UI 검증 채널 설계를 작성했고 실행 테스트는 아직 작성하지 않았다.
+  확인: 설계 검토중 단계. source-indexer 설계와 하네스 UI 검증 채널 설계를 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
 
 - 리뷰일: 2026-06-17
   리뷰자: REDSTONE
-  확인: `harness/self-test/tests/harness-ui-coverage-channel.test.ts`가 harness/ui Storybook Vitest 메타데이터 수집, JUnit 결과 병합, (UI) AC PASS/RED 판정, `harness:validate` 실행 순서, Storybook 계약 대조, Storybook build 포함을 검증한다. `npm run harness:self-test`, `npm run harness:tool-test`, `npm run harness:validate`가 통과했고 REQ-029 trace state는 GREEN이다.
+  확인: `harness/self-test/tests/harness-ui-coverage-channel.test.ts`가 harness/ui Storybook Vitest 메타데이터 수집, JUnit 결과 병합, (UI) AC PASS/RED 판정, `harness:validate` 실행 순서, UI 설계 검토 표면 대조, Storybook build 포함을 검증한다. `npm run harness:self-test`, `npm run harness:tool-test`, `npm run harness:validate`가 통과했고 REQ-029 trace state는 GREEN이다.
   결과: 승인
 
 - 리뷰일: 2026-06-18

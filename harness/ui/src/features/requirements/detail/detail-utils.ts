@@ -65,11 +65,11 @@ export function artifactKindMeta(kind: string) {
   const detail = detailParts.join(":");
 
   if (category === "card") return { label: "요건 카드", name: detail, tone: "blue" as const };
-  if (category === "scenario") return { label: "시나리오", name: detail, tone: "green" as const };
-  if (category === "api") return { label: "API", name: detail, tone: "neutral" as const };
+  if (category === "scenario") return { label: "수용 시나리오", name: detail, tone: "green" as const };
+  if (category === "api") return { label: "API 설계", name: detail, tone: "neutral" as const };
   if (rawCategory === "Request") return { label: "Request", name: detail, tone: "warning" as const };
   if (rawCategory === "Response") return { label: "Response", name: detail, tone: "blue" as const };
-  if (rawCategory === "Entity") return { label: "Entity", name: detail, tone: "green" as const };
+  if (rawCategory === "Entity") return { label: "DB 설계", name: detail, tone: "green" as const };
   if (rawCategory === "Page") return { label: "UI Page", name: detail, tone: "blue" as const };
   if (rawCategory === "Route") return { label: "UI Route", name: detail, tone: "neutral" as const };
   if (rawCategory === "Story") return { label: "UI Story", name: detail, tone: "warning" as const };

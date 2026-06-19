@@ -10,8 +10,8 @@ import { linkTargetProps, uiSurfaceLabel } from "./detail-utils";
 export function RequirementUiTab({ detail }: { detail: RequirementDetail }) {
   return (
     <>
-      <SectionHeader title="UI 검토 링크" />
-      <div className="grid gap-3" role="list" aria-label="연결된 UI 표면">
+      <SectionHeader title="UI 설계" />
+      <div className="grid gap-3" role="list" aria-label="연결된 UI 설계">
         {detail.uiSurfaces.map((surface) => {
           return (
             <Card key={`${surface.kind}-${surface.name}-${surface.storybookStory ?? surface.route ?? ""}`} className="p-4" role="listitem">
@@ -36,7 +36,7 @@ export function RequirementUiTab({ detail }: { detail: RequirementDetail }) {
             </Card>
           );
         })}
-        {detail.uiSurfaces.length === 0 ? <EmptyState>연결된 UI 표면이 없다.</EmptyState> : null}
+        {detail.uiSurfaces.length === 0 ? <EmptyState>연결된 UI 설계가 없다.</EmptyState> : null}
       </div>
     </>
   );

@@ -32,14 +32,14 @@ Feature: 하네스 UI 검증 채널
     When 하네스가 하네스 scope 추적을 생성한다
     Then 해당 수용 기준은 RED로 보고된다
 
-  Scenario: 하네스 UI Storybook 계약이 수집된 story와 빌드로 검증된다
+  Scenario: 하네스 UI 설계 검토 표면이 수집된 story와 빌드로 검증된다
     Covers:
-      - Storybook 계약을 선언한 하네스 scope 요건은 harness/ui에서 수집한 story 인덱스와 대조되어, 선언한 표면이나 상태가 없으면 위반으로 보고된다
-      - `npm run harness:validate`는 harness/ui Storybook build를 실행해 Skeleton 검토 표면이 빌드 가능한지 확인한다
+      - UI 설계 검토 표면이 있는 하네스 scope 요건은 harness/ui에서 수집한 story 인덱스와 대조되어, 선언한 표면이나 상태가 없으면 위반으로 보고된다
+      - `npm run harness:validate`는 harness/ui Storybook build를 실행해 UI 설계 검토 표면이 빌드 가능한지 확인한다
 
-    Given 하네스 scope 요건이 Storybook 계약을 선언한다
+    Given 하네스 scope 요건에 UI 설계 검토 표면이 있다
     When 개발자가 npm run harness:validate를 실행한다
-    Then 하네스는 harness/ui에서 수집한 story 인덱스와 계약을 대조한다
+    Then 하네스는 harness/ui에서 수집한 story 인덱스와 UI 설계 검토 표면을 대조한다
     And 선언한 표면이나 상태가 없으면 위반으로 보고된다
     And harness/ui Storybook build가 검증 과정에 포함된다
 

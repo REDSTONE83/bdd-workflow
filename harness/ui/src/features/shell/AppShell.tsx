@@ -39,7 +39,7 @@ export function AppShell({
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-4">
           <div>
-            <div className="text-lg font-semibold text-foreground">BDD Harness</div>
+            <div className="text-lg font-semibold text-foreground">요건 검증 하네스</div>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-sm text-foreground">

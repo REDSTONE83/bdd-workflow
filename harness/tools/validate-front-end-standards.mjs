@@ -7,13 +7,13 @@
 // 출력: build/{app|harness}/findings/front-end-standards.findings.json
 //
 // 룰 ID:
-//   FE-TEST-DYN              Playwright BDD annotation이 literal {type,description} 형태가 아님
+//   FE-TEST-DYN              Playwright 수용 테스트 annotation이 literal {type,description} 형태가 아님
 //   FE-TEST-COVERS-NO-REQ    Covers 메타데이터는 있으나 Requirement 메타데이터 없음
 //   FE-TEST-REQ-NO-COVERS    Requirement 메타데이터는 있으나 Covers 메타데이터 없음
 //   FE-E2E-LIVE-LOCATION     상위 요건 E2E AC를 커버하는 Playwright 테스트가 live 디렉터리 밖에 있음
 //   FE-LIVE-MOCK-IMPORT      live Playwright spec이 API mock helper를 import함
-//   FE-STORY-MISSING-SURFACE 요건 Storybook 계약의 story surface가 누락
-//   FE-STORY-MISSING-STATE   공통 UI primitive 또는 요건 Storybook 계약의 필수 상태가 누락
+//   FE-STORY-MISSING-SURFACE 요건 UI 설계 검토 표면의 story surface가 누락
+//   FE-STORY-MISSING-STATE   공통 UI primitive 또는 요건 UI 설계 검토 표면의 필수 상태가 누락
 //   FE-STORY-REQ-MISMATCH    Storybook 상태가 선언 요건 metadata와 연결되지 않음
 //   FE-STORY-COVER-NO-PLAY   Storybook Vitest covers가 있으나 play assertion이 없음
 //   FE-API-CONTRACT-MISSING  OpenAPI 계약 산출물 부재
@@ -104,6 +104,8 @@ const REQUIRED_STORY_STATES = {
 };
 
 const STORYBOOK_CONTRACT_STATUSES = new Set([
+    '설계 검토중',
+    '설계 승인',
     'Skeleton 검토중',
     'Skeleton 승인',
     '테스트 작성중',
@@ -226,7 +228,7 @@ function findingsForMissingStoryStates(stories) {
 }
 
 function cardHasStorybookContract(card) {
-    return Array.isArray(card.storybookContract) && card.storybookContract.length > 0;
+    return uiReviewSurfacesForCard(card).length > 0;
 }
 
 function shouldValidateStorybookContract(card) {
@@ -236,6 +238,13 @@ function shouldValidateStorybookContract(card) {
 
 function storyIdentity(story) {
     return [story.title, story.story].filter(Boolean).join(' / ');
+}
+
+function uiReviewSurfacesForCard(card) {
+    if (Array.isArray(card.uiReviewSurfaces) && card.uiReviewSurfaces.length > 0) {
+        return card.uiReviewSurfaces;
+    }
+    return Array.isArray(card.storybookContract) ? card.storybookContract : [];
 }
 
 function findingsForStorybookContracts(stories, requirementCards) {
@@ -249,7 +258,7 @@ function findingsForStorybookContracts(stories, requirementCards) {
 
     for (const card of requirementCards ?? []) {
         if (!card.id || !shouldValidateStorybookContract(card)) continue;
-        for (const contract of card.storybookContract ?? []) {
+        for (const contract of uiReviewSurfacesForCard(card)) {
             const titleStories = storiesByTitle.get(contract.title) ?? [];
             if (titleStories.length === 0) {
                 findings.push({
@@ -257,7 +266,7 @@ function findingsForStorybookContracts(stories, requirementCards) {
                     severity: 'error',
                     strictSeverity: 'error',
                     kind: 'static',
-                    message: `Storybook 계약 ${card.id}: "${contract.title}" story surface가 없음`,
+                    message: `UI 설계 검토 표면 ${card.id}: "${contract.title}" story surface가 없음`,
                     requirements: [card.id],
                     location: {
                         file: card.location?.file ?? '',
@@ -278,7 +287,7 @@ function findingsForStorybookContracts(stories, requirementCards) {
                     severity: 'error',
                     strictSeverity: 'error',
                     kind: 'static',
-                    message: `Storybook 계약 ${card.id}: "${contract.title}" 상태 누락 — ${missingStates.join(', ')}`,
+                    message: `UI 설계 검토 표면 ${card.id}: "${contract.title}" 상태 누락 — ${missingStates.join(', ')}`,
                     requirements: [card.id],
                     location: {
                         file: titleStories[0]?.file ?? card.location?.file ?? '',
@@ -306,7 +315,7 @@ function findingsForStorybookContracts(stories, requirementCards) {
                     severity: 'error',
                     strictSeverity: 'error',
                     kind: 'static',
-                    message: `Storybook 계약 ${card.id}: "${contract.title}" 상태가 REQ metadata와 연결되지 않음 — ${mismatched.map((story) => story.story).join(', ')}`,
+                    message: `UI 설계 검토 표면 ${card.id}: "${contract.title}" 상태가 REQ metadata와 연결되지 않음 — ${mismatched.map((story) => story.story).join(', ')}`,
                     requirements: [card.id],
                     location: {
                         file: mismatched[0]?.file ?? card.location?.file ?? '',
@@ -332,7 +341,7 @@ function findingsForStorybookContracts(stories, requirementCards) {
 }
 
 function findingsForStorybookVitestSuccessConditions(frontEndTests) {
-    // Storybook Vitest는 app·harness 양쪽에서 (UI) 수용 기준의 BDD 채널이다.
+    // Storybook Vitest는 app·harness 양쪽에서 (UI) 수용 기준의 수용 테스트 채널이다.
     // covers가 있으면 story 렌더 smoke가 아니라 play 안의 expect assertion으로 성공 조건을 드러낸다.
     const findings = [];
     for (const test of frontEndTests ?? []) {

@@ -383,9 +383,9 @@ describe('validate-front-end-standards — @UsesApi contract', () => {
 describe('validate-front-end-standards — Storybook contract', () => {
     const card = {
         id: 'REQ-001',
-        status: 'Skeleton 승인',
+        status: '설계 승인',
         location: { file: 'app/docs/requirements/REQ-001-demo.md', line: 1, identity: 'REQ-001' },
-        storybookContract: [
+        uiReviewSurfaces: [
             { title: 'Todos/TodoFormDialog', states: ['Create', 'Submitting'] }
         ]
     };

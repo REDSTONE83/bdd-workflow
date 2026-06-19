@@ -42,9 +42,11 @@ function cardFixture(overrides = {}) {
             '제외 범위': true,
             '수용 기준': true,
             '의사결정 로그': true,
-            'BDD 테스트 리뷰': true,
+            '수용 테스트 리뷰': true,
             '열린 질문': true
         },
+        acceptanceTestReviewIncomplete: true,
+        acceptanceTestReviewApproved: false,
         bddReviewIncomplete: true,
         bddReviewApproved: false,
         referencedRequirementIds: [],

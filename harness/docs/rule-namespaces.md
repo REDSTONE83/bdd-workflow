@@ -32,10 +32,10 @@ BE-F5            backend framework configuration rule 5
 BE-L2            backend Lombok rule 2
 
 FE-STRUCT-01              frontend project structure rule (예정)
-FE-STORY-MISSING-SURFACE  요건 Storybook 계약의 story surface 누락 (severity=error)
-FE-STORY-MISSING-STATE    공통 UI primitive 또는 요건 Storybook 계약의 필수 상태 누락 (severity=error)
+FE-STORY-MISSING-SURFACE  요건 UI 설계 검토 표면의 story surface 누락 (severity=error)
+FE-STORY-MISSING-STATE    공통 UI primitive 또는 요건 UI 설계 검토 표면의 필수 상태 누락 (severity=error)
 FE-STORY-REQ-MISMATCH     Storybook 상태가 선언 요건 metadata와 연결되지 않음 (severity=error)
-FE-TEST-DYN               Playwright BDD annotation이 literal {type,description} 아님
+FE-TEST-DYN               Playwright 수용 테스트 annotation이 literal {type,description} 아님
 FE-TEST-COVERS-NO-REQ     Covers 메타데이터는 있으나 Requirement 메타데이터 없음
 FE-TEST-REQ-NO-COVERS     Requirement 메타데이터는 있으나 Covers 메타데이터 없음
 FE-INDEX-UNKNOWN          FE source index가 분류하지 못한 issue 보조 매핑

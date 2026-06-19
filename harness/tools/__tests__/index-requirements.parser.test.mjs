@@ -8,8 +8,8 @@ import assert from 'node:assert/strict';
 import {
     acceptanceCriterionItems,
     acceptanceCriteriaWithLines,
-    bddReviewResultItems,
-    bddReviewResultSummary,
+    acceptanceTestReviewResultItems,
+    acceptanceTestReviewResultSummary,
     decisionLogItems,
     storybookContractItems,
     verificationTargetItems
@@ -220,12 +220,12 @@ describe('decisionLogItems', () => {
     });
 });
 
-describe('bddReviewResultSummary', () => {
-    it('uses only BDD review result lines and ignores domain text containing 미완료', () => {
-        const summary = bddReviewResultSummary([
+describe('acceptanceTestReviewResultSummary', () => {
+    it('uses only acceptance test review result lines and ignores domain text containing 미완료', () => {
+        const summary = acceptanceTestReviewResultSummary([
             '- 시나리오 문서: `docs/scenarios/REQ-999.feature`',
             '',
-            '### 요건 Skeleton 승인 이력',
+            '### 요건 설계 승인 이력',
             '',
             '- 승인일: 2026-06-08',
             '  확인: 할 일을 미완료로 되돌리는 도메인 문장은 상태 표기가 아니다.',
@@ -248,7 +248,7 @@ describe('bddReviewResultSummary', () => {
     });
 
     it('treats the latest result line as authoritative', () => {
-        const summary = bddReviewResultSummary([
+        const summary = acceptanceTestReviewResultSummary([
             '- 리뷰일: 2026-06-07',
             '  결과: 승인',
             '- 리뷰일: 2026-06-08',
@@ -261,9 +261,9 @@ describe('bddReviewResultSummary', () => {
     });
 });
 
-describe('bddReviewResultItems', () => {
-    it('does not parse Skeleton 결과 lines as test review results', () => {
-        assert.deepEqual(bddReviewResultItems([
+describe('acceptanceTestReviewResultItems', () => {
+    it('does not parse legacy Skeleton 결과 lines as test review results', () => {
+        assert.deepEqual(acceptanceTestReviewResultItems([
             '  Skeleton 결과: 승인',
             '  결과: 승인'
         ].join('\n')), [

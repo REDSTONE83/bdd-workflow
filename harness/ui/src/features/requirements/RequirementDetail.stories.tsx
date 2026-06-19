@@ -55,7 +55,7 @@ const meta = {
     harness: { requirements: ["REQ-032"] },
     docs: {
       description: {
-        component: "요건 하나의 메타데이터 아래에서 개요, AC, 시나리오, UI, API 계약, Entity, 산출물/소스 탭으로 사용자/목적, 범위, 표준 용어, 제외 범위, 의사결정 로그, AC 카드 목록, 시나리오별 테스트 정보, UI 표면 목록형 카드, API Request/Response, Entity 목록형 카드, 요건 카드/시나리오 연결 산출물과 UI 접두 뱃지가 있는 소스 위치 카드를 확인한다.",
+        component: "요건 하나의 메타데이터 아래에서 개요, AC, 수용 시나리오, UI 설계, API 설계, DB 설계, 산출물/소스 탭으로 사용자/목적, 범위, 표준 용어, 제외 범위, 의사결정 로그, AC 카드 목록, 수용 시나리오별 테스트 정보, UI 설계 목록형 카드, API Request/Response, DB 설계 목록형 카드, 요건 카드/수용 시나리오 연결 산출물과 UI 접두 뱃지가 있는 소스 위치 카드를 확인한다.",
       },
     },
   },
@@ -84,12 +84,12 @@ export const CompleteCoverage: Story = {
     harness: {
       covers: [
         "요건 상세는 요건 ID, 제목, 카드 상태, 우선순위, 대상 시스템, 제품 영역, 검증 수준과 추적 상태를 표시한다",
-        "요건 상세의 주요 정보군은 개요, AC, 시나리오, UI, API 계약, Entity, 산출물/소스 탭으로 구분된다",
+        "요건 상세의 주요 정보군은 개요, AC, 수용 시나리오, UI 설계, API 설계, DB 설계, 산출물/소스 탭으로 구분된다",
       ],
     },
     docs: {
       description: {
-        story: "모든 AC 커버리지가 PASS이고 RED/BLUE 차단 사유가 없는 상태다. 메타데이터, AC 항목 카드의 채널 색상 뱃지, 연결 테스트/시나리오 바로가기와 시나리오 항목의 테스트 정보가 BLUE 상태와 일관되는지 확인한다.",
+        story: "모든 AC 커버리지가 PASS이고 RED/BLUE 차단 사유가 없는 상태다. 메타데이터, AC 항목 카드의 채널 색상 뱃지, 연결 테스트/수용 시나리오 바로가기와 수용 시나리오 항목의 테스트 정보가 BLUE 상태와 일관되는지 확인한다.",
       },
     },
   },
@@ -103,7 +103,7 @@ export const CompleteCoverage: Story = {
     await expect(canvas.getAllByText("제품 영역")[0]).toBeVisible();
     await expect(canvas.getAllByText("검증 수준")[0]).toBeVisible();
     await expect(canvas.getAllByText("BLUE")[0]).toBeVisible();
-    for (const tabName of ["개요", "AC", "시나리오", "UI", "API 계약", "Entity", "산출물 / 소스"]) {
+    for (const tabName of ["개요", "AC", "수용 시나리오", "UI 설계", "API 설계", "DB 설계", "산출물 / 소스"]) {
       await expect(canvas.getByRole("tab", { name: tabName })).toBeVisible();
     }
   },
@@ -178,14 +178,14 @@ export const LinkedArtifacts: Story = {
   parameters: {
     harness: {
       covers: [
-        "연결 산출물은 요건 카드와 BDD 시나리오 종류 뱃지와 파일 위치가 있는 목록형 카드로 표시된다",
-        "소스코드 위치는 연결 산출물 파일을 제외하고 API, Request, Response, Entity, UI Page, UI Story 종류 뱃지와 파일 위치가 있는 목록형 카드로 표시된다",
+        "연결 산출물은 요건 카드와 수용 시나리오 종류 뱃지와 파일 위치가 있는 목록형 카드로 표시된다",
+        "소스코드 위치는 연결 산출물 파일을 제외하고 API 설계, Request, Response, DB 설계, UI Page, UI Story 종류 뱃지와 파일 위치가 있는 목록형 카드로 표시된다",
         "카드 원본 문서와 연결 항목의 파일 경로/라인 위치 자체는 로컬 에디터 바로가기 링크로 제공되고 별도 열기 버튼은 표시되지 않는다",
       ],
     },
     docs: {
       description: {
-        story: "카드 원본과 시나리오 산출물 링크가 표시되는 상태다. 산출물/소스 탭의 연결 산출물에는 요건 카드와 시나리오만 보이고, 소스 위치에는 산출물 파일 없이 API/Data/UI 구현 표면이 종류 뱃지가 있는 목록형 카드로 보이는지 확인한다. 파일 경로와 라인은 별도 열기 버튼 없이 위치 텍스트 자체가 로컬 에디터 바로가기처럼 동작해야 한다.",
+        story: "카드 원본과 수용 시나리오 산출물 링크가 표시되는 상태다. 산출물/소스 탭의 연결 산출물에는 요건 카드와 수용 시나리오만 보이고, 소스 위치에는 산출물 파일 없이 API 설계/DB 설계/UI 구현 표면이 종류 뱃지가 있는 목록형 카드로 보이는지 확인한다. 파일 경로와 라인은 별도 열기 버튼 없이 위치 텍스트 자체가 로컬 에디터 바로가기처럼 동작해야 한다.",
       },
     },
   },
@@ -193,13 +193,13 @@ export const LinkedArtifacts: Story = {
     const canvas = await openDetailTab(canvasElement, "산출물 / 소스");
     await expect(canvas.getByRole("heading", { name: "연결 산출물" })).toBeVisible();
     await expect(visibleText(canvas, "요건 카드")).toBeVisible();
-    await expect(visibleText(canvas, "시나리오")).toBeVisible();
+    await expect(visibleText(canvas, "수용 시나리오")).toBeVisible();
     await expect(canvas.getByText("harness/docs/requirements/REQ-031-harness-ui-requirement-board.md:1")).toBeVisible();
     await expect(canvas.getByRole("heading", { name: "소스코드 위치" })).toBeVisible();
-    await expect(visibleText(canvas, "API")).toBeVisible();
+    await expect(visibleText(canvas, "API 설계")).toBeVisible();
     await expect(visibleText(canvas, "Request")).toBeVisible();
     await expect(visibleText(canvas, "Response")).toBeVisible();
-    await expect(visibleText(canvas, "Entity")).toBeVisible();
+    await expect(visibleText(canvas, "DB 설계")).toBeVisible();
     await expect(visibleText(canvas, "UI Page")).toBeVisible();
     await expect(visibleText(canvas, "UI Story")).toBeVisible();
     await expect(canvas.queryByRole("button", { name: "열기" })).not.toBeInTheDocument();
@@ -211,15 +211,15 @@ export const AcceptanceAndScenarios: Story = {
   parameters: {
     harness: {
       covers: [
-        "수용 기준 원문 목록은 카드로 표시되고 BDD 시나리오 목록은 번호 없는 Given/When/Then, 파일 위치, Covers 관계를 확인할 수 있다",
+        "수용 기준 원문 목록은 카드로 표시되고 수용 시나리오 목록은 번호 없는 Given/When/Then, 파일 위치, Covers 관계를 확인할 수 있다",
         "AC 목록 카드에서 AC ID는 한 단계 큰 글꼴로 표시되고 검증 채널은 ID 옆 유형별 색상 뱃지로 표시되며 판정 상태는 카드 우측에 표시된다",
-        "AC 목록 카드에서 연결 테스트와 연결 시나리오는 바로가기 링크로 제공되고 연결 테스트 라벨과 목록 컨텐츠는 상단 정렬된다",
-        "BDD 시나리오마다 Covers 기준으로 연결된 커버리지 판정과 테스트가 항목 안에 표시된다",
+        "AC 목록 카드에서 연결 테스트와 연결 수용 시나리오는 바로가기 링크로 제공되고 연결 테스트 라벨과 목록 컨텐츠는 상단 정렬된다",
+        "수용 시나리오마다 Covers 기준으로 연결된 커버리지 판정과 테스트가 항목 안에 표시된다",
       ],
     },
     docs: {
       description: {
-        story: "AC 탭과 시나리오 탭에서 수용 기준 원문 카드 목록과 BDD Scenario 목록을 각각 확인하는 상태다. 각 AC의 ID, 채널 색상 뱃지, 판정, 연결 테스트/시나리오 바로가기와 각 시나리오의 표준 테스트 파일 링크, 강조된 Given/When/Then, feature 위치가 보여야 한다.",
+        story: "AC 탭과 수용 시나리오 탭에서 수용 기준 원문 카드 목록과 수용 시나리오 목록을 각각 확인하는 상태다. 각 AC의 ID, 채널 색상 뱃지, 판정, 연결 테스트/수용 시나리오 바로가기와 각 수용 시나리오의 표준 테스트 파일 링크, 강조된 Given/When/Then, feature 위치가 보여야 한다.",
       },
     },
   },
@@ -227,46 +227,46 @@ export const AcceptanceAndScenarios: Story = {
     const canvas = await openDetailTab(canvasElement, "AC");
     await expect(canvas.getByRole("heading", { name: "AC 목록" })).toBeVisible();
     await expect(canvas.getByText("AC-1")).toBeVisible();
-    await expect(canvas.getAllByText("UI")[0]).toBeVisible();
+    await expect(visibleText(canvas, "UI")).toBeVisible();
     await expect(canvas.getAllByText("PASS")[0]).toBeVisible();
     await expect(canvas.getAllByText("연결 테스트")[0]).toBeVisible();
-    await expect(canvas.getAllByText("시나리오")[0]).toBeVisible();
+    await expect(canvas.getAllByText("수용 시나리오")[0]).toBeVisible();
     await expect(visibleText(canvas, /RequirementDetail\.stories\.tsx:36/)).toBeVisible();
     await expect(canvas.getAllByText(/REQ-031-harness-ui-requirement-board\.feature/)[0]).toBeVisible();
 
-    await userEvent.click(canvas.getByRole("tab", { name: "시나리오" }));
-    await expect(canvas.getByRole("heading", { name: "시나리오" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("tab", { name: "수용 시나리오" }));
+    await expect(canvas.getByRole("heading", { name: "수용 시나리오" })).toBeVisible();
     await expect(canvas.getAllByText("Given/When/Then")[0]).toBeVisible();
     await expect(canvas.getAllByText("Given")[0]).toBeVisible();
     await expect(canvas.getAllByText("When")[0]).toBeVisible();
     await expect(canvas.getAllByText("Then")[0]).toBeVisible();
     await expect(visibleText(canvas, /RequirementDetail\.stories\.tsx:36/)).toBeVisible();
-    // BDD 시나리오마다 커버리지 판정(연결됨)과 연결 테스트가 항목 안에 표시된다
-    const scenarioList = within(canvas.getByRole("list", { name: "연결된 시나리오" }));
+    // 수용 시나리오마다 커버리지 판정(연결됨)과 연결 테스트가 항목 안에 표시된다
+    const scenarioList = within(canvas.getByRole("list", { name: "연결된 수용 시나리오" }));
     await expect(scenarioList.getAllByText("연결됨")[0]).toBeVisible();
     await expect(scenarioList.getAllByText("연결 테스트")[0]).toBeVisible();
   },
 };
 
-export const SkeletonContracts: Story = {
+export const DesignSurfaces: Story = {
   args: { detail: requirementDetail },
   parameters: {
     harness: {
       covers: [
         "연결된 API 작업은 세로 목록형 카드로 표시되고 Request, Response 구성과 그 안의 중첩 객체 필드는 펼침으로 확인된다",
-        "연결된 Entity 구성은 Entity 탭에서 세로 목록형 카드로 표시되고 table과 컬럼 메타데이터는 펼침으로 확인된다",
-        "연결된 UI 표면은 UI 탭에서 세로 목록형 카드로 표시되고 카드별 설명과 Storybook 검토 링크와 구현 파일 위치가 제공된다",
+        "연결된 DB 설계는 DB 설계 탭에서 세로 목록형 카드로 표시되고 table과 컬럼 메타데이터는 펼침으로 확인된다",
+        "연결된 UI 설계는 UI 설계 탭에서 세로 목록형 카드로 표시되고 카드별 설명과 Storybook 검토 링크와 구현 파일 위치가 제공된다",
       ],
     },
     docs: {
       description: {
-        story: "API 계약 탭에서 요건에 연결된 API 작업 목록형 카드, Request/Response 펼침, Request/Response 필드의 참조 객체 펼침을 확인하고, Entity 탭에서 Entity 테이블과 컬럼 메타데이터 목록을 확인하는 상태다. UI 표면은 UI 탭에서 description이 있는 목록형 카드로 표시되고 Storybook 검토 버튼과 구현 위치 링크를 제공해야 한다.",
+        story: "API 설계 탭에서 요건에 연결된 API 작업 목록형 카드, Request/Response 펼침, Request/Response 필드의 참조 객체 펼침을 확인하고, DB 설계 탭에서 DB 테이블과 컬럼 메타데이터 목록을 확인하는 상태다. UI 설계는 UI 설계 탭에서 description이 있는 목록형 카드로 표시되고 Storybook 검토 버튼과 구현 위치 링크를 제공해야 한다.",
       },
     },
   },
   play: async ({ canvasElement }) => {
-    const canvas = await openDetailTab(canvasElement, "API 계약");
-    await expect(canvas.getByRole("heading", { name: "API 계약" })).toBeVisible();
+    const canvas = await openDetailTab(canvasElement, "API 설계");
+    await expect(canvas.getByRole("heading", { name: "API 설계" })).toBeVisible();
     await expect(canvas.getByText("/api/requirements")).toBeVisible();
     await expect(canvas.getByText("operationId: listRequirementTrace")).toBeVisible();
     await userEvent.click(canvas.getAllByRole("button", { name: /Request/ })[0]);
@@ -276,16 +276,16 @@ export const SkeletonContracts: Story = {
     await userEvent.click(canvas.getAllByRole("button", { name: /참조 객체/ })[0]);
     await expect(canvas.getAllByText("RequirementRow")[0]).toBeVisible();
 
-    await userEvent.click(canvas.getByRole("tab", { name: "Entity" }));
-    await expect(canvas.getByRole("heading", { name: "Entity" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("tab", { name: "DB 설계" }));
+    await expect(canvas.getByRole("heading", { name: "DB 설계" })).toBeVisible();
     await expect(visibleText(canvas, "category")).toBeVisible();
     await expect(canvas.getByText("JPA Entity")).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: /컬럼 목록/ }));
     await expect(visibleText(canvas, "name")).toBeVisible();
     await expect(visibleText(canvas, "NOT NULL")).toBeVisible();
 
-    await userEvent.click(canvas.getByRole("tab", { name: "UI" }));
-    await expect(canvas.getByRole("heading", { name: "UI 검토 링크" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("tab", { name: "UI 설계" }));
+    await expect(canvas.getByRole("heading", { name: "UI 설계" })).toBeVisible();
     await expect(visibleText(canvas, "RequirementBoardPage")).toBeVisible();
     await expect(canvas.getByText("요건 목록과 상태 요약을 보여주는 하네스 UI 화면 표면이다.")).toBeVisible();
     await expect(canvas.getAllByRole("button", { name: "Storybook 검토" })[0]).toBeVisible();

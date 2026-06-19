@@ -44,11 +44,13 @@ const REQUIRED_SECTIONS = [
     '제외 범위',
     '수용 기준',
     '의사결정 로그',
-    'BDD 테스트 리뷰',
+    '수용 테스트 리뷰',
     '열린 질문'
 ];
 const ALLOWED_STATUSES = [
     '초안',
+    '설계 검토중',
+    '설계 승인',
     'Skeleton 검토중',
     'Skeleton 승인',
     '테스트 작성중',
@@ -234,6 +236,13 @@ function hasAnyVerificationTarget(card) {
     return Object.keys(card.verificationTargets ?? {}).length > 0;
 }
 
+function hasRequiredSection(card, section) {
+    if (section === '수용 테스트 리뷰') {
+        return Boolean(card.sectionPresent?.['수용 테스트 리뷰'] || card.sectionPresent?.['BDD 테스트 리뷰']);
+    }
+    return Boolean(card.sectionPresent?.[section]);
+}
+
 function verificationContractFindings(card) {
     const findings = [];
     const mustHaveTargets = STATUSES_REQUIRING_VERIFICATION_TARGETS.has(card.status);
@@ -246,21 +255,25 @@ function verificationContractFindings(card) {
         return findings;
     }
 
+    if (!hasAnyVerificationTarget(card)) {
+        return findings;
+    }
+
     if (targetRequired(card, 'API') && (card.apiSkeleton ?? []).length === 0) {
         findings.push(findingForCard(card, 'CARD-API-SKELETON-MISSING',
-            '검증 대상 API=필요이지만 ## API Skeleton 섹션 항목이 없음'));
+            '레거시 검증 대상 API=필요이지만 API 설계 항목이 없음 (## API 설계 또는 레거시 ## API Skeleton)'));
     }
     if (targetRequired(card, 'DB') && (card.dbSkeleton ?? []).length === 0) {
         findings.push(findingForCard(card, 'CARD-DB-SKELETON-MISSING',
-            '검증 대상 DB=필요이지만 ## DB Skeleton 섹션 항목이 없음'));
+            '레거시 검증 대상 DB=필요이지만 DB 설계 항목이 없음 (## DB 설계 또는 레거시 ## DB Skeleton)'));
     }
     if (targetRequired(card, 'UI') && (card.uiSkeleton ?? []).length === 0) {
         findings.push(findingForCard(card, 'CARD-UI-SKELETON-MISSING',
-            '검증 대상 UI=필요이지만 ## UI Skeleton 또는 ## 화면/라우팅 Skeleton 섹션 항목이 없음'));
+            '레거시 검증 대상 UI=필요이지만 UI 설계 항목이 없음 (## UI 설계 또는 레거시 ## UI Skeleton/## 화면/라우팅 Skeleton)'));
     }
     if (targetRequired(card, 'Storybook') && (card.storybookContract ?? []).length === 0) {
         findings.push(findingForCard(card, 'CARD-STORYBOOK-CONTRACT-MISSING',
-            '검증 대상 Storybook=필요이지만 ## Storybook 계약 섹션 항목이 없음'));
+            '레거시 검증 대상 Storybook=필요이지만 UI 설계 검토 표면 항목이 없음 (## UI 설계 검토 표면 또는 레거시 ## Storybook 계약)'));
     }
     return findings;
 }
@@ -467,7 +480,7 @@ function validateCard(card, allCards, terminologyIndex) {
     }
 
     for (const sec of REQUIRED_SECTIONS) {
-        if (!card.sectionPresent?.[sec]) {
+        if (!hasRequiredSection(card, sec)) {
             findings.push(findingForCard(card, 'CARD-SECTION-MISSING',
                 `필수 섹션 누락: ## ${sec}`,
                 { section: sec }));
@@ -549,15 +562,18 @@ function validateCard(card, allCards, terminologyIndex) {
             findings.push(findingForCard(card, 'CARD-APPROVAL-OPEN-QUESTIONS',
                 '상태=승인이지만 열린 질문이 남아 있음'));
         }
-        if (card.bddReviewIncomplete) {
+        const acceptanceTestReviewIncomplete = Boolean(card.acceptanceTestReviewIncomplete ?? card.bddReviewIncomplete);
+        const acceptanceTestReviewApproved = Boolean(card.acceptanceTestReviewApproved ?? card.bddReviewApproved);
+        const acceptanceTestReviewResult = card.acceptanceTestReviewResult ?? card.bddReviewResult ?? null;
+        if (acceptanceTestReviewIncomplete) {
             findings.push(findingForCard(card, 'CARD-APPROVAL-BDD-INCOMPLETE',
-                '상태=승인이지만 BDD 테스트 리뷰의 최신 "결과:" 라인이 "미완료"임',
-                { bddReviewResult: card.bddReviewResult ?? null }));
+                '상태=승인이지만 수용 테스트 리뷰의 최신 "결과:" 라인이 "미완료"임',
+                { acceptanceTestReviewResult }));
         }
-        if (!card.bddReviewApproved) {
+        if (!acceptanceTestReviewApproved) {
             findings.push(findingForCard(card, 'CARD-APPROVAL-BDD-NO-APPROVAL',
-                '상태=승인이지만 BDD 테스트 리뷰의 최신 "결과:" 라인이 "승인"이 아님',
-                { bddReviewResult: card.bddReviewResult ?? null }));
+                '상태=승인이지만 수용 테스트 리뷰의 최신 "결과:" 라인이 "승인"이 아님',
+                { acceptanceTestReviewResult }));
         }
     }
 

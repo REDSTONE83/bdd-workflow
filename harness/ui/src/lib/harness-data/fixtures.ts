@@ -470,7 +470,7 @@ export const requirementDetail: RequirementDetail = {
       method: "GET",
       path: "/api/requirements",
       operationId: "listRequirementTrace",
-      status: "Skeleton",
+      status: "설계",
       file: "harness/ui/server/index.ts",
       line: 15,
       requests: ["RequirementBoardQuery"],
@@ -481,7 +481,7 @@ export const requirementDetail: RequirementDetail = {
       method: "GET",
       path: "/api/requirements/{requirementId}",
       operationId: "getRequirementDetail",
-      status: "Skeleton",
+      status: "설계",
       file: "harness/ui/server/index.ts",
       line: 15,
       requests: ["RequirementDetailParams"],
@@ -493,7 +493,7 @@ export const requirementDetail: RequirementDetail = {
     {
       kind: "Request",
       name: "RequirementBoardQuery",
-      status: "Skeleton",
+      status: "설계",
       file: "harness/ui/src/lib/harness-data/types.ts",
       line: 1,
       fields: [
@@ -507,7 +507,7 @@ export const requirementDetail: RequirementDetail = {
     {
       kind: "Request",
       name: "RequirementDetailParams",
-      status: "Skeleton",
+      status: "설계",
       file: "harness/ui/src/lib/harness-data/types.ts",
       line: 106,
       fields: [
@@ -517,7 +517,7 @@ export const requirementDetail: RequirementDetail = {
     {
       kind: "Response",
       name: "RequirementBoardResponse",
-      status: "Skeleton",
+      status: "설계",
       file: "harness/ui/src/lib/harness-data/types.ts",
       line: 18,
       fields: [
@@ -529,7 +529,7 @@ export const requirementDetail: RequirementDetail = {
     {
       kind: "Response",
       name: "RequirementDetailResponse",
-      status: "Skeleton",
+      status: "설계",
       file: "harness/ui/src/lib/harness-data/types.ts",
       line: 47,
       fields: [
@@ -542,14 +542,14 @@ export const requirementDetail: RequirementDetail = {
         { name: "redReasons", type: "FindingRow[]", required: true, description: "추적 산출물의 RED 사유" },
         { name: "apiSurfaces", type: "RequirementApiSurface[]", required: true, description: "연결 API 작업" },
         { name: "dataShapes", type: "RequirementDataShape[]", required: true, description: "Request/Response와 중첩 객체 구성" },
-        { name: "entitySurfaces", type: "RequirementEntitySurface[]", required: true, description: "JPA Entity와 컬럼 구성" },
+        { name: "entitySurfaces", type: "RequirementEntitySurface[]", required: true, description: "DB table과 컬럼 구성" },
         { name: "uiSurfaces", type: "RequirementUiSurface[]", required: true, description: "화면과 Storybook 검토 링크" },
       ],
     },
     {
       kind: "Object",
       name: "RequirementStandardTerm",
-      status: "Skeleton",
+      status: "설계",
       file: "harness/ui/src/lib/harness-data/types.ts",
       line: 114,
       fields: [
@@ -561,7 +561,7 @@ export const requirementDetail: RequirementDetail = {
     {
       kind: "Object",
       name: "RequirementRow",
-      status: "Skeleton",
+      status: "설계",
       file: "harness/ui/src/lib/harness-data/types.ts",
       line: 16,
       fields: [
@@ -580,7 +580,7 @@ export const requirementDetail: RequirementDetail = {
     {
       kind: "Object",
       name: "RequirementDecisionLog",
-      status: "Skeleton",
+      status: "설계",
       file: "harness/ui/src/lib/harness-data/types.ts",
       line: 110,
       fields: [
@@ -674,7 +674,7 @@ export const requirementDetail: RequirementDetail = {
       kind: "Page",
       name: "RequirementBoardPage",
       route: "/requirements",
-      status: "Skeleton",
+      status: "설계",
       description: "요건 목록과 상태 요약을 보여주는 하네스 UI 화면 표면이다.",
       file: "harness/ui/src/features/requirements/RequirementBoardPage.tsx",
       line: 1,
@@ -683,7 +683,7 @@ export const requirementDetail: RequirementDetail = {
       kind: "Story",
       name: "RequirementBoard",
       status: "검토 가능",
-      description: "요건 보드 화면 Skeleton을 Storybook에서 검토하는 대표 상태다.",
+      description: "요건 보드 UI 설계를 Storybook에서 검토하는 대표 상태다.",
       file: "harness/ui/src/features/requirements/RequirementBoard.stories.tsx",
       line: 1,
       storybookTitle: "Harness/Requirements/RequirementBoard",
@@ -735,7 +735,7 @@ export const changeSetRows: ChangeSetRow[] = [
     requestedDate: "2026-06-10",
     affectedRequirements: requirementRows.slice(0, 3),
     summary: "하네스 산출물을 로컬 웹 UI에서 조회하고 검증 명령을 실행한다.",
-    scopeItems: ["하네스 UI 요건", "Storybook Skeleton", "검증 명령 실행"],
+    scopeItems: ["하네스 UI 요건", "UI 설계 검토", "검증 명령 실행"],
     completionCriteria: ["REQ-029~REQ-035 승인", "npm run harness:validate 통과"],
     verificationCommands: ["npm run harness:trace -- --requirement REQ-031", "npm run harness:validate"],
     openDiscussions: [],

@@ -30,7 +30,7 @@ function PrimitiveGallery() {
           <Badge variant="success">GREEN</Badge>
           <Badge variant="warning">경고</Badge>
           <Badge variant="info">BLUE</Badge>
-          <Badge size="sm" variant="secondary">Skeleton 검토중</Badge>
+          <Badge size="sm" variant="secondary">설계 검토중</Badge>
           <Badge size="sm" variant="warning">높음</Badge>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -98,7 +98,7 @@ function PrimitiveGallery() {
             요건 메타데이터와 주요 상태를 좁은 면적에서 전환해 확인한다.
           </TabsContent>
           <TabsContent value="contracts" className="rounded-md border border-border p-4 text-sm text-muted-foreground">
-            API, Request, Response, Entity 구성을 탭 안에서 분리한다.
+            API 설계, Request, Response, DB 설계 구성을 탭 안에서 분리한다.
           </TabsContent>
           <TabsContent value="findings" className="rounded-md border border-border p-4 text-sm text-muted-foreground">
             RED 사유와 BLUE 차단 사유를 판정 탭에서 확인한다.

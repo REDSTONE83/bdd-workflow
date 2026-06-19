@@ -60,10 +60,10 @@ export function RequirementDetailView({ detail }: { detail: RequirementDetail })
         <TabsList aria-label="요건 상세 탭" className="flex w-full justify-start overflow-x-auto">
           <TabsTrigger value="overview">개요</TabsTrigger>
           <TabsTrigger value="acceptance">AC</TabsTrigger>
-          <TabsTrigger value="scenarios">시나리오</TabsTrigger>
-          <TabsTrigger value="ui">UI</TabsTrigger>
-          <TabsTrigger value="api">API 계약</TabsTrigger>
-          <TabsTrigger value="entities">Entity</TabsTrigger>
+          <TabsTrigger value="scenarios">수용 시나리오</TabsTrigger>
+          <TabsTrigger value="ui">UI 설계</TabsTrigger>
+          <TabsTrigger value="api">API 설계</TabsTrigger>
+          <TabsTrigger value="entities">DB 설계</TabsTrigger>
           <TabsTrigger value="artifacts">산출물 / 소스</TabsTrigger>
         </TabsList>
 

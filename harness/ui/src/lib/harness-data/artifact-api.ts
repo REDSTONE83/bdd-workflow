@@ -440,7 +440,7 @@ function buildUiSurfaces(scope: HarnessScope, traceRequirement: Record<string, u
       kind: "Story",
       name: stringValue(story.component, storyName),
       status: "검토 가능",
-      description: "요건과 연결된 Storybook 검토 표면이다.",
+      description: "요건과 연결된 UI 설계 검토 표면이다.",
       file: stringValue(story.file),
       line: normalizeLine(story.line),
       storybookTitle: title,

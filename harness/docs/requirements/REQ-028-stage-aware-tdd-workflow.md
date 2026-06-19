@@ -15,13 +15,13 @@
 
 ## 사용자/목적
 
-하네스 작업자와 리뷰어는 요건 카드가 초안, Skeleton, 테스트, 구현, 검증, 승인 중 어느 단계인지에 따라 필요한 산출물과 게이트 강도를 다르게 확인할 수 있어야 한다.
+하네스 작업자와 리뷰어는 요건 카드가 초안, 설계, 테스트, 구현, 검증, 승인 중 어느 단계인지에 따라 필요한 산출물과 게이트 강도를 다르게 확인할 수 있어야 한다.
 
 ## 범위
 
 - 요건 카드 상태를 엄격한 TDD 흐름에 맞게 단계화한다.
-- Skeleton 승인 전에는 API/DB/UI/Storybook 계약을 검토 가능한 수준으로 준비한다.
-- UI가 있는 요건은 Storybook을 Skeleton 단계의 공식 검토 표면으로 사용한다.
+- 설계 승인 전에는 API/DB/UI 설계를 source index와 생성 산출물에서 검토 가능한 수준으로 준비한다.
+- UI가 있는 요건은 Storybook을 UI 설계 검토 표면으로 사용한다.
 - 테스트 승인 단계에서는 모든 AC가 실행 테스트 코드와 연결되었는지 확인하되, 구현 전 실패 자체는 허용한다.
 - 검증중 또는 승인 상태의 RED는 통합 게이트에서 차단한다.
 - 구현중 이전 단계의 RED는 상태 보고에는 남기되 통합 게이트 차단 사유로 보지 않는다.
@@ -38,33 +38,13 @@
 
 ## 수용 기준
 
-- (STATIC) 요건 카드 상태는 `초안`, `Skeleton 검토중`, `Skeleton 승인`, `테스트 작성중`, `테스트 승인`, `구현중`, `검증중`, `승인`, `대체됨`을 지원한다
-- (STATIC) `Skeleton 승인` 이후 단계의 요건은 선언한 검증 대상에 맞는 API/DB/UI/Storybook 계약을 카드에 가져야 한다
-- (STATIC) UI Storybook 계약이 있는 요건은 선언한 Storybook surface와 named export 상태가 실제 Storybook source index에 있고 해당 요건 metadata와 연결되어야 한다
-- (STATIC) `npm run app:validate`는 Storybook build를 실행해 Skeleton UI 검토 표면이 빌드 가능한지 확인한다
+- (STATIC) 요건 카드 상태는 `초안`, `설계 검토중`, `설계 승인`, `테스트 작성중`, `테스트 승인`, `구현중`, `검증중`, `승인`, `대체됨`을 지원한다
+- (STATIC) `설계 승인` 이후 단계의 요건은 필요한 API/DB/UI 설계 표면이 소스 기반 추출 결과에 있어야 한다
+- (STATIC) UI 설계 검토 표면이 있는 요건은 선언한 Storybook surface와 named export 상태가 실제 Storybook source index에 있고 해당 요건 metadata와 연결되어야 한다
+- (STATIC) `npm run app:validate`는 Storybook build를 실행해 UI 설계 검토 표면이 빌드 가능한지 확인한다
 - (STATIC) 테스트 승인 단계는 AC별 실행 테스트 연결을 요구하지만 구현 전 테스트 실패 자체는 통합 게이트 차단 사유로 보지 않는다
 - (STATIC) `gate.mjs --check`는 `검증중` 또는 `승인` 카드의 RED를 TRACE 실패로 차단한다
-- (STATIC) 승인 카드의 BDD 테스트 리뷰 검사는 자유 텍스트가 아니라 최신 `결과:` 라인을 기준으로 `승인` 또는 `미완료` 상태를 판정한다
-
-## 검증 대상
-
-- STATIC: 필요
-
-## API Skeleton
-
-- 해당 없음
-
-## DB Skeleton
-
-- 해당 없음
-
-## UI Skeleton
-
-- 해당 없음
-
-## Storybook 계약
-
-- 해당 없음
+- (STATIC) 승인 카드의 수용 테스트 리뷰 검사는 자유 텍스트가 아니라 최신 `결과:` 라인을 기준으로 `승인` 또는 `미완료` 상태를 판정한다
 
 ## 의사결정 로그
 
@@ -75,45 +55,50 @@
   영향: 카드 상태 enum과 하네스 게이트 정책을 단계 인식 방식으로 확장한다.
 
 - 결정일: 2026-06-08
-  결정: UI 검토 표면은 Skeleton 단계에서 Storybook으로 실제 확인 가능해야 한다.
+  결정: UI 검토 표면은 설계 단계에서 Storybook으로 실제 확인 가능해야 한다.
   이유: 상태 표나 문서만으로는 Dialog/List/Page 하위 상태 누락을 잡기 어렵다.
   결정자: REDSTONE
-  영향: 요건별 Storybook 계약과 FE 정적 검사를 도입한다.
+  영향: 요건별 UI 설계 검토 표면과 FE 정적 검사를 도입한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-028-stage-aware-tdd-workflow.feature`
 
-### 요건 Skeleton 승인 이력
+### 요건 설계 승인 이력
 
 - 승인일: 2026-06-08
-  검증 설계: 단계별 상태 enum, Skeleton 계약, Storybook 계약, app validate Storybook build, 단계별 RED 차단 정책, BDD 테스트 리뷰 결과 라인 파싱을 STATIC AC로 검증한다.
-  API Skeleton: 해당 없음.
-  DB Skeleton: 해당 없음.
-  화면/라우팅 Skeleton: 해당 없음.
-  검사기 Skeleton: `index-requirements.mjs`가 검증 대상과 Storybook 계약을 수집하고, `validate-requirement-cards.mjs`/`validate-front-end-standards.mjs`/`gate.mjs`/`run.mjs`가 단계별 정적 검사를 수행한다.
-  추적 정책: Skeleton 단계의 테스트 누락 RED는 허용하고, 테스트 승인/구현중 단계의 테스트 누락 RED는 차단하며, 실행된 테스트 실패 RED는 검증중 전까지 허용한다.
+  검증 설계: 단계별 상태 enum, 설계 표면, UI 설계 검토 표면, app validate Storybook build, 단계별 RED 차단 정책, 수용 테스트 리뷰 결과 라인 파싱을 STATIC AC로 검증한다.
+  API 설계: 해당 없음.
+  DB 설계: 해당 없음.
+  UI 설계: 해당 없음.
+  검사기 설계: `index-requirements.mjs`가 수용 테스트 리뷰와 legacy 설계 섹션 alias를 수집하고, `evaluate-trace-state.mjs`가 source index 기반 API/DB/UI 설계 표면을 생성하며, `validate-front-end-standards.mjs`/`gate.mjs`/`run.mjs`가 단계별 정적 검사를 수행한다.
+  추적 정책: 설계 검토중 단계의 테스트 누락 RED는 허용하고, 설계 승인 이후 설계 표면 누락 RED는 차단하며, 테스트 승인/구현중 단계의 테스트 누락 RED는 차단하고, 실행된 테스트 실패 RED는 검증중 전까지 허용한다.
   검증: `npm run harness:tool-test`, `npm run harness:self-test`.
   승인자: REDSTONE
-  Skeleton 결과: 승인
+  설계 결과: 승인
 
 ### 테스트 리뷰
 
 - 리뷰일: 2026-06-08
   리뷰자: REDSTONE
-  확인: 단계 상태 enum, Skeleton 계약, Storybook 계약, app validate Storybook build, 테스트 승인 게이트, 검증 단계 RED 차단 정책을 self-test로 확인했다.
+  확인: 단계 상태 enum, 설계 표면, UI 설계 검토 표면, app validate Storybook build, 테스트 승인 게이트, 검증 단계 RED 차단 정책을 self-test로 확인했다.
   결과: 승인
 
 - 리뷰일: 2026-06-08
   리뷰자: REDSTONE
-  확인: 승인 카드의 BDD 테스트 리뷰 상태가 자유 텍스트가 아니라 최신 `결과:` 라인으로 계산되는지 parser tool-test와 validator self-test로 확인한다.
+  확인: 승인 카드의 수용 테스트 리뷰 상태가 자유 텍스트가 아니라 최신 `결과:` 라인으로 계산되는지 parser tool-test와 validator self-test로 확인한다.
+  결과: 승인
+
+- 리뷰일: 2026-06-19
+  리뷰자: REDSTONE
+  확인: 카드 상태 enum을 `설계 검토중`/`설계 승인`으로 전환하고, `수용 테스트 리뷰` 섹션과 source index 기반 `designSurfaces` 생성, `TRACE-DESIGN-*` 게이트 차단, UI 설계 검토 표면 대조를 self-test와 tool-test로 확인한다.
   결과: 승인
 
 ### 최종 승인 리뷰
 
-- 승인일: 2026-06-08
+- 승인일: 2026-06-19
   승인자: REDSTONE
-  확인: `npm run harness:validate`와 `npm run harness:trace -- --requirement REQ-028` 기준 RED가 없고, 최신 BDD 테스트 리뷰 결과가 승인 상태다.
+  확인: `npm run harness:validate`와 `npm run harness:trace -- --requirement REQ-028` 기준 RED가 없고, 최신 수용 테스트 리뷰 결과가 승인 상태다.
   결과: 승인
 
 ## 열린 질문

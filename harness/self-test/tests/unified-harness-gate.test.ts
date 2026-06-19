@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { bddReviewResultSummary } from '../../tools/index-requirements.mjs';
+import { acceptanceTestReviewResultSummary } from '../../tools/index-requirements.mjs';
 import {
     addFinding,
     addTerminologyFinding,
@@ -23,7 +23,7 @@ const REQUIRED_CARD_SECTIONS = [
     '제외 범위',
     '수용 기준',
     '의사결정 로그',
-    'BDD 테스트 리뷰',
+    '수용 테스트 리뷰',
     '열린 질문'
 ];
 
@@ -51,6 +51,8 @@ function requirementCardFixture(overrides: Record<string, any> = {}) {
         terms: [],
         openQuestions: [],
         approved: false,
+        acceptanceTestReviewIncomplete: false,
+        acceptanceTestReviewApproved: false,
         bddReviewIncomplete: false,
         bddReviewApproved: false,
         sectionPresent: sectionPresence(),
@@ -203,13 +205,13 @@ harnessTest({
 
 harnessTest({
     requirement: 'REQ-028',
-    name: '요건 카드 상태 enum은 단계 인식 TDD 상태를 허용한다',
-    covers: ['요건 카드 상태는 `초안`, `Skeleton 검토중`, `Skeleton 승인`, `테스트 작성중`, `테스트 승인`, `구현중`, `검증중`, `승인`, `대체됨`을 지원한다']
+    name: '요건 카드 상태 enum은 설계 중심 요건 검증 상태를 허용한다',
+    covers: ['요건 카드 상태는 `초안`, `설계 검토중`, `설계 승인`, `테스트 작성중`, `테스트 승인`, `구현중`, `검증중`, `승인`, `대체됨`을 지원한다']
 }, () => {
     const statuses = [
         '초안',
-        'Skeleton 검토중',
-        'Skeleton 승인',
+        '설계 검토중',
+        '설계 승인',
         '테스트 작성중',
         '테스트 승인',
         '구현중',
@@ -234,64 +236,44 @@ harnessTest({
 
 harnessTest({
     requirement: 'REQ-028',
-    name: 'Skeleton 승인 이후 검증 대상별 계약 누락을 카드 finding으로 보고한다',
-    covers: ['`Skeleton 승인` 이후 단계의 요건은 선언한 검증 대상에 맞는 API/DB/UI/Storybook 계약을 카드에 가져야 한다']
+    name: '설계 승인 이후 생성 설계 표면 누락을 TRACE 실패로 차단한다',
+    covers: ['`설계 승인` 이후 단계의 요건은 필요한 API/DB/UI 설계 표면이 소스 기반 추출 결과에 있어야 한다']
 }, () => {
-    const reviewing = runRequirementCardValidatorFixture([
-        requirementCardFixture({
-            status: 'Skeleton 검토중',
-            verificationTargets: {
-                API: { required: true, raw: '필요' },
-                Storybook: { required: true, raw: '필요' }
-            }
-        })
-    ]);
-    assert.equal(reviewing.findings.length, 0, JSON.stringify(reviewing.findings, null, 2));
+    const reviewing = runGateFixture(stateWithCards([{
+        id: 'REQ-028',
+        state: 'RED',
+        status: '설계 검토중',
+        redReasons: [{ ruleId: 'TRACE-DESIGN-UI-MISSING', evidence: { designKind: 'ui' } }]
+    }]), allCleanFindings(), ['--check']);
+    assert.equal(reviewing.status, 0);
+    assert.ok(reviewing.output.includes('gate: pass'));
 
-    const missing = runRequirementCardValidatorFixture([
-        requirementCardFixture({
-            status: 'Skeleton 승인',
-            verificationTargets: {
-                API: { required: true, raw: '필요' },
-                DB: { required: true, raw: '필요' },
-                UI: { required: true, raw: '필요' },
-                Storybook: { required: true, raw: '필요' }
-            }
-        })
-    ]);
-    const missingRules = missing.findings.map((finding: { ruleId: string }) => finding.ruleId).sort();
-    assert.deepEqual(missingRules, [
-        'CARD-API-SKELETON-MISSING',
-        'CARD-DB-SKELETON-MISSING',
-        'CARD-STORYBOOK-CONTRACT-MISSING',
-        'CARD-UI-SKELETON-MISSING'
-    ]);
+    const missing = runGateFixture(stateWithCards([{
+        id: 'REQ-028',
+        state: 'RED',
+        status: '설계 승인',
+        redReasons: [{ ruleId: 'TRACE-DESIGN-UI-MISSING', evidence: { designKind: 'ui' } }]
+    }]), allCleanFindings(), ['--check']);
+    assert.equal(missing.status, 1);
+    assert.ok(missing.output.includes('[TRACE]'));
+    assert.ok(missing.output.includes('red=1'));
 
-    const complete = runRequirementCardValidatorFixture([
+    const minimalCard = runRequirementCardValidatorFixture([
         requirementCardFixture({
-            status: 'Skeleton 승인',
-            verificationTargets: {
-                API: { required: true, raw: '필요' },
-                DB: { required: true, raw: '필요' },
-                UI: { required: true, raw: '필요' },
-                Storybook: { required: true, raw: '필요' }
-            },
-            apiSkeleton: ['GET /fixture'],
-            dbSkeleton: ['fixture_table'],
-            uiSkeleton: ['FixturePage /fixtures'],
-            storybookContract: [{ title: 'Fixture/Page', states: ['Default'], raw: 'Fixture/Page: Default' }]
+            status: '설계 승인',
+            sectionPresent: sectionPresence()
         })
     ]);
-    assert.equal(complete.findings.length, 0, JSON.stringify(complete.findings, null, 2));
+    assert.equal(minimalCard.findings.length, 0, JSON.stringify(minimalCard.findings, null, 2));
 });
 
 harnessTest({
     requirement: 'REQ-028',
-    name: '승인 BDD 리뷰 상태는 최신 결과 라인 기준으로 판정한다',
-    covers: ['승인 카드의 BDD 테스트 리뷰 검사는 자유 텍스트가 아니라 최신 `결과:` 라인을 기준으로 `승인` 또는 `미완료` 상태를 판정한다']
+    name: '승인 수용 테스트 리뷰 상태는 최신 결과 라인 기준으로 판정한다',
+    covers: ['승인 카드의 수용 테스트 리뷰 검사는 자유 텍스트가 아니라 최신 `결과:` 라인을 기준으로 `승인` 또는 `미완료` 상태를 판정한다']
 }, () => {
-    const approvedSummary = bddReviewResultSummary([
-        '### 요건 Skeleton 승인 이력',
+    const approvedSummary = acceptanceTestReviewResultSummary([
+        '### 요건 설계 승인 이력',
         '- 승인일: 2026-06-08',
         '  확인: 할 일을 미완료로 되돌리는 도메인 문장은 리뷰 상태가 아니다.',
         '  Skeleton 결과: 미완료',
@@ -303,14 +285,14 @@ harnessTest({
         requirementCardFixture({
             status: '승인',
             approved: true,
-            bddReviewResult: approvedSummary.latest,
-            bddReviewIncomplete: approvedSummary.incomplete,
-            bddReviewApproved: approvedSummary.approved
+            acceptanceTestReviewResult: approvedSummary.latest,
+            acceptanceTestReviewIncomplete: approvedSummary.incomplete,
+            acceptanceTestReviewApproved: approvedSummary.approved
         })
     ]);
     assert.equal(approved.findings.length, 0, JSON.stringify(approved.findings, null, 2));
 
-    const incompleteSummary = bddReviewResultSummary([
+    const incompleteSummary = acceptanceTestReviewResultSummary([
         '- 리뷰일: 2026-06-07',
         '  결과: 승인',
         '- 리뷰일: 2026-06-08',
@@ -320,9 +302,9 @@ harnessTest({
         requirementCardFixture({
             status: '승인',
             approved: true,
-            bddReviewResult: incompleteSummary.latest,
-            bddReviewIncomplete: incompleteSummary.incomplete,
-            bddReviewApproved: incompleteSummary.approved
+            acceptanceTestReviewResult: incompleteSummary.latest,
+            acceptanceTestReviewIncomplete: incompleteSummary.incomplete,
+            acceptanceTestReviewApproved: incompleteSummary.approved
         })
     ]);
     const ruleIds = incomplete.findings.map((finding: { ruleId: string }) => finding.ruleId);
@@ -364,7 +346,7 @@ harnessTest({
     const draftState = stateWithCards([{
         id: 'REQ-028',
         state: 'RED',
-        status: 'Skeleton 승인',
+        status: '설계 검토중',
         redReasons: redReason('TRACE-AC-MISSING', 'MISSING')
     }]);
     const draftRun = runGateFixture(draftState, allCleanFindings(), ['--check']);
@@ -397,7 +379,7 @@ harnessTest({
 harnessTest({
     requirement: 'REQ-028',
     name: 'app validate는 Storybook build를 실행한다',
-    covers: ['`npm run app:validate`는 Storybook build를 실행해 Skeleton UI 검토 표면이 빌드 가능한지 확인한다']
+    covers: ['`npm run app:validate`는 Storybook build를 실행해 UI 설계 검토 표면이 빌드 가능한지 확인한다']
 }, () => {
     const runner = readText(path.join(workspaceRoot, 'harness', 'tools', 'run.mjs'));
     assert.ok(runner.includes('function frontEndBuildStorybook()'));
@@ -407,8 +389,8 @@ harnessTest({
 
 harnessTest({
     requirement: 'REQ-028',
-    name: 'Storybook 계약 누락은 FE finding으로 보고된다',
-    covers: ['UI Storybook 계약이 있는 요건은 선언한 Storybook surface와 named export 상태가 실제 Storybook source index에 있고 해당 요건 metadata와 연결되어야 한다']
+    name: 'UI 설계 검토 표면 누락은 FE finding으로 보고된다',
+    covers: ['UI 설계 검토 표면이 있는 요건은 선언한 Storybook surface와 named export 상태가 실제 Storybook source index에 있고 해당 요건 metadata와 연결되어야 한다']
 }, () => {
     const dir = tempDir('stage-aware-storybook-');
     const feSourceIndex = path.join(dir, 'front-end.source-index.json');
@@ -435,9 +417,9 @@ harnessTest({
     writeJson(requirementsIndex, {
         entries: [{
             id: 'REQ-028',
-            status: 'Skeleton 승인',
+            status: '설계 승인',
             location: { file: 'harness/docs/requirements/REQ-028-stage-aware-tdd-workflow.md', line: 1, identity: 'REQ-028' },
-            storybookContract: [
+            uiReviewSurfaces: [
                 { title: 'Todos/TodoFormDialog', states: ['Create', 'Submitting'] }
             ]
         }]

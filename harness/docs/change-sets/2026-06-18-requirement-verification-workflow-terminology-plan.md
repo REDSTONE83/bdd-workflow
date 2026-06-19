@@ -1,6 +1,6 @@
 # Change Set: 2026-06-18 요건 검증 워크플로우 용어와 설계 추출 전환 계획
 
-상태: 계획
+상태: 완료
 요청일: 2026-06-18
 변경 유형: 하네스 개선, 표준 개정, 마이그레이션
 영향 요건: REQ-006, REQ-010, REQ-012, REQ-028, REQ-029, REQ-030, REQ-031, REQ-032, REQ-033, REQ-036
@@ -30,7 +30,7 @@
 
 ## 제외 범위
 
-- 이번 계획 문서에서 실제 문서 일괄 치환, 파서 변경, 요건 카드 마이그레이션을 수행하지 않는다.
+- 전체 요건 카드 본문의 수작업 설계 섹션 일괄 제거와 legacy alias 제거는 이번 완료 범위에서 제외한다. 전환 대상 하네스 카드와 템플릿, 표준, 리포트, UI label, 파서, 게이트는 새 용어와 생성 설계 표면 중심으로 전환한다.
 - 기존 요건 카드의 범위, 수용 기준, 수용 시나리오 의미는 이 전환만으로 바꾸지 않는다.
 - `REQ-XXX` ID 체계, 헤더 관계 필드(`상위 요건`/`관련 요건`/`대체 요건`/`명세 역할`), AC 마커 `(API)/(UI)/(E2E)/(STATIC)`, RED/GREEN/BLUE 판정 모델은 유지한다.
 - 앱 요건 카드 본문의 수작업 섹션 제거는 이 하네스 change set이 아니라 별도 앱 scope change set에서 수행한다(AGENTS.md의 scope 분리 규칙).
@@ -44,7 +44,7 @@
 - 새 카드 템플릿에서 사람이 직접 관리하는 `검증 대상`, `API Skeleton`, `DB Skeleton`, `UI Skeleton`, `Storybook 계약` 섹션이 제거된다.
 - 앱 scope 소스 인덱스와 trace state가 요건 ID 기준으로 `API 설계`, `DB 설계`, `UI 설계`를 생성하고, 하네스 scope는 `UI 설계`와 STATIC 표면을 생성한다.
 - 새 카드는 수작업 계약 섹션 없이도 설계 검토 단계에서 필요한 설계 표면을 리포트와 하네스 UI에서 확인할 수 있다.
-- 전환 기간에는 기존 `Skeleton`/`Storybook 계약` 섹션을 가진 카드가 즉시 실패하지 않고, 호환 파서가 읽되 새 표준으로 이관할 수 있는 warning을 제공한다.
+- 전환 기간에는 기존 `Skeleton`/`Storybook 계약` 섹션을 가진 카드가 즉시 실패하지 않고, 호환 파서가 읽으며 새 표준 메시지에서 이관 방향을 안내한다.
 - `설계 승인` 이후 단계의 요건은 필요한 설계 표면이 소스 기반 추출 결과에 없으면 게이트가 차단한다.
 - `수용 테스트 리뷰`는 최신 `결과:` 라인을 기준으로 판정하고, 기존 `BDD 테스트 리뷰` 섹션은 호환 기간에만 alias로 읽는다.
 - 하네스 UI 요건 상세 화면은 카드 복사본이 아니라 생성 산출물에서 온 API/DB/UI 설계와 테스트/구현 연결을 표시한다.
@@ -64,6 +64,13 @@
 - `npm run app:trace -- --requirement REQ-001` (백엔드 API+DB를 가진 앱 카드로 설계 추출 검증)
 - `npm run app:validate`
 - `npm run repo:validate`
+
+## 검증 결과
+
+- 2026-06-19: `npm run harness:self-test`, `npm run harness:validate`, `npm run app:validate`, `npm run repo:validate` 통과.
+- 2026-06-19: `npm run harness:trace -- --requirement REQ-028`, `npm run harness:trace -- --requirement REQ-029`, `npm run harness:trace -- --requirement REQ-032` 모두 BLUE.
+- 2026-06-19: `npm run app:trace -- --requirement REQ-001`, `npm run app:trace -- --requirement REQ-020` 모두 BLUE.
+- 2026-06-19: `npm run app:source-index`, `npm run app:openapi-index`, `npm run app:front-end-source-index`로 앱 API/DB/UI 설계 표면 생성 경로를 확인했다.
 
 ## 전환 단계
 
@@ -124,6 +131,8 @@
 - 2026-06-18: 명칭이 표면별로 흩어져 있으므로(`BDD Workflow Harness`/`코드 중심 BDD 하네스`/`BDD Harness`) 단일 `요건 검증 하네스`로 통일한다.
 - 2026-06-18: `npm run harness:source-index`는 존재하지 않으므로 `harness:front-end-source-index`로 정정하고, 설계 추출은 하네스 scope만으로 검증할 수 없어 검증 명령에 `app:source-index`/`app:openapi-index`/`app:trace`를 포함한다.
 - 2026-06-18: 상태 enum 전환은 해당 상태 카드 0장으로 저위험이고, 실제 부담은 20~37장 카드 본문의 수작업 설계/리뷰 섹션 제거임을 분리해 기록한다.
+- 2026-06-19: 하네스 표준/템플릿/UI/파서/게이트/self-test를 새 용어와 생성 설계 표면 중심으로 전환하고, 기존 `Skeleton`/`Storybook 계약`/`BDD 테스트 리뷰` 명칭은 호환 alias로만 읽는다.
+- 2026-06-19: 앱 요건 카드 본문 전체 마이그레이션은 앱 scope Change Set으로 분리하고, 이번 하네스 Change Set은 앱 소스 인덱스와 trace 검증으로 설계 표면 생성 경로만 확인한다.
 
 ## 열린 논의
 

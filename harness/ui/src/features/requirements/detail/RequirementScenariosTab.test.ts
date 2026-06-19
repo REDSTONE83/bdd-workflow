@@ -17,7 +17,7 @@ describe("RequirementScenariosTab", () => {
     const html = renderToStaticMarkup(createElement(RequirementScenariosTab, { detail }));
 
     expect(html).toContain("연결 테스트");
-    expect(html).not.toContain("BDD Scenario의 문서 위치, 연결 테스트, 주요 Given/When/Then을 확인한다.");
+    expect(html).not.toContain("수용 시나리오의 문서 위치, 연결 테스트, 주요 Given/When/Then을 확인한다.");
     expect(html).toContain("harness/ui/src/features/requirements/RequirementDetail.stories.tsx:1");
     expect(html).toContain("href=\"vscode://file/harness/ui/src/features/requirements/RequirementDetail.stories.tsx:1\"");
     expect(html).toContain("Given/When/Then");
