@@ -41,25 +41,6 @@
 
 - (API) 연결된 카테고리가 삭제되면 본인의 할 일은 유지되고 카테고리 연결만 해제된다
 
-## 검증 대상
-
-- API: 필요
-- DB: 필요
-- UI: 불필요
-- Storybook: 불필요
-- E2E: 불필요
-- STATIC: 불필요
-
-## API Skeleton
-
-- `DELETE /categories/{categoryId}` 성공 흐름에서 삭제 대상 카테고리에 연결된 본인 할 일의 카테고리 연결을 해제한다.
-- 카테고리 삭제 API의 권한, 부재, 타인 자원 검증은 `REQ-019`가 소유하고 본 카드는 삭제 후 할 일 유지 결과만 검증한다.
-
-## DB Skeleton
-
-- `Todo.categoryId`는 nullable이며, 연결된 카테고리가 삭제되면 같은 사용자 할 일의 `category_id`만 `null`로 바꾼다.
-- 할 일 row와 제목, 설명, 마감일, 우선순위, 완료 상태는 유지한다.
-
 ## 의사결정 로그
 
 - 결정일: 2026-05-21
@@ -68,7 +49,7 @@
   결정자: Product Owner, Tech Lead
   영향: 사용자 관점 동작은 본 카드가 검증하고, 카테고리 삭제 핸들러의 삭제 조건은 `REQ-019`가 소유한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-026-todo-category-unlink-on-category-delete.feature`
 

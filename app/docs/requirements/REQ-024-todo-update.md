@@ -76,36 +76,6 @@
 - (UI) 할 일의 선택 정보를 비우고 저장하면 목록에서 설명과 마감일은 보이지 않고 카테고리는 미분류로 보인다
 - (UI) 할 일 수정 요청이 실패하면 실패 안내가 보이고 사용자가 다시 시도할 수 있다
 
-## 검증 대상
-
-- API: 필요
-- DB: 필요
-- UI: 필요
-- Storybook: 필요
-- E2E: 불필요
-- STATIC: 불필요
-
-## API Skeleton
-
-- `PATCH /todos/{todoId}`: 인증 사용자 기준 `UpdateTodoRequest`를 받아 입력한 항목만 수정하고 `TodoResponse`를 반환한다.
-- 요청 DTO는 필드 누락과 명시적 `null`을 구분하며, 제목/설명/마감일/우선순위/카테고리 소유권 검증을 수행한다.
-- FE API client는 `/todos/{todoId}` PATCH를 할 일 수정 입력 대화상자 submit 시 generated client 경유로 호출한다.
-
-## DB Skeleton
-
-- `Todo` entity/table은 부분 수정 시 누락 필드를 기존 값으로 유지하고, 설명/마감일/카테고리 명시적 비움은 nullable 컬럼에 반영한다.
-- 수정은 `user_id`와 `todoId`로 사용자 소유권을 격리한다.
-
-## UI Skeleton
-
-- Component: `TodoFormDialog` edit mode, 기존 제목/설명/마감일/우선순위/카테고리를 입력 영역에 채워 보여준다.
-- Validation: 제목 필수, 설명 길이 제한, 저장 중 비활성, 저장 실패 재시도 상태를 표시한다.
-- Page integration: `TodosPage`는 수정 성공 후 목록 항목의 제목, 설명, 마감일, 우선순위, 카테고리 표시를 갱신한다.
-
-## Storybook 계약
-
-- Todos/TodoFormDialog: Edit, TitleRequiredError, DescriptionTooLongError, Submitting, SaveFailure
-
 ## 의사결정 로그
 
 - 결정일: 2026-05-21
@@ -120,7 +90,7 @@
   결정자: REDSTONE
   영향: 수정 입력 대화상자, 수정 입력 검증, 수정 실패 재시도, 목록 반영 UI AC와 FE BDD 커버리지를 본 카드로 이동한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-024-todo-update.feature`
 

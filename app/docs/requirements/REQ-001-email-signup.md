@@ -78,39 +78,6 @@
 - (UI) 데스크톱 화면에서 회원 가입 카드의 주요 입력과 버튼이 화면 밖으로 넘치지 않는다
 - (UI) 회원 가입 화면은 자동 접근성 검사에서 위반이 없어야 한다
 
-## 검증 대상
-
-- API: 필요
-- DB: 필요
-- UI: 필요
-- Storybook: 필요
-- E2E: 필요
-- STATIC: 불필요
-
-## API Skeleton
-
-- `POST /users/signup`: 사용자 이름, 이메일, 비밀번호를 받아 계정을 생성하고 `SignupResponse`를 반환한다.
-- 요청 DTO는 이름 필수/길이, 이메일 형식/중복, 비밀번호 길이와 ASCII 출력 가능 문자 정책을 검증한다.
-- 성공 응답은 생성된 사용자 식별자와 이메일을 포함하고, 실패 응답은 중복 이메일과 입력 검증 실패를 구분한다.
-- FE API client는 `/users/signup` POST를 회원 가입 화면 submit 시 generated client 경유로 호출한다.
-
-## DB Skeleton
-
-- `UserAccount` entity/table `user_account`: `id`, `name`, `email`, `password_hash`, `created_at`, `updated_at`를 가진다.
-- 이메일은 계정 식별에 쓰이는 고유 값이며, 저장 비밀번호는 평문이 아니라 BCrypt hash로 저장한다.
-
-## UI Skeleton
-
-- Page: `SignupPage`, route `/signup`, 비인증 단일 카드 레이아웃으로 렌더링한다.
-- Component state: 초기 입력, 필드 오류, 제출 중 비활성, 중복 이메일 서버 거절, 성공 후 이동 상태를 제공한다.
-- Route behavior: 가입 성공 후 `/login?signupCompleted=1`로 이동하고, 이미 인증된 사용자는 `/todos`로 이동한다.
-- Accessibility: 데스크톱 viewport overflow와 자동 접근성 검사를 FE BDD 테스트로 확인한다.
-
-## Storybook 계약
-
-- Routes/SignupPage: RouteSignup, Initial, FieldErrors, Submitting, ServerRejectionDuplicateEmail, Success
-- Routes/LoginPage: SignupCompletedNotice
-
 ## 의사결정 로그
 
 - 결정일: 2026-05-20
@@ -173,7 +140,7 @@
   결정자: Product Owner, Tech Lead
   영향: REQ-013은 `상태: 대체됨`, `대체 요건: REQ-001`로 닫고, FE 화면/시나리오/테스트/story metadata는 본 카드로 이동한다. 범위와 AC가 바뀌었으므로 본 카드는 `검토중`으로 되돌린다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-001-email-signup.feature`
 - 시나리오 문서: `docs/scenarios/REQ-001-email-signup-screen.feature`

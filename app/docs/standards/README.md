@@ -13,6 +13,7 @@
 코드 구조:
 
 - [`package-structure.md`](./package-structure.md): 도메인 패키지 내부 레이어 (controller/dto/service/domain/exception/repository)
+- [`source-requirement-links.md`](./source-requirement-links.md): 소스 코드, 테스트, Storybook/live metadata의 요건 ID 연결 표준
 - [`api-contract.md`](./api-contract.md): 컨트롤러, DTO, OpenAPI, 전역 오류 응답, PATCH/페이징/Jackson 구성
 - [`persistence-schema.md`](./persistence-schema.md): JPA Entity, 컬럼 매핑, Repository / Pageable 패턴, schema preview
 - [`java-code-style.md`](./java-code-style.md): Lombok 허용/금지 범위와 금지 애너테이션 목록

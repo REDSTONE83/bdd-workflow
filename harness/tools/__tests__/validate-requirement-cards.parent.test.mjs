@@ -178,3 +178,45 @@ describe('validate-requirement-cards — 상위 요건', () => {
         ]);
     });
 });
+
+describe('validate-requirement-cards — legacy section migration', () => {
+    it('reports legacy requirement-card sections as migration warnings', () => {
+        const payload = runValidator([
+            cardFixture({
+                sectionPresent: {
+                    ...cardFixture().sectionPresent,
+                    '검증 대상': true,
+                    'API Skeleton': true,
+                    'BDD 테스트 리뷰': true
+                }
+            })
+        ]);
+
+        const findings = payload.findings
+            .filter((item) => item.ruleId === 'CARD-LEGACY-SECTION')
+            .map((item) => ({
+                severity: item.severity,
+                section: item.evidence.section,
+                replacement: item.evidence.replacement
+            }))
+            .sort((a, b) => a.section.localeCompare(b.section));
+
+        assert.deepEqual(findings, [
+            {
+                severity: 'warning',
+                section: 'API Skeleton',
+                replacement: '생성 API 설계 표면'
+            },
+            {
+                severity: 'warning',
+                section: 'BDD 테스트 리뷰',
+                replacement: '수용 테스트 리뷰'
+            },
+            {
+                severity: 'warning',
+                section: '검증 대상',
+                replacement: 'AC 마커와 source index 기반 API/DB/UI 설계 표면'
+            }
+        ]);
+    });
+});

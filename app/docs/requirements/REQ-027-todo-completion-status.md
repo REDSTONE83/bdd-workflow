@@ -51,35 +51,6 @@
 - (API) 수정 시 미완료로 되돌리면 할 일이 미완료 상태로 되돌아간다
 - (UI) 할 일 목록의 완료 체크를 바꾸면 목록의 완료 상태 표시가 바뀐다
 
-## 검증 대상
-
-- API: 필요
-- DB: 필요
-- UI: 필요
-- Storybook: 필요
-- E2E: 불필요
-- STATIC: 불필요
-
-## API Skeleton
-
-- `PATCH /todos/{todoId}`: 인증 사용자 기준 `completed` 필드를 명시적으로 받아 완료 또는 미완료 상태로 바꾼다.
-- `completed`의 명시적 `null`은 거절하고, 자원 부재와 소유권 격리는 `REQ-024`와 같은 PATCH 경로 정책을 따른다.
-- FE API client는 목록 항목 체크박스 변경 시 `/todos/{todoId}` PATCH를 generated client 경유로 호출한다.
-
-## DB Skeleton
-
-- `Todo.completed`는 boolean 필드이며 완료와 미완료 상태를 모두 저장할 수 있다.
-- 완료 상태 변경은 같은 `Todo` row의 `completed` 값만 바꾸고 다른 필드는 유지한다.
-
-## UI Skeleton
-
-- Component: `TodoList`, 목록 항목의 완료 체크박스와 완료 상태 표시를 제공한다.
-- Page integration: `TodosPage`는 체크박스 변경 성공 후 목록의 완료 상태 표시를 갱신한다.
-
-## Storybook 계약
-
-- Todos/TodoList: Default, ManyItemsLoadingMore
-
 ## 의사결정 로그
 
 - 결정일: 2026-05-21
@@ -100,7 +71,7 @@
   결정자: REDSTONE
   영향: 목록 체크박스 토글 UI AC와 FE BDD 커버리지를 본 카드로 이동한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-027-todo-completion-status.feature`
 

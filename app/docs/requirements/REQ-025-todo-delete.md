@@ -48,35 +48,6 @@
 - (UI) 삭제를 확인하면 그 할 일은 목록에서 사라진다
 - (UI) 할 일 삭제 요청이 실패하면 실패 안내가 보이고 사용자가 다시 시도할 수 있다
 
-## 검증 대상
-
-- API: 필요
-- DB: 필요
-- UI: 필요
-- Storybook: 필요
-- E2E: 불필요
-- STATIC: 불필요
-
-## API Skeleton
-
-- `DELETE /todos/{todoId}`: 인증 사용자 기준 본인 할 일을 삭제하고 성공 응답을 반환한다.
-- 존재하지 않거나 다른 사용자의 할 일은 같은 거절 응답으로 처리해 자원 존재 여부를 노출하지 않는다.
-- FE API client는 `/todos/{todoId}` DELETE를 삭제 확인 대화상자 confirm 시 generated client 경유로 호출한다.
-
-## DB Skeleton
-
-- `Todo` entity/table은 soft delete 컬럼 없이 hard delete로 제거된다.
-- 삭제는 `user_id`와 `todoId`로 사용자 소유권을 격리한다.
-
-## UI Skeleton
-
-- Component: `TodoDeleteDialog`, 삭제 확인 문구, 삭제 중 비활성, 삭제 실패 재시도 상태를 제공한다.
-- Page integration: `TodosPage`는 삭제 성공 후 해당 할 일을 목록에서 제거한다.
-
-## Storybook 계약
-
-- Todos/TodoDeleteDialog: Default, Submitting, DeleteFailure
-
 ## 의사결정 로그
 
 - 결정일: 2026-05-21
@@ -97,7 +68,7 @@
   결정자: REDSTONE
   영향: 삭제 확인 대화상자, 삭제 실패 재시도, 목록 제거 UI AC와 FE BDD 커버리지를 본 카드로 이동한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-025-todo-delete.feature`
 

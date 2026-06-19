@@ -76,6 +76,17 @@ const TERM_KEY_PATTERN = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){1,2}$/;
 const REMEDIATION_CARD = 'harness/docs/standards/requirement-card.md';
 const REMEDIATION_TERM = 'harness/docs/standards/terminology.md';
 const REMEDIATION_UI_VOCABULARY = 'harness/docs/standards/ui-vocabulary.md';
+const LEGACY_SECTION_MIGRATIONS = new Map([
+    ['검증 대상', 'AC 마커와 source index 기반 API/DB/UI 설계 표면'],
+    ['API Skeleton', '생성 API 설계 표면'],
+    ['DB Skeleton', '생성 DB 설계 표면'],
+    ['UI Skeleton', '생성 UI 설계 표면'],
+    ['화면/라우팅 Skeleton', '생성 UI 설계 표면'],
+    ['Storybook 계약', 'UI 설계 검토 표면'],
+    ['UI / Storybook 계약', 'UI 설계 검토 표면'],
+    ['UI Storybook 계약', 'UI 설계 검토 표면'],
+    ['BDD 테스트 리뷰', '수용 테스트 리뷰']
+]);
 
 const STATUSES_REQUIRING_VERIFICATION_TARGETS = new Set([
     'Skeleton 승인',
@@ -274,6 +285,17 @@ function verificationContractFindings(card) {
     if (targetRequired(card, 'Storybook') && (card.storybookContract ?? []).length === 0) {
         findings.push(findingForCard(card, 'CARD-STORYBOOK-CONTRACT-MISSING',
             '레거시 검증 대상 Storybook=필요이지만 UI 설계 검토 표면 항목이 없음 (## UI 설계 검토 표면 또는 레거시 ## Storybook 계약)'));
+    }
+    return findings;
+}
+
+function legacySectionFindings(card) {
+    const findings = [];
+    for (const [section, replacement] of LEGACY_SECTION_MIGRATIONS) {
+        if (!card.sectionPresent?.[section]) continue;
+        findings.push(findingForCard(card, 'CARD-LEGACY-SECTION',
+            `legacy 요건 카드 섹션 "## ${section}"은 새 카드 작성 기준이 아님. ${replacement}(으)로 이관한다.`,
+            { section, replacement }, 'warning'));
     }
     return findings;
 }
@@ -486,6 +508,7 @@ function validateCard(card, allCards, terminologyIndex) {
                 { section: sec }));
         }
     }
+    findings.push(...legacySectionFindings(card));
 
     if ((card.acceptanceCriteria ?? []).length === 0) {
         findings.push(findingForCard(card, 'CARD-AC-EMPTY', '수용 기준 비어 있음'));
