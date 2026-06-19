@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { handleHarnessApiRequest } from "./server/index";
+import { createHarnessExpressApp } from "./server/index";
 
 const port = Number(process.env.HARNESS_UI_PORT ?? 5180);
 
@@ -10,12 +10,14 @@ export default defineConfig({
     {
       name: "harness-ui-api",
       configureServer(server) {
+        const harnessApiApp = createHarnessExpressApp({ serveStatic: false });
         server.middlewares.use((request, response, next) => {
           if (!request.url?.startsWith("/api/")) {
             next();
             return;
           }
-          void handleHarnessApiRequest(request, response);
+          // Express 앱은 Connect 미들웨어로 동작하지만 Vite 타입은 원시 req/res로 노출한다.
+          (harnessApiApp as unknown as typeof server.middlewares)(request, response, next);
         });
       },
     },

@@ -21,6 +21,7 @@
 
 - `npm run harness:ui`로 하네스 UI 서버를 기동한다. 서버는 localhost 전용이며 외부 주소 접근을 받지 않는다.
 - 기본 포트는 5180이고 `HARNESS_UI_PORT` 환경변수로 변경할 수 있다.
+- 독립 실행 서버는 빌드된 SPA 정적 자산과 JSON API를 같은 localhost 서버에서 제공하고, 클라이언트 route 요청은 `index.html`로 폴백한다.
 - 앱셸은 상단 머리 영역(제품명, scope 전환)과 요건, 표준 용어, 게이트, Change Set, 실행 화면으로 이동하는 좌측 LNB로 구성한다.
 - scope 전환은 애플리케이션과 하네스 중 하나를 선택하고, 모든 화면이 선택한 scope의 산출물을 표시한다.
 - 선택한 scope의 검증 산출물이 아직 없으면 빈 화면 대신 산출물 생성 명령 안내를 표시한다.
@@ -43,6 +44,7 @@
 ## 수용 기준
 
 - (STATIC) 하네스 UI 서버는 localhost 요청만 수신하고 다른 호스트 주소로는 접근을 받지 않는다
+- (STATIC) 하네스 UI 서버는 빌드된 SPA 정적 자산과 JSON API를 같은 localhost 서버에서 제공하고 클라이언트 route 요청은 index.html로 폴백한다
 - (STATIC) 하네스 UI 서버는 선택한 scope의 산출물 요약(생성 시각·산출물 없음·오래된 원본)을 제공하고 산출물 파일이 바뀌면 갱신 이벤트로 통지한다
 - (UI) 하네스 UI는 모든 화면에서 요건, 표준 용어, 게이트, Change Set, 실행 화면으로 이동하는 좌측 LNB를 표시한다
 - (UI) scope 전환으로 애플리케이션과 하네스 산출물을 오갈 수 있고, 현재 선택한 scope가 화면에 표시된다
@@ -107,6 +109,11 @@
 - 리뷰일: 2026-06-18
   리뷰자: REDSTONE
   확인: 자동 갱신/scope 전환을 라이브 백엔드로 구현했다. `/api/artifact-summary`와 `/api/events` SSE, `useArtifactSummary` 훅, `AppRouter` 컨테이너, 제어형 scope 전환을 추가하고, `harness-ui-app-shell.test.ts`가 산출물 요약(생성 시각·산출물 없음·오래된 원본)과 파일 변경 SSE 이벤트를 검증한다. `ScopeSwitch` story가 실제 범위 전환을 구동한다. 신규 (STATIC) 수용 기준이 GREEN이다.
+  결과: 승인
+
+- 리뷰일: 2026-06-19
+  리뷰자: REDSTONE
+  확인: 하네스 UI 서버를 Express 앱으로 전환하고 독립 실행 서버가 빌드된 SPA 정적 자산, 클라이언트 route `index.html` 폴백, `/api/health` JSON 응답을 같은 localhost 서버에서 제공하는지 `harness-ui-app-shell.test.ts`로 검증했다.
   결과: 승인
 
 ## 열린 질문

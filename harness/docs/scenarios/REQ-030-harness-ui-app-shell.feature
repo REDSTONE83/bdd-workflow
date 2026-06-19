@@ -10,6 +10,16 @@ Feature: 하네스 UI 앱셸
     Then 로컬 주소의 요청만 수신된다
     And 외부에서 접근 가능한 호스트 주소의 접근은 받아들여지지 않는다
 
+  Scenario: 하네스 UI 서버는 빌드된 SPA와 API를 함께 제공한다
+    Covers:
+      - 하네스 UI 서버는 빌드된 SPA 정적 자산과 JSON API를 같은 localhost 서버에서 제공하고 클라이언트 route 요청은 index.html로 폴백한다
+
+    Given 하네스 UI 서버가 빌드된 SPA 정적 자산과 함께 실행 중이다
+    When 루트 경로와 클라이언트 route와 API health 경로를 같은 localhost 서버에 요청한다
+    Then 루트 경로는 빌드된 앱 셸을 반환한다
+    And 클라이언트 route 요청은 index.html로 폴백된다
+    And API health 경로는 JSON 응답을 반환한다
+
   Scenario: 앱셸은 모든 화면에서 좌측 LNB를 유지한다
     Covers:
       - 하네스 UI는 모든 화면에서 요건, 표준 용어, 게이트, Change Set, 실행 화면으로 이동하는 좌측 LNB를 표시한다
