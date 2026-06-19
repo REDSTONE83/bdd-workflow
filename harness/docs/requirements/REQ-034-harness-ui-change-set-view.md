@@ -42,35 +42,6 @@
 - (UI) Change Set 카드를 펼치면 요청 요약, 작업 범위, 완료 조건, 검증 명령, 열린 논의, 영향 요건과 영향 요건의 추적 상태를 확인할 수 있다
 - (UI) 영향 요건에서 해당 요건의 상세 화면으로 이동할 수 있다
 
-## 검증 대상
-
-- API: 불필요
-- DB: 불필요
-- UI: 필요
-- Storybook: 필요
-- E2E: 불필요
-- STATIC: 불필요
-
-## API Skeleton
-
-- 해당 없음
-
-## DB Skeleton
-
-- 해당 없음
-
-## UI Skeleton
-
-- 화면 표면: `harness/ui/src/features/change-sets/ChangeSetViewPage.tsx`를 `/change-sets` route에 둔다.
-- 주요 영역: Change Set 필터, 목록형 카드, 카드 내부 펼침 상세, 영향 요건 목록, 영향 요건 상세 이동 진입점을 둔다.
-- 표시 필드: 카드 요약에는 Change Set 제목, 상태, 요청일, 영향 요건 수, 열린 논의 수를 표시한다. 카드 펼침 상세에는 요청 요약, 작업 범위, 완료 조건, 검증 명령, 열린 논의, 영향 요건, 영향 요건의 추적 상태를 표시한다.
-- 상태 목록: 카드 목록, 제목 필터 적용, 상태 필터 적용, 선택한 영향 요건 필터 적용, 영향 요건 검색 아이콘, 필터 결과 없음, 카드 상세 펼침, 영향 요건 추적 상태 표시, 영향 요건 없음, 열린 논의 있음을 검토 상태로 둔다.
-- 사용자 행위: Change Set 카드를 펼치고, 영향 요건을 선택해 `/requirements/:requirementId`로 이동한다. Change Set 문서 생성/편집은 제공하지 않는다.
-
-## Storybook 계약
-
-- Harness/ChangeSets/ChangeSetView: List, Detail, LinkedRequirements, FilteredByTitle, FilteredByStatus, FilteredByAffectedRequirement, EmptyResult, EmptyAffectedRequirements, OpenDiscussions
-
 ## 의사결정 로그
 
 - 결정일: 2026-06-10
@@ -103,26 +74,26 @@
   결정자: REDSTONE
   영향: `/change-sets` 화면은 선택된 영향 요건으로 목록을 좁히고, 필터 영역에는 선택된 요건 ID만 표시하며, 검색/선택은 돋보기 아이콘으로 여는 REQ-037 대화상자에 위임한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-034-harness-ui-change-set-view.feature`
 
-### 요건 Skeleton 설계 이력
+### 요건 설계 승인 이력
 
 - 설계일: 2026-06-10
   검증 설계: `.feature`의 4개 Scenario가 카드 수용 기준 4개를 1:1 `Covers:`로 연결한다. 모든 AC는 사용자가 관찰하는 Change Set 조회 결과이므로 `(UI)`로 검증한다.
-  UI Skeleton: `/change-sets` route는 `change-sets.index.json`, `change-set-report.json`, `trace.state.json`을 결합한 view model을 사용한다. 화면은 Change Set을 목록형 카드로 보여주고, 상세는 카드 내부 펼침으로 제공한다. 카드 요약에는 영향 요건 수만 표시하고, 개별 영향 요건과 추적 상태는 펼침 상세에 둔다. 목록은 제목, 상태, 선택한 영향 요건으로 필터링할 수 있다. 영향 요건 필터는 선택된 ID만 표시하고 돋보기 아이콘으로 REQ-037 대화상자를 호출한다. Change Set 완료 여부를 화면이나 서버가 자체 판정하지 않는다.
-  Storybook 계약: `Harness/ChangeSets/ChangeSetView`의 `List`, `Detail`, `LinkedRequirements`, `FilteredByTitle`, `FilteredByStatus`, `FilteredByAffectedRequirement`, `EmptyResult`, `EmptyAffectedRequirements`, `OpenDiscussions` 상태가 있어야 한다.
-  서버 Skeleton: 영향 요건의 추적 상태는 trace state의 값만 붙인다. 영향 요건이 현재 scope에 없으면 상태 확인 불가로 표시하고 상세 이동은 비활성화한다.
+  UI 설계: `/change-sets` route는 `change-sets.index.json`, `change-set-report.json`, `trace.state.json`을 결합한 view model을 사용한다. 화면은 Change Set을 목록형 카드로 보여주고, 상세는 카드 내부 펼침으로 제공한다. 카드 요약에는 영향 요건 수만 표시하고, 개별 영향 요건과 추적 상태는 펼침 상세에 둔다. 목록은 제목, 상태, 선택한 영향 요건으로 필터링할 수 있다. 영향 요건 필터는 선택된 ID만 표시하고 돋보기 아이콘으로 REQ-037 대화상자를 호출한다. Change Set 완료 여부를 화면이나 서버가 자체 판정하지 않는다.
+  UI 설계 검토 표면: `Harness/ChangeSets/ChangeSetView`의 `List`, `Detail`, `LinkedRequirements`, `FilteredByTitle`, `FilteredByStatus`, `FilteredByAffectedRequirement`, `EmptyResult`, `EmptyAffectedRequirements`, `OpenDiscussions` 상태가 있어야 한다.
+  서버 설계: 영향 요건의 추적 상태는 trace state의 값만 붙인다. 영향 요건이 현재 scope에 없으면 상태 확인 불가로 표시하고 상세 이동은 비활성화한다.
   추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다.
-  검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-034`로 카드/시나리오/용어 정합성을 확인한다.
-  Skeleton 결과: 승인 대기
+  검증: 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-034`로 카드/시나리오/용어 정합성을 확인한다.
+  설계 결과: 승인 대기
 
 ### 테스트 리뷰
 
 - 리뷰일: 2026-06-10
   리뷰자: REDSTONE
-  확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
+  확인: 설계 검토중 단계. UI 설계와 UI 설계 검토 표면을 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
 
 - 리뷰일: 2026-06-17

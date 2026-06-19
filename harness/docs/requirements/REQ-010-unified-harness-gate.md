@@ -92,16 +92,16 @@
   결정자: 사용자
   영향: `gate.mjs`는 CLI `--requirement` 인자(우선) 또는 `trace.state.json`의 `filter` 배열로 selectedIds를 정해, 그 카드에 귀속된 finding만 카테고리별 카운트에 합산한다. TRACE 카운트도 같은 selectedIds로 `state.requirements[]`를 다시 카운트한다(`state.summary`의 미리 계산된 값은 신뢰하지 않음). 단일 카드 작업자는 다른 카드 또는 글로벌에 귀속된 BE/TRM 위반에 가로막히지 않는다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-010-unified-harness-gate.feature`
 
-### 요건 Skeleton 승인 이력
+### 요건 설계 승인 이력
 
 - 승인일: 2026-05-23
   검증 설계: `harness/docs/scenarios/REQ-010-unified-harness-gate.feature`의 10개 Scenario가 카드 수용 기준 10개를 1:1 `Covers:`로 연결한다.
-  도구 Skeleton: `harness/tools/gate.mjs` 신규. 입력은 `build/harness/state/trace.state.json` + `build/harness/findings/{requirement-cards,cross-artifact,back-end-standards,front-end-standards,scenarios,terminology}.findings.json` 6종. 누락 입력은 누락 경로와 안내 메시지를 출력하고 exit 2. CLI 인자 `--check`, `--require-blue`, `--requirement REQ-XXX`(반복 가능), `--quiet` 지원. CATEGORY_ORDER 상수로 8개 카테고리 라벨(`TRACE`/`CARD`/`REF`/`TRC`/`BE`/`FE`/`SCN`/`TRM`) 고정. TRC는 ruleId `TRC-*` error severity만 차단(TRC-COV-* warning은 정보 출력). TRM은 `strictSeverity: error` 차단. TRACE 카운트는 `state.requirements[]`에서 selectedIds로 다시 카운트(`state.summary` 신뢰 안 함). `gate-trace.mjs` 삭제, `trace-requirements.mjs` 최종 spawn 대상을 `gate.mjs`로 교체.
-  데이터 계약: Skeleton 단계에서 `docs/harness/data-contracts.md` "게이트 (Layer 4)" 섹션에 입력 3종 + 8개 카테고리 매핑 표 + exit code 정책 + TRACE selectedIds 재카운트 정책 명시. `docs/harness/rule-namespaces.md` Layer 4 섹션에 8개 카테고리 분기 갱신.
+  도구 설계: `harness/tools/gate.mjs` 신규. 입력은 `build/harness/state/trace.state.json` + `build/harness/findings/{requirement-cards,cross-artifact,back-end-standards,front-end-standards,scenarios,terminology}.findings.json` 6종. 누락 입력은 누락 경로와 안내 메시지를 출력하고 exit 2. CLI 인자 `--check`, `--require-blue`, `--requirement REQ-XXX`(반복 가능), `--quiet` 지원. CATEGORY_ORDER 상수로 8개 카테고리 라벨(`TRACE`/`CARD`/`REF`/`TRC`/`BE`/`FE`/`SCN`/`TRM`) 고정. TRC는 ruleId `TRC-*` error severity만 차단(TRC-COV-* warning은 정보 출력). TRM은 `strictSeverity: error` 차단. TRACE 카운트는 `state.requirements[]`에서 selectedIds로 다시 카운트(`state.summary` 신뢰 안 함). `gate-trace.mjs` 삭제, `trace-requirements.mjs` 최종 spawn 대상을 `gate.mjs`로 교체.
+  데이터 계약: 설계 단계에서 `docs/harness/data-contracts.md` "게이트 (Layer 4)" 섹션에 입력 3종 + 8개 카테고리 매핑 표 + exit code 정책 + TRACE selectedIds 재카운트 정책 명시. `docs/harness/rule-namespaces.md` Layer 4 섹션에 8개 카테고리 분기 갱신.
   추적 정책: `대상 시스템: harness`. 사용자-facing API/화면 연결 요구 없음. 10개 Scenario `Covers:`가 10개 AC를 1:1 커버하면 GREEN.
   Gradle 실행 순서: `validateHarness`/`validateRequirementCard`/`validateRequirementCardBlue`가 `validateStandardsStrict` 직접 의존을 `validateStandards`(non-strict, findings emit only)로 교체. 호출 진입점(`trace-requirements.mjs`)은 유지. test 태스크의 `mustRunAfter`도 `validateStandards`만 남김.
   게이트 정책: TRM strict 차단 정책 도입(`gate.mjs`가 `terminology.findings.json`의 `strictSeverity: error`까지 차단). BE-* error 차단 신규 흡수. `validateTerminologyStrict`/`validateStandardsStrict`는 단독 진단 도구로 남고 통합 게이트 체인에서는 빠짐.
@@ -109,7 +109,7 @@
   표준/문서 갱신: `harness/docs/standards/terminology.md`(TRM strict 차단 반영), `harness/docs/standards/requirement-card.md`(validate 설명 갱신), `AGENTS.md`(검증 명령 표 갱신), `harness/docs/overview.md`(scope별 도구 리스트 갱신).
   검증: `npm run harness:self-test-index` PASS. `npm run harness:self-test` PASS. `node harness/tools/gate.mjs --check` fixture 검증에서 RED/CARD/REF/TRC/BE/FE/SCN/TRM 카테고리 차단과 필수 finding 파일 누락 exit=2를 확인한다. `npm run harness:validate` PASS.
   승인자: 사용자
-  Skeleton 결과: 승인
+  설계 결과: 승인
 
 ### 테스트 리뷰
 

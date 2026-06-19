@@ -78,19 +78,19 @@
   결정자: Tech Lead
   영향: TRACE 카테고리에 AC target × 테스트 종류 매트릭스가 추가된다. `(API)`는 백엔드 Acceptance Test, `(UI)`는 Storybook Vitest, `(E2E)`는 프런트엔드 사용자 여정 테스트, `(STATIC)`은 하네스/정적 검사 실행 테스트 커버로 판정한다. 상위 요건의 `(E2E)`는 별도 정적 규칙으로 live Playwright 위치를 강제한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 시나리오 문서: `harness/docs/scenarios/REQ-012-ac-target-marker.feature`
 
-### 요건 Skeleton 승인 이력
+### 요건 설계 승인 이력
 
 - 승인일: 2026-05-26
   검증 설계: `.feature` 9개 Scenario가 9개 수용 기준을 1:1로 `Covers:` 매핑한다. 카드/시나리오/용어 정적 finding 0건. AC 커버 테스트는 본 단계에서 작성하지 않으므로 TRACE-AC-MISSING(테스트 미작성 단계의 정상 RED)이 남는다.
-  API Skeleton: 해당 없음 (하네스 카드).
-  DB Skeleton: 해당 없음.
-  Service Skeleton: 해당 없음.
-  화면/라우팅 Skeleton: 해당 없음.
-  검사기 Skeleton:
+  API 설계: 해당 없음 (하네스 카드).
+  DB 설계: 해당 없음.
+  Service 설계: 해당 없음.
+  화면/라우팅 설계: 해당 없음.
+  검사기 설계:
     - Layer 1 collector (`harness/tools/index-requirements.mjs`): `acceptanceCriteria` 형식을 `string[]`에서 `[{ text, target, invalidMarker? }]`로 변경. bullet 시작의 `(...)` 괄호 토큰 중 `API`/`UI`/`E2E`/`STATIC`은 stripped text와 target으로 부여, 그 외 토큰은 invalidMarker로 표시한다 (자연어 괄호 `(see foo)` 같은 공백 포함 형태는 마커 후보에서 제외).
     - Layer 2 validator (`harness/tools/validate-requirement-cards.mjs`): `CARD-AC-MARKER-MISSING`과 `CARD-AC-MARKER-INVALID`를 error로 emit한다. AC 중복 검사는 `.text` 기준으로 어댑트한다.
     - Trace evaluator (`harness/tools/evaluate-trace-state.mjs`): coverage row가 `{ criterion: text, target, ... }` 형태로 산출되고, `targetCoverageForCriterion`이 `API`/`UI`/`E2E`/`STATIC`별 requiredChecks를 계산한다.
@@ -101,7 +101,7 @@
   Gradle 실행 순서: 기존 task 그래프 그대로. `indexRequirements` → `validateRequirementCards`/`validateCrossArtifact`/`evaluateTraceState` → `renderTraceReport`/`gate` 순서 유지.
   검증: `./gradlew traceRequirementCard -Preq=REQ-012` 성공(카드/시나리오/용어 finding 0건, redReasons 1건=TRACE-AC-MISSING). `./gradlew validateRequirementCard -Preq=REQ-012`는 RED(테스트 미작성)로 차단되는 것이 정상이며, 이 카드의 통합 게이트 통과는 다음 구현 단계에서 Acceptance Test/Storybook Vitest/live Playwright 테스트가 추가된 뒤로 미룬다. `./gradlew validateHarness`는 REQ-011·REQ-012 두 카드의 TRACE RED 두 건 외 finding 0건이며, 기존 REQ-001~REQ-010 카드는 회귀 없이 BLUE 유지.
   승인자: Product Owner, Tech Lead
-  Skeleton 결과: 승인
+  설계 결과: 승인
 
 ### 테스트 리뷰
 
