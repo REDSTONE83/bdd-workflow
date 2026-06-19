@@ -7,6 +7,8 @@
 - `scenarios/`: 애플리케이션 BDD 시나리오
 - `standards/`: API, JPA, FE, 런타임 구현 표준
 
+저장소 공통 Git/PR 워크플로우 표준은 루트 `CONTRIBUTING.md`에 둔다. `standards/git-workflow.md`는 기존 링크 호환을 위한 안내 문서다.
+
 하네스 운영 문서와 하네스 요건은 `harness/docs`에 둔다.
 
 원칙은 다음과 같다.

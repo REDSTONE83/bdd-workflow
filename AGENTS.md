@@ -51,6 +51,7 @@ harness/self-test/**/*.ts
 
 - 앱 문서: `app/docs/README.md`
 - 앱 구현 표준: `app/docs/standards/README.md`
+- 저장소 공통 Git/PR 워크플로우 표준: `CONTRIBUTING.md`
 - 하네스 개요: `harness/docs/overview.md`
 - 하네스 데이터 계약: `harness/docs/data-contracts.md`
 - 하네스 프로젝트 구조: `harness/docs/project-structure.md`
@@ -74,6 +75,13 @@ harness/self-test/**/*.ts
 3. 하네스 구현은 `harness/tools`, `harness/source-indexer`, `harness/annotations`에서 진행한다.
 4. 하네스 검증 코드는 `harness/self-test`에 둔다.
 5. `npm run harness:validate`로 하네스 게이트를 통과시킨다.
+
+Git/PR 작업:
+
+1. PR 생성 또는 PR 본문 수정 전 `CONTRIBUTING.md`를 읽고 제목, 본문, 검증 기록 형식을 맞춘다.
+2. `main`에는 직접 커밋하지 않고 작업 브랜치에서 커밋한 뒤 PR로 머지한다.
+3. PR 본문에는 표준의 `요약`, `변경 사항`, `검증`, `후속` 섹션과 관련 Change Set, 영향 요건, RED/GREEN/BLUE 요약을 포함한다.
+4. 머지 후 작업 브랜치를 정리하고 `main`을 최신화한다.
 
 저장소 전체 확인이 필요할 때만 `npm run repo:validate`를 실행한다. `harness/tools/gate.mjs`는 REQ-010 통합 게이트 구현이며, 각 scope의 state/findings만 읽어 판정한다.
 
