@@ -1,6 +1,6 @@
 # Change Set: 2026-06-13 요건 상위 관계 명시
 
-상태: 진행중
+상태: 완료
 요청일: 2026-06-13
 변경 유형: 수정
 영향 요건: REQ-016, REQ-017, REQ-018, REQ-019, REQ-020, REQ-022, REQ-023, REQ-024, REQ-025, REQ-027
@@ -33,6 +33,13 @@
 - `npm run app:trace -- --requirement REQ-021`
 - `npm run app:trace -- --requirement REQ-015`
 - `npm run app:validate`
+
+## 검증 결과
+
+- 2026-06-19: 생성 trace state에서 `REQ-016`~`REQ-020`의 `parentRequirementIds`가 모두 `REQ-015`이고, `REQ-015`의 `childRequirementIds`가 `REQ-016`, `REQ-017`, `REQ-018`, `REQ-019`, `REQ-020`으로 역산됨을 확인했다.
+- 2026-06-19: 생성 trace state에서 `REQ-022`, `REQ-023`, `REQ-024`, `REQ-025`, `REQ-027`의 `parentRequirementIds`가 모두 `REQ-021`이고, `REQ-021`의 `childRequirementIds`가 해당 다섯 요건으로 역산됨을 확인했다.
+- 2026-06-19: `npm run app:trace -- --requirement REQ-015`와 `npm run app:trace -- --requirement REQ-021` 모두 `gate: pass`, 각 단일 trace는 BLUE다.
+- 2026-06-19: `REQ-026`은 의도대로 `parentRequirementIds`가 비어 있고, `npm run app:validate`는 RED 0 / GREEN 0 / BLUE 17 / INACTIVE 4, Change Set warnings 0으로 통과했다.
 
 ## 결정 로그
 
