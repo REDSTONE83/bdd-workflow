@@ -1,5 +1,6 @@
 ## 요약
 
+- 작성 전 확인: `CONTRIBUTING.md`
 - 관련 Change Set:
 - 영향 요건:
 - 관련 카드/시나리오:

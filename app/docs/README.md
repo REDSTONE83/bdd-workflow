@@ -7,7 +7,7 @@
 - `scenarios/`: 애플리케이션 BDD 시나리오
 - `standards/`: API, JPA, FE, 런타임 구현 표준
 
-저장소 공통 Git/PR 워크플로우 표준은 현재 `standards/git-workflow.md`에 둔다. 이 문서는 애플리케이션 구현 표준이 아니라 브랜치, 커밋, PR 본문 규약을 정하는 공통 협업 표준이다.
+저장소 공통 Git/PR 워크플로우 표준은 루트 `CONTRIBUTING.md`에 둔다. `standards/git-workflow.md`는 기존 링크 호환을 위한 안내 문서다.
 
 하네스 운영 문서와 하네스 요건은 `harness/docs`에 둔다.
 
