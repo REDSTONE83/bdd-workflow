@@ -35,9 +35,9 @@
 - [`id-policy.md`](./id-policy.md): 시간 정렬 UUID 단일 식별자 정책
 - [`datetime.md`](./datetime.md): Instant + UTC 저장, ISO-8601 직렬화
 
-협업:
+저장소 공통 협업:
 
-- [`git-workflow.md`](./git-workflow.md): 브랜치 전략, 커밋 메시지, PR 본문 규약 (게이트 입력 아님, 수동 리뷰)
+- [`git-workflow.md`](./git-workflow.md): 브랜치 전략, 커밋 메시지, PR 본문 규약 (애플리케이션 구현 표준이 아니라 저장소 공통 표준, 게이트 입력 아님, 수동 리뷰)
 
 하네스 운영 표준:
 

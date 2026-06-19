@@ -1,6 +1,6 @@
 # Change Set: 2026-06-18 PR 워크플로우 표준 참조 보완
 
-상태: 계획
+상태: 완료
 요청일: 2026-06-18
 변경 유형: 하네스 개선, 표준 개정
 영향 요건: 없음
@@ -40,6 +40,14 @@
 - `npm run harness:trace`
 - `npm run harness:validate`
 - `gh pr view <PR번호> --json body,title,url`
+
+## 검증 결과
+
+- 2026-06-19: `AGENTS.md`에 PR 생성/수정 전 `app/docs/standards/git-workflow.md` 확인 절차를 추가했다.
+- 2026-06-19: `app/docs/standards/git-workflow.md`, `app/docs/standards/README.md`, `app/docs/README.md`에 Git/PR 표준이 저장소 공통 협업 표준임을 명시했다.
+- 2026-06-19: `.github/pull_request_template.md`를 추가해 표준의 필수 섹션과 검증 항목을 기본 입력 항목으로 제공한다.
+- 2026-06-19: `npm run harness:trace` 통과. 하네스 요건은 `BLUE=16`, `RED=0`, `GREEN=0`, Change Set warning은 0건이다.
+- 2026-06-19: `npm run harness:validate` 통과. tool-test 59건, Storybook Vitest 69건, self-test 61건이 모두 통과했다.
 
 ## 결정 로그
 
