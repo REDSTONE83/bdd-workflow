@@ -42,7 +42,7 @@ function cardEntry(id: string, acText: string, target = 'UI') {
         id,
         title: `${id} fixture`,
         priority: '중간',
-        status: 'Skeleton 검토중',
+        status: '설계 검토중',
         requirementType: '하네스',
         specRole: '원자 요건',
         targetSystem: 'harness',
@@ -56,6 +56,8 @@ function cardEntry(id: string, acText: string, target = 'UI') {
         acceptanceCriteria: [{ text: acText, target, line: 42 }],
         openQuestions: [],
         terms: [],
+        acceptanceTestReviewIncomplete: true,
+        acceptanceTestReviewApproved: false,
         bddReviewIncomplete: true,
         bddReviewApproved: false,
         referencedRequirementIds: [],
@@ -244,8 +246,8 @@ harnessTest({
 
 harnessTest({
     requirement: 'REQ-029',
-    name: '하네스 Storybook 계약은 harness/ui story 인덱스와 대조된다',
-    covers: ['Storybook 계약을 선언한 하네스 scope 요건은 harness/ui에서 수집한 story 인덱스와 대조되어, 선언한 표면이나 상태가 없으면 위반으로 보고된다']
+    name: '하네스 UI 설계 검토 표면은 harness/ui story 인덱스와 대조된다',
+    covers: ['UI 설계 검토 표면이 있는 하네스 scope 요건은 harness/ui에서 수집한 story 인덱스와 대조되어, 선언한 표면이나 상태가 없으면 위반으로 보고된다']
 }, () => {
     const dir = tempDir('harness-ui-storybook-contract-');
     const feSourceIndex = path.join(dir, 'front-end.source-index.json');
@@ -270,9 +272,9 @@ harnessTest({
     writeJson(requirementsIndex, {
         entries: [{
             id: 'REQ-900',
-            status: 'Skeleton 승인',
+            status: '설계 승인',
             location: { file: 'harness/docs/requirements/REQ-900-fixture.md', line: 1, identity: 'REQ-900' },
-            storybookContract: [{ title: 'Harness/Foo', states: ['Default', 'Empty'], raw: 'Harness/Foo: Default, Empty' }]
+            uiReviewSurfaces: [{ title: 'Harness/Foo', states: ['Default', 'Empty'], raw: 'Harness/Foo: Default, Empty' }]
         }]
     });
 
@@ -334,7 +336,7 @@ harnessTest({
     writeJson(requirementsIndex, {
         entries: [{
             id: 'REQ-900',
-            status: 'Skeleton 승인',
+            status: '설계 승인',
             location: { file: 'harness/docs/requirements/REQ-900-fixture.md', line: 1, identity: 'REQ-900' }
         }]
     });
@@ -357,7 +359,7 @@ harnessTest({
 harnessTest({
     requirement: 'REQ-029',
     name: 'harness:validate는 harness/ui Storybook build를 실행한다',
-    covers: ['`npm run harness:validate`는 harness/ui Storybook build를 실행해 Skeleton 검토 표면이 빌드 가능한지 확인한다']
+    covers: ['`npm run harness:validate`는 harness/ui Storybook build를 실행해 UI 설계 검토 표면이 빌드 가능한지 확인한다']
 }, () => {
     const runner = readText(path.join(workspaceRoot, 'harness', 'tools', 'run.mjs'));
     const validateBody = runner.slice(runner.indexOf('function harnessValidate'), runner.indexOf('function harnessTest'));

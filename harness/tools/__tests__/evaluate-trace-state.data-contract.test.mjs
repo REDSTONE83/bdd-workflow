@@ -39,6 +39,8 @@ function cardEntry(overrides = {}) {
         acceptanceCriteria: [{ text: `${id} AC`, target: 'STATIC', line: 42 }],
         openQuestions: ['검증 전 질문'],
         terms: [],
+        acceptanceTestReviewIncomplete: true,
+        acceptanceTestReviewApproved: false,
         bddReviewIncomplete: true,
         bddReviewApproved: false,
         referencedRequirementIds: [],

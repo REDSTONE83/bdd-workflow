@@ -57,7 +57,7 @@ function fixtureCard({ id, title, specRole = '원자 요건', parent = '없음' 
         '  결정자: REDSTONE',
         '  영향: fixture',
         '',
-        '## BDD 테스트 리뷰',
+        '## 수용 테스트 리뷰',
         '',
         '- 리뷰일: 2026-06-16',
         '  결과: 미완료',

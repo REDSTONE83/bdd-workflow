@@ -45,6 +45,8 @@ function cardEntry(overrides: Record<string, any> = {}) {
         acceptanceCriteria: [{ text: `${id} AC`, target: 'STATIC', line: 42 }],
         openQuestions: [],
         terms: [],
+        acceptanceTestReviewIncomplete: true,
+        acceptanceTestReviewApproved: false,
         bddReviewIncomplete: true,
         bddReviewApproved: false,
         referencedRequirementIds: [],

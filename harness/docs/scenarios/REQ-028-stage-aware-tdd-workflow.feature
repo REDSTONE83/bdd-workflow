@@ -3,31 +3,31 @@ Feature: 단계 인식 TDD 요건 워크플로우
 
   Scenario: 요건 카드 상태가 TDD 워크플로우 단계를 표현한다
     Covers:
-      - 요건 카드 상태는 `초안`, `Skeleton 검토중`, `Skeleton 승인`, `테스트 작성중`, `테스트 승인`, `구현중`, `검증중`, `승인`, `대체됨`을 지원한다
+      - 요건 카드 상태는 `초안`, `설계 검토중`, `설계 승인`, `테스트 작성중`, `테스트 승인`, `구현중`, `검증중`, `승인`, `대체됨`을 지원한다
 
     Given 요건 카드가 TDD 워크플로우 상태를 가진다
     When 하네스가 요건 카드를 검사한다
     Then 하네스는 단계 상태를 허용된 상태로 인식한다
 
-  Scenario: Skeleton 승인 이후 검증 대상 계약이 필요하다
+  Scenario: 설계 승인 이후 생성 설계 표면이 필요하다
     Covers:
-      - `Skeleton 승인` 이후 단계의 요건은 선언한 검증 대상에 맞는 API/DB/UI/Storybook 계약을 카드에 가져야 한다
+      - `설계 승인` 이후 단계의 요건은 필요한 API/DB/UI 설계 표면이 소스 기반 추출 결과에 있어야 한다
 
-    Given 요건 카드가 Skeleton 승인 이후 단계이다
-    When 하네스가 요건 카드의 검증 대상을 검사한다
-    Then 선언된 검증 대상에 맞는 계약 항목이 있어야 한다
+    Given 요건 카드가 설계 승인 이후 단계이다
+    When 하네스가 요건별 생성 설계 표면을 검사한다
+    Then 필요한 API, DB, UI 설계 표면이 source index 추출 결과에 있어야 한다
 
-  Scenario: Storybook 계약이 실제 Storybook 상태와 연결된다
+  Scenario: UI 설계 검토 표면이 실제 Storybook 상태와 연결된다
     Covers:
-      - UI Storybook 계약이 있는 요건은 선언한 Storybook surface와 named export 상태가 실제 Storybook source index에 있고 해당 요건 metadata와 연결되어야 한다
+      - UI 설계 검토 표면이 있는 요건은 선언한 Storybook surface와 named export 상태가 실제 Storybook source index에 있고 해당 요건 metadata와 연결되어야 한다
 
-    Given 요건 카드에 UI Storybook 계약이 있다
+    Given 요건에 UI 설계 검토 표면이 있다
     When 하네스가 FE source index의 Storybook 항목을 비교한다
     Then 선언된 surface와 상태가 존재하고 해당 요건 metadata와 연결되어야 한다
 
   Scenario: app validate가 Storybook build를 실행한다
     Covers:
-      - `npm run app:validate`는 Storybook build를 실행해 Skeleton UI 검토 표면이 빌드 가능한지 확인한다
+      - `npm run app:validate`는 Storybook build를 실행해 UI 설계 검토 표면이 빌드 가능한지 확인한다
 
     Given 애플리케이션 검증이 실행된다
     When 하네스 러너가 app validate 단계를 수행한다
@@ -45,14 +45,14 @@ Feature: 단계 인식 TDD 요건 워크플로우
     Covers:
       - `gate.mjs --check`는 `검증중` 또는 `승인` 카드의 RED를 TRACE 실패로 차단한다
 
-    Given Skeleton 승인 카드와 검증중 카드가 각각 RED 상태이다
+    Given 설계 검토중 카드와 검증중 카드가 각각 RED 상태이다
     When 개발자가 gate.mjs --check를 실행한다
-    Then Skeleton 단계의 RED는 통과하고 검증중 카드의 RED는 TRACE 실패로 차단된다
+    Then 설계 단계의 RED는 통과하고 검증중 카드의 RED는 TRACE 실패로 차단된다
 
   Scenario: 승인 리뷰 상태는 최신 결과 라인으로 판정된다
     Covers:
-      - 승인 카드의 BDD 테스트 리뷰 검사는 자유 텍스트가 아니라 최신 `결과:` 라인을 기준으로 `승인` 또는 `미완료` 상태를 판정한다
+      - 승인 카드의 수용 테스트 리뷰 검사는 자유 텍스트가 아니라 최신 `결과:` 라인을 기준으로 `승인` 또는 `미완료` 상태를 판정한다
 
-    Given 승인 카드의 BDD 테스트 리뷰에 도메인 문장과 여러 리뷰 이력이 있다
-    When 하네스가 BDD 테스트 리뷰 결과를 검사한다
-    Then 자유 텍스트와 Skeleton 결과는 제외하고 최신 결과 라인으로 승인 상태를 판정한다
+    Given 승인 카드의 수용 테스트 리뷰에 도메인 문장과 여러 리뷰 이력이 있다
+    When 하네스가 수용 테스트 리뷰 결과를 검사한다
+    Then 자유 텍스트와 레거시 Skeleton 결과는 제외하고 최신 결과 라인으로 승인 상태를 판정한다

@@ -55,7 +55,7 @@ export function RequirementAcceptanceTab({ detail }: { detail: RequirementDetail
                         </div>
                       ) : "없음"}
                     </dd>
-                    <dt className="text-xs font-semibold leading-5 text-muted-foreground">시나리오</dt>
+                    <dt className="text-xs font-semibold leading-5 text-muted-foreground">수용 시나리오</dt>
                     <dd className="min-w-0 break-words text-xs leading-5 text-muted-foreground">
                       {scenarios.length > 0 ? (
                         <div className="grid gap-1">
@@ -68,7 +68,7 @@ export function RequirementAcceptanceTab({ detail }: { detail: RequirementDetail
                                     file={scenario.file}
                                     line={scenario.line}
                                     label={`${scenario.file}:${scenario.line}`}
-                                    aria-label={`${scenario.file}:${scenario.line} 시나리오 위치 바로가기`}
+                                    aria-label={`${scenario.file}:${scenario.line} 수용 시나리오 위치 바로가기`}
                                   />
                                 ) : (
                                   scenarioTitle

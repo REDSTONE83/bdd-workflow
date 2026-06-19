@@ -10,8 +10,8 @@ export function RequirementApiContractsTab({ detail }: { detail: RequirementDeta
   return (
     <div>
       <section>
-        <SectionHeader title="API 계약" />
-        <div className="grid gap-3" role="list" aria-label="연결된 API 계약">
+        <SectionHeader title="API 설계" />
+        <div className="grid gap-3" role="list" aria-label="연결된 API 설계">
           {detail.apiSurfaces.map((api) => (
             <Card key={`${api.method}-${api.path}`} className="p-4" role="listitem">
               <div className="min-w-0">

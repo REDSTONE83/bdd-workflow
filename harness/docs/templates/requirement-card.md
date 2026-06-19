@@ -54,32 +54,21 @@
 
 마커는 필수이며 `@Covers`, Storybook Vitest `covers`, live Playwright `Covers`, `.feature` `Covers:`에는 마커를 포함하지 않는다.
 
-## 검증 대상
+## API 설계
 
-- API: 불필요
-- DB: 불필요
-- UI: 불필요
-- Storybook: 불필요
-- E2E: 불필요
-- STATIC: 불필요
+- 소스 기반 API 설계 표면이 필요하면 연결 기준과 검토 내용을 작성한다. 해당 없음이면 `해당 없음`.
 
-`Skeleton 승인` 이후 단계에서는 필요한 검증 표면을 `필요`로 바꾸고 아래 Skeleton/Storybook 계약 섹션을 채운다.
+## DB 설계
 
-## API Skeleton
+- 소스 기반 DB 설계 표면이 필요하면 연결 기준과 검토 내용을 작성한다. 해당 없음이면 `해당 없음`.
 
-- 해당 없음
+## UI 설계
 
-## DB Skeleton
+- 소스 기반 UI 설계 표면이 필요하면 route, 화면 이름, 주요 표시 정보, 상태별 story 위치를 작성한다. 해당 없음이면 `해당 없음`.
 
-- 해당 없음
+## UI 설계 검토 표면
 
-## UI Skeleton
-
-- 해당 없음
-
-## Storybook 계약
-
-- 해당 없음
+- Storybook 검토 표면이 필요하면 `Title: StateA, StateB` 형식으로 작성한다. 해당 없음이면 `해당 없음`.
 
 ## 의사결정 로그
 
@@ -89,24 +78,24 @@
   결정자: Product Owner, Tech Lead
   영향: 범위, AC, 시나리오, 테스트, 관련 요건에 어떤 영향이 있는가.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
-시나리오 문서는 `app/docs/scenarios/REQ-XXX-*.feature` 또는 `harness/docs/scenarios/REQ-XXX-*.feature`에 Gherkin 형식으로 별도로 작성하고 승인한다. 이 섹션에는 요건 단위 Skeleton 승인 이력과 전체 테스트 리뷰 결과만 요약한다.
+시나리오 문서는 `app/docs/scenarios/REQ-XXX-*.feature` 또는 `harness/docs/scenarios/REQ-XXX-*.feature`에 Gherkin 형식으로 별도로 작성하고 승인한다. 이 섹션에는 요건 단위 설계 승인 이력과 전체 테스트 리뷰 결과만 요약한다.
 
 - 시나리오 문서: `app/docs/scenarios/REQ-000-feature.feature` 또는 `harness/docs/scenarios/REQ-000-feature.feature`
 
-### 요건 Skeleton 승인 이력
+### 요건 설계 승인 이력
 
-- 승인일: YYYY-MM-DD
+- 설계일: YYYY-MM-DD
   검증 설계: `.feature`의 Scenario들이 모든 수용 기준을 `Covers:`로 다루는지 확인 완료 여부.
-  API Skeleton: 엔드포인트, 요청/응답 DTO, 상태 코드, 오류 코드. 해당 없음이면 `해당 없음`.
-  DB Skeleton: 변경되는 Entity/컬럼/관계, `previewSchema` 확인 결과. 해당 없음이면 `해당 없음`.
-  화면/라우팅 Skeleton: 화면 이름, route, 접근 권한, 주요 표시 정보, 상태별 story 위치. 해당 없음이면 `해당 없음`.
-  검사기 Skeleton: collector/validator/reporter/gate 변경. 해당 없음이면 `해당 없음`.
+  API 설계: 엔드포인트, 요청/응답 DTO, 상태 코드, 오류 코드. 해당 없음이면 `해당 없음`.
+  DB 설계: 변경되는 Entity/컬럼/관계, `previewSchema` 확인 결과. 해당 없음이면 `해당 없음`.
+  UI 설계: 화면 이름, route, 접근 권한, 주요 표시 정보, 상태별 story 위치. 해당 없음이면 `해당 없음`.
+  검사기 설계: collector/validator/reporter/gate 변경. 해당 없음이면 `해당 없음`.
   추적 정책: AC 마커, 관련 요건, 대체 요건, RED/GREEN/BLUE 판정 영향.
   검증: 실행한 명령과 결과.
   승인자: Product Owner, Tech Lead
-  Skeleton 결과: 승인 또는 수정 요청
+  설계 결과: 승인 또는 수정 요청
 
 ### 테스트 리뷰
 

@@ -95,7 +95,7 @@ export const DefaultArtifacts: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("BDD Harness")).toBeVisible();
+    await expect(canvas.getByText("요건 검증 하네스")).toBeVisible();
     for (const linkName of ["요건", "표준 용어", "게이트", "Change Set", "실행 화면"]) {
       await expect(canvas.getByRole("link", { name: new RegExp(linkName) })).toBeVisible();
     }

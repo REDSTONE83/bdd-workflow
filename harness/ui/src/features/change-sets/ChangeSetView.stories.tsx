@@ -39,7 +39,7 @@ const terminologyRequirement = {
   id: "REQ-036",
   title: "하네스 UI 표준 용어 조회",
   traceState: "RED" as const,
-  cardStatus: "Skeleton 검토중",
+  cardStatus: "설계 검토중",
   priority: "중간",
   relatedRequirementIds: ["REQ-029", "REQ-030"],
 };
@@ -54,7 +54,7 @@ const filterableRows = [
     affectedRequirements: [terminologyRequirement],
     summary: "프로젝트 표준 용어 목록 조회와 검색 화면을 구성한다.",
     scopeItems: ["표준 용어 목록", "용어 상세", "검색 필터"],
-    completionCriteria: ["REQ-036 Skeleton 검토", "Storybook 상태 확인"],
+    completionCriteria: ["REQ-036 설계 검토", "Storybook 상태 확인"],
     verificationCommands: ["npm run harness:trace -- --requirement REQ-036"],
     openDiscussions: ["용어 상세 표시 밀도 확인"],
   },

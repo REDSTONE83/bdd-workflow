@@ -4,8 +4,8 @@
 
 ## 문서
 
-- [`requirement-card.md`](./requirement-card.md): 요건 카드 구조, 상태, 수용 기준, Skeleton/승인 단계 규칙.
-- [`acceptance-test.md`](./acceptance-test.md): BDD 시나리오와 실행 테스트 연결 규칙.
+- [`requirement-card.md`](./requirement-card.md): 요건 카드 구조, 상태, 수용 기준, 설계/승인 단계 규칙.
+- [`acceptance-test.md`](./acceptance-test.md): 수용 시나리오와 실행 테스트 연결 규칙.
 - [`terminology.md`](./terminology.md): 표준 용어 운영과 카드 `표준 용어` 섹션 정책.
 - [`ui-vocabulary.md`](./ui-vocabulary.md): UI 컴포넌트/위젯 문서 어휘.
 - [`harness-ui.md`](./harness-ui.md): `harness/ui` 로컬 웹 UI의 구조, UI 서버, 데이터 경계, Storybook Vitest, 명령 실행 표준.

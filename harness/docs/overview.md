@@ -1,4 +1,4 @@
-# 코드 중심 BDD 하네스 개요
+# 요건 검증 하네스 개요
 
 ## 목표
 
@@ -32,7 +32,7 @@ Change Set
   harness/docs/change-sets/*.md
   사용자 요청 단위 작업 범위. 명세 원천이 아니며 파일 경로가 identity.
 
-시나리오 문서
+수용 시나리오 문서
   app/docs/scenarios/REQ-XXX-*.feature
   harness/docs/scenarios/REQ-XXX-*.feature
   @REQ-XXX + Covers: AC 문장 목록
@@ -54,7 +54,7 @@ Change Set
   build/harness/reports/*
 ```
 
-`@Covers` 또는 FE/Harness `Covers` 메타데이터가 있는 테스트만 AC 커버리지에 포함된다. `.feature`는 공유 BDD 명세와 추적 입력으로만 사용하며 Cucumber 런타임은 도입하지 않는다.
+`@Covers` 또는 FE/Harness `Covers` 메타데이터가 있는 테스트만 AC 커버리지에 포함된다. `.feature`는 공유 수용 시나리오와 추적 입력으로만 사용하며 Cucumber 런타임은 도입하지 않는다.
 
 ## 파이프라인
 
@@ -138,9 +138,9 @@ npm run repo:validate
 
 `repo:validate`는 앱 검증과 하네스 검증을 순차 실행할 뿐, 두 scope의 입력이나 산출물을 합치지 않는다.
 
-## Skeleton 운영
+## 설계 검토 운영
 
-Skeleton 단계의 카드는 아직 실행 테스트가 없으므로 RED가 정상이다. 이 단계에서는 strict 게이트를 돌리지 않고 scope에 맞는 trace와 컴파일/인덱스 생성만 확인한다.
+설계 검토 단계의 카드는 아직 실행 테스트가 없을 수 있으므로 RED가 정상이다. 이 단계에서는 strict 게이트를 돌리지 않고 scope에 맞는 trace와 컴파일/인덱스 생성만 확인한다. `설계 승인` 이후에는 필요한 API/DB/UI 설계 표면이 소스 기반 추출 결과에 없으면 gate가 차단한다.
 
 애플리케이션:
 

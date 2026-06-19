@@ -18,7 +18,7 @@ const REQUIRED_SECTIONS = [
     '제외 범위',
     '수용 기준',
     '의사결정 로그',
-    'BDD 테스트 리뷰',
+    '수용 테스트 리뷰',
     '열린 질문'
 ];
 const REQUIREMENT_ID_PATTERN = /^REQ-\d{3,}$/;
@@ -48,6 +48,10 @@ function section(content, heading) {
     const afterHeading = content.slice(start).replace(new RegExp(`^## ${escapeRegExp(heading)}\\s*`, 'm'), '');
     const nextHeading = afterHeading.search(/^## /m);
     return nextHeading >= 0 ? afterHeading.slice(0, nextHeading) : afterHeading;
+}
+
+function hasSection(content, heading) {
+    return new RegExp(`^## ${escapeRegExp(heading)}\\s*$`, 'm').test(content);
 }
 
 function bulletItems(markdown) {
@@ -194,6 +198,9 @@ function bddReviewResultSummary(markdown) {
     };
 }
 
+const acceptanceTestReviewResultItems = bddReviewResultItems;
+const acceptanceTestReviewResultSummary = bddReviewResultSummary;
+
 function decisionLogItems(markdown) {
     const fields = {
         '결정일': 'date',
@@ -246,6 +253,13 @@ function firstNonEmptySection(content, headings) {
     return '';
 }
 
+function firstPresentSection(content, headings) {
+    for (const heading of headings) {
+        if (hasSection(content, heading)) return heading;
+    }
+    return '';
+}
+
 function parseCard(file) {
     const content = fs.readFileSync(file, 'utf8');
     const idRaw = headerValue(content, '요건 ID');
@@ -271,22 +285,27 @@ function parseCard(file) {
     const outOfScopeItems = bulletItems(section(content, '제외 범위'));
     const decisionLogs = decisionLogItems(section(content, '의사결정 로그'));
     const verificationTargets = verificationTargetItems(section(content, '검증 대상'));
-    const apiSkeleton = bulletItems(section(content, 'API Skeleton'));
-    const dbSkeleton = bulletItems(section(content, 'DB Skeleton'));
-    const uiSkeleton = bulletItems(firstNonEmptySection(content, ['UI Skeleton', '화면/라우팅 Skeleton']));
-    const storybookContract = storybookContractItems(firstNonEmptySection(content, [
+    const apiDesign = bulletItems(firstNonEmptySection(content, ['API 설계', 'API Skeleton']));
+    const dbDesign = bulletItems(firstNonEmptySection(content, ['DB 설계', 'DB Skeleton']));
+    const uiDesign = bulletItems(firstNonEmptySection(content, ['UI 설계', 'UI Skeleton', '화면/라우팅 Skeleton']));
+    const uiReviewSurfaces = storybookContractItems(firstNonEmptySection(content, [
+        'UI 설계 검토 표면',
+        'Storybook 검토 표면',
         'Storybook 계약',
         'UI / Storybook 계약',
         'UI Storybook 계약'
     ]));
-    const bddReview = section(content, 'BDD 테스트 리뷰');
-    const bddReviewResult = bddReviewResultSummary(bddReview);
-    const bddReviewIncomplete = bddReviewResult.incomplete;
-    const bddReviewApproved = bddReviewResult.approved;
+    const acceptanceTestReviewHeading = firstPresentSection(content, ['수용 테스트 리뷰', 'BDD 테스트 리뷰']);
+    const acceptanceTestReview = section(content, acceptanceTestReviewHeading);
+    const acceptanceTestReviewResult = bddReviewResultSummary(acceptanceTestReview);
+    const acceptanceTestReviewIncomplete = acceptanceTestReviewResult.incomplete;
+    const acceptanceTestReviewApproved = acceptanceTestReviewResult.approved;
     const sectionPresent = {};
     for (const sec of REQUIRED_SECTIONS) {
-        sectionPresent[sec] = new RegExp(`^## ${escapeRegExp(sec)}\\s*$`, 'm').test(content);
+        sectionPresent[sec] = hasSection(content, sec);
     }
+    sectionPresent['BDD 테스트 리뷰'] = hasSection(content, 'BDD 테스트 리뷰');
+    sectionPresent['수용 테스트 리뷰'] = hasSection(content, '수용 테스트 리뷰');
     const referencedRequirementIds = [...new Set(content.match(/\bREQ-\d{3,}\b/g) ?? [])];
 
     return {
@@ -314,14 +333,22 @@ function parseCard(file) {
         outOfScopeItems,
         decisionLogs,
         verificationTargets,
-        apiSkeleton,
-        dbSkeleton,
-        uiSkeleton,
-        storybookContract,
+        apiDesign,
+        dbDesign,
+        uiDesign,
+        uiReviewSurfaces,
+        // Legacy field names remain in the index during the migration window.
+        apiSkeleton: apiDesign,
+        dbSkeleton: dbDesign,
+        uiSkeleton: uiDesign,
+        storybookContract: uiReviewSurfaces,
         sectionPresent,
-        bddReviewResult: bddReviewResult.latest,
-        bddReviewIncomplete,
-        bddReviewApproved,
+        acceptanceTestReviewResult: acceptanceTestReviewResult.latest,
+        acceptanceTestReviewIncomplete,
+        acceptanceTestReviewApproved,
+        bddReviewResult: acceptanceTestReviewResult.latest,
+        bddReviewIncomplete: acceptanceTestReviewIncomplete,
+        bddReviewApproved: acceptanceTestReviewApproved,
         referencedRequirementIds
     };
 }
@@ -358,11 +385,18 @@ function toEntry(card) {
         outOfScopeItems: card.outOfScopeItems,
         decisionLogs: card.decisionLogs,
         verificationTargets: card.verificationTargets,
+        apiDesign: card.apiDesign,
+        dbDesign: card.dbDesign,
+        uiDesign: card.uiDesign,
+        uiReviewSurfaces: card.uiReviewSurfaces,
         apiSkeleton: card.apiSkeleton,
         dbSkeleton: card.dbSkeleton,
         uiSkeleton: card.uiSkeleton,
         storybookContract: card.storybookContract,
         sectionPresent: card.sectionPresent,
+        acceptanceTestReviewResult: card.acceptanceTestReviewResult,
+        acceptanceTestReviewIncomplete: card.acceptanceTestReviewIncomplete,
+        acceptanceTestReviewApproved: card.acceptanceTestReviewApproved,
         bddReviewResult: card.bddReviewResult,
         bddReviewIncomplete: card.bddReviewIncomplete,
         bddReviewApproved: card.bddReviewApproved,
@@ -390,6 +424,8 @@ export {
     acceptanceCriterionItems,
     acceptanceCriteriaWithLines,
     parseAcMarker,
+    acceptanceTestReviewResultItems,
+    acceptanceTestReviewResultSummary,
     bddReviewResultItems,
     bddReviewResultSummary,
     decisionLogItems,

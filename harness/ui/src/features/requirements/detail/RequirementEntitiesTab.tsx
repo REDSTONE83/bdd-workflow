@@ -27,8 +27,8 @@ function optionalBooleanLabel(value: boolean | null) {
 export function RequirementEntitiesTab({ detail }: { detail: RequirementDetail }) {
   return (
     <>
-      <SectionHeader title="Entity" />
-      <div className="grid gap-3" role="list" aria-label="연결된 Entity">
+      <SectionHeader title="DB 설계" />
+      <div className="grid gap-3" role="list" aria-label="연결된 DB 설계">
         {detail.entitySurfaces.map((entity) => (
           <Card key={`${entity.className}-${entity.table}`} className="p-4" role="listitem">
             <div className="flex items-start justify-between gap-4">
@@ -108,7 +108,7 @@ export function RequirementEntitiesTab({ detail }: { detail: RequirementDetail }
             </Collapsible>
           </Card>
         ))}
-        {detail.entitySurfaces.length === 0 ? <EmptyState>연결된 Entity가 없다.</EmptyState> : null}
+        {detail.entitySurfaces.length === 0 ? <EmptyState>연결된 DB 설계가 없다.</EmptyState> : null}
       </div>
     </>
   );

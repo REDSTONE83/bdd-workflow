@@ -24,8 +24,8 @@ function scenarioStepParts(step: string): { keyword?: StepKeyword; text: string 
 export function RequirementScenariosTab({ detail }: { detail: RequirementDetail }) {
   return (
     <>
-      <SectionHeader title="시나리오" />
-      <div className="grid gap-3" role="list" aria-label="연결된 시나리오">
+      <SectionHeader title="수용 시나리오" />
+      <div className="grid gap-3" role="list" aria-label="연결된 수용 시나리오">
         {detail.scenarios.map((scenario) => {
           const coverageRows = coverageRowsForScenario(detail, scenario);
           const tests = uniqueTests(coverageRows);
@@ -84,7 +84,7 @@ export function RequirementScenariosTab({ detail }: { detail: RequirementDetail 
             </Card>
           );
         })}
-        {detail.scenarios.length === 0 ? <EmptyState>연결된 시나리오가 없다.</EmptyState> : null}
+        {detail.scenarios.length === 0 ? <EmptyState>연결된 수용 시나리오가 없다.</EmptyState> : null}
       </div>
     </>
   );

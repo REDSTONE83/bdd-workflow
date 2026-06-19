@@ -113,6 +113,13 @@ function readAllRequirementCards() {
             acceptanceCriteria: entry.acceptanceCriteria ?? [],
             openQuestions: entry.openQuestions ?? [],
             terms: entry.terms ?? [],
+            verificationTargets: entry.verificationTargets ?? {},
+            apiDesign: entry.apiDesign ?? entry.apiSkeleton ?? [],
+            dbDesign: entry.dbDesign ?? entry.dbSkeleton ?? [],
+            uiDesign: entry.uiDesign ?? entry.uiSkeleton ?? [],
+            uiReviewSurfaces: entry.uiReviewSurfaces ?? entry.storybookContract ?? [],
+            acceptanceTestReviewIncomplete: Boolean(entry.acceptanceTestReviewIncomplete ?? entry.bddReviewIncomplete),
+            acceptanceTestReviewApproved: Boolean(entry.acceptanceTestReviewApproved ?? entry.bddReviewApproved),
             bddReviewIncomplete: Boolean(entry.bddReviewIncomplete),
             bddReviewApproved: Boolean(entry.bddReviewApproved),
             sectionPresent: entry.sectionPresent ?? {}
@@ -353,6 +360,118 @@ function frontEndSurfacesForRequirement(card, frontEndIndex) {
     };
 }
 
+function designSurfacesForRequirement(requirementApis, requirementEntities, frontEndSurfaces) {
+    return {
+        api: requirementApis.map((api) => ({
+            kind: 'api',
+            name: api.operationId ?? api.controller ?? api.http ?? '',
+            file: api.file ?? '',
+            line: api.line ?? 0,
+            evidence: api.http ?? null
+        })),
+        db: requirementEntities.map((entity) => ({
+            kind: 'db',
+            name: entity.table ?? entity.className ?? '',
+            file: entity.file ?? '',
+            line: entity.line ?? 0,
+            evidence: entity.className ?? null
+        })),
+        ui: [
+            ...(frontEndSurfaces.pages ?? []).map((page) => ({
+                kind: 'ui-page',
+                name: page.name ?? page.route ?? '',
+                file: page.file ?? '',
+                line: page.line ?? 0,
+                evidence: page.route ?? null
+            })),
+            ...(frontEndSurfaces.routes ?? []).map((route) => ({
+                kind: 'ui-route',
+                name: route.component ?? route.path ?? '',
+                file: route.file ?? '',
+                line: route.line ?? 0,
+                evidence: route.path ?? null
+            })),
+            ...(frontEndSurfaces.stories ?? []).map((story) => ({
+                kind: 'ui-story',
+                name: [story.title, story.story].filter(Boolean).join(' / '),
+                file: story.file ?? '',
+                line: story.line ?? 0,
+                evidence: story.component ?? null
+            }))
+        ]
+    };
+}
+
+const STATUSES_REQUIRING_GENERATED_DESIGN = new Set([
+    '설계 승인',
+    '테스트 작성중',
+    '테스트 승인',
+    '구현중',
+    '검증중',
+    '승인'
+]);
+
+function explicitTargetRequired(card, key) {
+    return card.verificationTargets?.[key]?.required === true;
+}
+
+function acceptanceTargets(card) {
+    return new Set((card.acceptanceCriteria ?? [])
+        .filter((criterion) => typeof criterion !== 'string')
+        .map((criterion) => criterion.target)
+        .filter(Boolean));
+}
+
+function hasMeaningfulDesignItems(card, key) {
+    const values = Array.isArray(card?.[key]) ? card[key] : [];
+    return values.some((item) => {
+        const text = typeof item === 'string' ? item : item?.raw ?? item?.name ?? '';
+        return text && !/^(해당 없음|없음|not required|no)$/i.test(text.trim());
+    });
+}
+
+function requiredDesignKinds(card) {
+    const targets = acceptanceTargets(card);
+    const kinds = new Set();
+    const targetSystem = card.targetSystem || scope;
+
+    if (targetSystem === 'application' && (explicitTargetRequired(card, 'API') || hasMeaningfulDesignItems(card, 'apiDesign'))) {
+        kinds.add('api');
+    }
+    if (targetSystem === 'application' && (explicitTargetRequired(card, 'DB') || hasMeaningfulDesignItems(card, 'dbDesign'))) {
+        kinds.add('db');
+    }
+    if (targets.has('UI')
+        || explicitTargetRequired(card, 'UI')
+        || explicitTargetRequired(card, 'Storybook')
+        || hasMeaningfulDesignItems(card, 'uiDesign')
+        || hasMeaningfulDesignItems(card, 'uiReviewSurfaces')) {
+        kinds.add('ui');
+    }
+    return kinds;
+}
+
+function designSurfaceMissingReasons(card, designSurfaces) {
+    if (!STATUSES_REQUIRING_GENERATED_DESIGN.has(card.status)) return [];
+    const reasons = [];
+    const required = requiredDesignKinds(card);
+    const labels = {
+        api: 'API 설계',
+        db: 'DB 설계',
+        ui: 'UI 설계'
+    };
+    for (const kind of required) {
+        if ((designSurfaces[kind] ?? []).length > 0) continue;
+        if (kind === 'api' && (designSurfaces.db ?? []).length > 0) continue;
+        reasons.push(traceReason(
+            `TRACE-DESIGN-${kind.toUpperCase()}-MISSING`,
+            `${card.status} 상태이지만 생성된 ${labels[kind]} 표면이 없음`,
+            { requirementId: card.id, status: card.status, designKind: kind }
+        ));
+    }
+    return reasons;
+}
+
 function effectiveCoveragePolicy(acTarget) {
     switch (acTarget) {
         case 'API': return 'API';
@@ -407,6 +526,7 @@ function evaluateRequirement(card, apis, tests, scenarios, entities, results, fr
         .map((entity) => ({ ...entity, columns: entity.columns.filter((column) => column.requirements.includes(card.id)) }))
         .filter((entity) => entity.requirements.includes(card.id) || entity.columns.length > 0);
     const frontEndSurfaces = frontEndSurfacesForRequirement(card, frontEndIndex);
+    const designSurfaces = designSurfacesForRequirement(requirementApis, requirementEntities, frontEndSurfaces);
     const coverage = card.acceptanceCriteria.map((criterion) => {
         const text = typeof criterion === 'string' ? criterion : criterion.text;
         const target = typeof criterion === 'string' ? null : (criterion.target ?? null);
@@ -421,10 +541,11 @@ function evaluateRequirement(card, apis, tests, scenarios, entities, results, fr
     if (['대체됨', '폐기'].includes(card.status)) {
         return { ...card, state: 'INACTIVE', redReasons: [], blueBlockedBy: [],
             apis: requirementApis, tests: requirementTests, scenarios: requirementScenarios,
-            entities: requirementEntities, frontEnd: frontEndSurfaces, coverage };
+            entities: requirementEntities, frontEnd: frontEndSurfaces, designSurfaces, coverage };
     }
 
     const redReasons = [];
+    redReasons.push(...designSurfaceMissingReasons(card, designSurfaces));
     if (card.acceptanceCriteria.length === 0) {
         redReasons.push(traceReason('TRACE-AC-EMPTY', '수용 기준 없음', { requirementId: card.id }));
     }
@@ -438,13 +559,13 @@ function evaluateRequirement(card, apis, tests, scenarios, entities, results, fr
     const blueBlockedBy = blueBlockersFor(card);
     if (redReasons.length > 0) {
         return { ...card, state: 'RED', redReasons, apis: requirementApis, tests: requirementTests,
-            scenarios: requirementScenarios, entities: requirementEntities, frontEnd: frontEndSurfaces, coverage, blueBlockedBy };
+            scenarios: requirementScenarios, entities: requirementEntities, frontEnd: frontEndSurfaces, designSurfaces, coverage, blueBlockedBy };
     }
     return {
         ...card, state: blueBlockedBy.length === 0 ? 'BLUE' : 'GREEN',
         redReasons, blueBlockedBy,
         apis: requirementApis, tests: requirementTests, scenarios: requirementScenarios,
-        entities: requirementEntities, frontEnd: frontEndSurfaces, coverage
+        entities: requirementEntities, frontEnd: frontEndSurfaces, designSurfaces, coverage
     };
 }
 

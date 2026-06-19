@@ -87,7 +87,7 @@ npm run repo:validate
 
 - `app/docs/requirements`: 애플리케이션 요건 카드
 - `app/docs/change-sets`: 애플리케이션 작업 범위
-- `app/docs/scenarios`: 애플리케이션 BDD 시나리오
+- `app/docs/scenarios`: 애플리케이션 수용 시나리오
 - `app/docs/standards`: API, JPA, FE, 런타임 구현 표준
 - `app/back-end`: Spring Boot API와 애플리케이션 JUnit/API 테스트
 - `app/back-end/src/openApiIndex/java`: `/v3/api-docs` export 전용 Spring 테스트 어댑터
@@ -118,7 +118,7 @@ build/app/
 
 - `harness/docs/requirements`: 하네스 요건 카드
 - `harness/docs/change-sets`: 하네스 작업 범위
-- `harness/docs/scenarios`: 하네스 BDD 시나리오
+- `harness/docs/scenarios`: 하네스 수용 시나리오
 - `harness/docs/standards`: 요건 카드, Acceptance, 용어 등 하네스 운영 표준
 - `harness/docs/terminology`: 전역 표준 용어 사전
 - `harness/annotations`: 애플리케이션이 사용하는 `@Requirement`, `@Covers`

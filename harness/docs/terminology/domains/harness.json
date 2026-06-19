@@ -15,10 +15,11 @@
             "allow": ["AC"]
         },
         "harness.scenario": {
-            "ko": "BDD 시나리오",
-            "en": "BDD scenario",
+            "ko": "수용 시나리오",
+            "en": "acceptance scenario",
             "meaning": ".feature 파일에 Given/When/Then 구조로 작성하고 Covers로 수용 기준과 연결하는 행위 검증 시나리오.",
-            "allow": ["시나리오", "Scenario", "feature 시나리오"]
+            "allow": ["수용 시나리오", "시나리오", "Scenario", "feature 시나리오"],
+            "ban": ["BDD 시나리오"]
         },
         "harness.scope": {
             "ko": "범위",
