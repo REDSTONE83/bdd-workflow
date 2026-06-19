@@ -87,13 +87,13 @@
   결정: `FE-API-CLIENT-STALE`는 FE generated 디렉터리에 OpenAPI hash 메타파일을 두는 방식으로 판단한다.
   이유: 빌드 결정성 유지(mtime 의존 없음). git checkout/CI 재설정에 영향 받지 않음. 해시는 `indexes/openapi.index.json`의 SHA-256과 비교. 메타파일 한 개를 두는 최소 비용.
   결정자: 사용자
-  영향: FE 생성 도구는 `app/front-end/src/api/generated/.openapi-source.sha256`(또는 동등 이름)에 base OpenAPI의 SHA-256을 기록한다. 검사기는 `indexes/openapi.index.json`의 현재 SHA와 비교해 다르면 finding. 메타파일이 없으면 별도 룰(`FE-API-CLIENT-NO-METADATA` 등)이 잡거나 초기 단계에서는 warning. 메타파일 이름·위치는 Skeleton에서 확정.
+  영향: FE 생성 도구는 `app/front-end/src/api/generated/.openapi-source.sha256`(또는 동등 이름)에 base OpenAPI의 SHA-256을 기록한다. 검사기는 `indexes/openapi.index.json`의 현재 SHA와 비교해 다르면 finding. 메타파일이 없으면 별도 룰(`FE-API-CLIENT-NO-METADATA` 등)이 잡거나 초기 단계에서는 warning. 메타파일 이름·위치는 설계 단계에서 확정.
 
 - 결정일: 2026-05-23
-  결정: 표준 용어 후보(`openapi.contract`, `api.operation`, `api.client` 등)는 Skeleton 단계에서 `node harness/tools/terminology.mjs draft add ...`로 등록하고 카드의 `## 표준 용어` 절에 키를 적는다.
+  결정: 표준 용어 후보(`openapi.contract`, `api.operation`, `api.client` 등)는 설계 단계에서 `node harness/tools/terminology.mjs draft add ...`로 등록하고 카드의 `## 표준 용어` 절에 키를 적는다.
   이유: AC가 아직 확정되지 않은 상태에서 용어를 박으면 실제 본문에 안 쓰일 수 있다. AC 문장 작성과 동시에 어떤 용어가 관계자 언어로 정착하는지 확인 가능. draft 등록은 validateHarness(safe) 통과를 유지하면서 validateTerminologyStrict 시 강제 단계로 승격된다.
   결정자: 사용자
-  영향: Skeleton 단계 진입 직전에 후보 키를 정하고 draft add. 카드의 `## 표준 용어`는 Skeleton 산출 시점에 채운다.
+  영향: 설계 단계 진입 직전에 후보 키를 정하고 draft add. 카드의 `## 표준 용어`는 설계 산출 시점에 채운다.
 
 - 결정일: 2026-06-02
   결정: REQ-006은 새 ID로 분리하지 않고 기존 ID를 유지한 채 `하네스` / `원자 요건` 카드로 전환한다.
@@ -101,25 +101,25 @@
   결정자: Product Owner, Tech Lead
   영향: 카드 헤더를 새 스키마로 보강하고 모든 AC에 `(STATIC)` 마커를 부여한다. Scenario `Covers:`와 실행 테스트 `@Covers` 문장은 마커 없이 기존 문장을 유지한다. 기존 승인된 동작과 검증 범위는 바꾸지 않는다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-006-openapi-contract-and-fe-api-rules.feature`
 
-### 요건 Skeleton 승인 이력
+### 요건 설계 승인 이력
 
 - 승인일: 2026-05-23
   검증 설계: `.feature`의 5개 Scenario가 카드 수용 기준 5개를 1:1로 `Covers:`로 연결. `validate-cross-artifact`에서 TRC-COV-* 0건.
-  API Skeleton: `app/back-end/src/openApiIndex/java/com/example/bddworkflow/harness/OpenApiContractDumpTest.java`. `@SpringBootTest` + MockMvc로 `/v3/api-docs`를 받아 `build/app/indexes/openapi.index.json`에 `entries[] {kind, method, path, operationId, requirements, location}` + `rawOpenApi` + canonical `sha256` 형태로 dump. `@Requirement("REQ-006")` 부착, `@Covers` 없음(산출물 생성 도구이므로 BDD Acceptance Test 아님).
-  DB Skeleton: 해당 없음.
-  Service Skeleton: 해당 없음 (FE-API 룰은 Layer 2 검사기 영역).
-  화면/라우팅 Skeleton: 해당 없음. `app/front-end/src/api/**` 디렉터리는 본 REQ에서 생성하지 않는다(생성 클라이언트 도입은 별도 단계). source-index의 apiCalls 추출은 디렉터리가 생긴 뒤 자동 활성화.
+  API 설계: `app/back-end/src/openApiIndex/java/com/example/bddworkflow/harness/OpenApiContractDumpTest.java`. `@SpringBootTest` + MockMvc로 `/v3/api-docs`를 받아 `build/app/indexes/openapi.index.json`에 `entries[] {kind, method, path, operationId, requirements, location}` + `rawOpenApi` + canonical `sha256` 형태로 dump. `@Requirement("REQ-006")` 부착, `@Covers` 없음(산출물 생성 도구이므로 BDD Acceptance Test 아님).
+  DB 설계: 해당 없음.
+  Service 설계: 해당 없음 (FE-API 룰은 Layer 2 검사기 영역).
+  화면/라우팅 설계: 해당 없음. `app/front-end/src/api/**` 디렉터리는 본 REQ에서 생성하지 않는다(생성 클라이언트 도입은 별도 단계). source-index의 apiCalls 추출은 디렉터리가 생긴 뒤 자동 활성화.
   표준 용어: `openapi.contract`, `api.operation`, `api.client` draft 등록. 카드 `## 표준 용어` 절에 적용.
   검사기 골격: `harness/tools/validate-front-end-standards.mjs`에 `FE-API-CONTRACT-MISSING`, `FE-API-UNKNOWN-OPERATION`, `FE-API-CLIENT-STALE` 룰 ID 등록. 초기 severity는 warning. OpenAPI 인덱스 부재 시 `FE-API-CONTRACT-MISSING` warning 1건 emit 확인. 향후 표준 확정 후 strictSeverity를 error로 승격하면서 `gate-trace`가 `feStandardsErrors`로 차단.
   추적 정책: 사용자-facing API/화면이 없는 하네스·계약 파이프라인 요건이므로 `대상 시스템: harness`로 분류한다. trace는 API/FE 표면 연결을 요구하지 않고 수용 기준 커버 테스트만 본다. 표준 문서 갱신: `harness/docs/standards/requirement-card.md`, `harness/docs/overview.md`. 데이터 계약 갱신: `harness/docs/data-contracts.md`에 `openapi.index.json` 디렉터리·`api-operation`/`api-call` kind·`apiCalls[]` 명시.
   실행 순서: `OpenApiContractDumpTest`는 일반 `test`에서 제외하고, 전용 `generateOpenApiIndex` 태스크 하나만 그것을 실행한다. `npm run app:validate`는 OpenAPI export를 실행해 최신 `openapi.index.json`을 만들고, `npm run harness:validate`는 하네스 Node/TypeScript self-test와 FE 계약 검사 fixture를 검증한다. `./gradlew test`는 애플리케이션 테스트만 실행하고, 하네스 테스트 결과는 `build/harness/test-results/nodeSelfTest` 아래에 분리된다.
   검증: `./gradlew compileJava`, `./gradlew compileTestJava`, `./gradlew generateHarnessSourceIndex`, `./gradlew generateFrontEndSourceIndex`, `./gradlew generateOpenApiIndex`, `./gradlew traceRequirementCard -Preq=REQ-006` 통과. `./gradlew validateRequirementCardBlue -Preq=REQ-001`로 다른 BLUE 카드 회귀 확인.
   승인자: 사용자
-  Skeleton 결과: 승인
+  설계 결과: 승인
 
 ### 테스트 리뷰
 

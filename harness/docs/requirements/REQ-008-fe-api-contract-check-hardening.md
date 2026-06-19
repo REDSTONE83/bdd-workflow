@@ -64,22 +64,22 @@
   결정자: 사용자
   영향: source index가 `app/front-end/src/**`를 스캔해 `src/api/**` 밖 `fetch`, `window.fetch`, `globalThis.fetch` 호출을 issue로 만들고 FE validator가 `FE-API-DIRECT-FETCH` error finding으로 정규화한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-008-fe-api-contract-check-hardening.feature`
 
-### 요건 Skeleton 승인 이력
+### 요건 설계 승인 이력
 
 - 승인일: 2026-05-23
   검증 설계: `.feature`의 5개 Scenario가 카드 수용 기준 5개를 1:1로 `Covers:`로 연결한다.
-  API Skeleton: 해당 없음.
-  DB Skeleton: 해당 없음.
-  Service Skeleton: 해당 없음. FE API 계약 검사는 Layer 1 source index와 Layer 2 validator 영역이다.
-  화면/라우팅 Skeleton: 해당 없음.
-  검사기 Skeleton: `app/front-end/tools/source-index.mjs`가 직접 `fetch` 경계 위반 issue를 만들고, `harness/tools/validate-front-end-standards.mjs`가 FE-API drift와 metadata finding을 error로 낸다.
+  API 설계: 해당 없음.
+  DB 설계: 해당 없음.
+  Service 설계: 해당 없음. FE API 계약 검사는 Layer 1 source index와 Layer 2 validator 영역이다.
+  화면/라우팅 설계: 해당 없음.
+  검사기 설계: `app/front-end/tools/source-index.mjs`가 직접 `fetch` 경계 위반 issue를 만들고, `harness/tools/validate-front-end-standards.mjs`가 FE-API drift와 metadata finding을 error로 낸다.
   검증: `npm run harness:self-test`, `npm run harness:validate -- --require-blue --requirement REQ-008`, `npm run app:validate`, `node harness/tools/terminology.mjs validate --strict` 통과.
   승인자: 사용자
-  Skeleton 결과: 승인
+  설계 결과: 승인
 
 ### 테스트 리뷰
 

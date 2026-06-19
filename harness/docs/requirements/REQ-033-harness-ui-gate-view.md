@@ -42,63 +42,34 @@
 - (UI) 각 검사 결과는 메시지와 파일 위치를 표시하고 근거와 권고 조치를 펼쳐 볼 수 있다
 - (STATIC) 게이트 화면의 카테고리 차단 판정은 통합 하네스 게이트 도구의 판정과 일치한다
 
-## 검증 대상
-
-- API: 불필요
-- DB: 불필요
-- UI: 필요
-- Storybook: 필요
-- E2E: 불필요
-- STATIC: 필요
-
-## API Skeleton
-
-- 해당 없음
-
-## DB Skeleton
-
-- 해당 없음
-
-## UI Skeleton
-
-- 화면 표면: `harness/ui/src/features/gates/GateViewPage.tsx`를 `/gate` route에 둔다.
-- 주요 영역: 8개 게이트 카테고리 요약, 검사 결과 필터, 검사 결과 목록, 펼친 finding 상세를 둔다.
-- 표시 필드: 카테고리(TRACE, CARD, REF, TRC, BE, FE, SCN, TRM), 차단 여부, 검사 결과 수, 규칙, 심각도, 요건, 파일 경로, 메시지, 근거, 권고 조치를 표시한다.
-- 상태 목록: 게이트 통과, 카테고리 차단, finding 상세 펼침, 필터 적용을 검토 상태로 둔다.
-- 사용자 행위: 규칙, 심각도, 요건, 파일 경로로 검사 결과를 좁히고, finding을 펼쳐 근거와 권고 조치를 확인한다.
-
-## Storybook 계약
-
-- Harness/Gates/GateView: Passing, CategoryBlocked, FindingExpanded, Filtered
-
 ## 의사결정 로그
 
 - 결정일: 2026-06-10
   결정: 게이트 화면의 차단 판정은 화면이나 UI 서버가 분류 규칙을 복제하지 않고 통합 하네스 게이트 도구의 판정 결과를 그대로 사용한다.
   이유: 카테고리 매핑 규칙이 두 곳에 있으면 게이트와 화면이 다른 답을 줄 수 있다 (REQ-010 단일 게이트 원칙).
   결정자: REDSTONE
-  영향: 게이트 판정을 머신이 읽을 수 있게 노출하는 방식이 Skeleton 단계의 설계 대상이 된다.
+  영향: 게이트 판정을 머신이 읽을 수 있게 노출하는 방식이 설계 단계의 설계 대상이 된다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-033-harness-ui-gate-view.feature`
 
-### 요건 Skeleton 설계 이력
+### 요건 설계 승인 이력
 
 - 설계일: 2026-06-10
   검증 설계: `.feature`의 4개 Scenario가 카드 수용 기준 4개를 1:1 `Covers:`로 연결한다. 카테고리/목록/펼침/필터는 `(UI)`, 통합 게이트 도구 판정 보존은 `(STATIC)`으로 검증한다.
-  UI Skeleton: `/gate` route는 gate summary와 findings view model을 받아 카테고리 요약과 검사 결과 목록을 구성한다. 화면은 카테고리 차단 판정을 다시 계산하지 않는다.
-  Storybook 계약: `Harness/Gates/GateView`의 `Passing`, `CategoryBlocked`, `FindingExpanded`, `Filtered` 상태가 있어야 한다.
-  검사기 Skeleton: 통합 게이트 도구의 카테고리 판정을 UI가 읽을 수 있도록 `gate.report.json` 또는 동등한 machine-readable DTO를 만든다. DTO에는 8개 카테고리의 차단 여부, error 수, ruleId별 수량, 관련 finding 참조가 포함되어야 한다.
+  UI 설계: `/gate` route는 gate summary와 findings view model을 받아 카테고리 요약과 검사 결과 목록을 구성한다. 화면은 카테고리 차단 판정을 다시 계산하지 않는다.
+  UI 설계 검토 표면: `Harness/Gates/GateView`의 `Passing`, `CategoryBlocked`, `FindingExpanded`, `Filtered` 상태가 있어야 한다.
+  검사기 설계: 통합 게이트 도구의 카테고리 판정을 UI가 읽을 수 있도록 `gate.report.json` 또는 동등한 machine-readable DTO를 만든다. DTO에는 8개 카테고리의 차단 여부, error 수, ruleId별 수량, 관련 finding 참조가 포함되어야 한다.
   추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다. `(STATIC)` AC는 gate summary DTO가 `gate.mjs`의 CATEGORY_ORDER와 finding 집계를 그대로 반영하는 self-test로 판정한다.
-  검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-033`로 카드/시나리오/용어 정합성을 확인한다.
-  Skeleton 결과: 승인 대기
+  검증: 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-033`로 카드/시나리오/용어 정합성을 확인한다.
+  설계 결과: 승인 대기
 
 ### 테스트 리뷰
 
 - 리뷰일: 2026-06-10
   리뷰자: REDSTONE
-  확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
+  확인: 설계 검토중 단계. UI 설계와 UI 설계 검토 표면을 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
 
 - 리뷰일: 2026-06-17

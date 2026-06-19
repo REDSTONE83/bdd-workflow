@@ -62,7 +62,7 @@
   결정: `scenario-index.mjs`의 `issue` 객체에 `kind` 필드를 추가해 Layer 2 매핑 키로 쓴다.
   이유: 현재 issue는 `{line, message}`만 갖고 있어 자연어 message로 분류해야 한다. 그러면 메시지 문구가 바뀌면 매핑이 깨진다. Layer 2가 안정적으로 매핑하려면 collector가 의도된 종류를 명시적으로 박아야 한다.
   결정자: 사용자
-  영향: scenario-index 출력의 issue 모양이 `{line, message, kind}`로 확장된다. 이는 Layer 1 ↔ Layer 2 사이의 계약이므로 Skeleton 단계에서 `docs/harness/data-contracts.md`의 인덱스 엔트리 절에 `scenarios.index.json`의 `issues[]` 스키마와 7개 `kind` enum(`SCN-*` 룰 매핑 키)을 명시한다.
+  영향: scenario-index 출력의 issue 모양이 `{line, message, kind}`로 확장된다. 이는 Layer 1 ↔ Layer 2 사이의 계약이므로 설계 단계에서 `docs/harness/data-contracts.md`의 인덱스 엔트리 절에 `scenarios.index.json`의 `issues[]` 스키마와 7개 `kind` enum(`SCN-*` 룰 매핑 키)을 명시한다.
 
 - 결정일: 2026-05-23
   결정: 본 REQ 도입과 함께 `evaluate-trace-state.mjs` / `render-trace-report.mjs`에서 raw `scenarioIndex.issues[]` 직접 소비를 끊는다. trace/report는 `scenarios.findings.json`(SCN-* 정규화 결과)만 본다.
@@ -76,23 +76,23 @@
   결정자: 사용자
   영향: `validate-scenarios.mjs`는 feature 파일의 `@REQ-XXX` 태그를 그대로 finding의 `requirements`로 옮긴다(태그가 있는 경우). `SCN-REQ-TAG-MISSING` 같이 태그 자체가 없는 finding은 `requirements: []`로 emit한다. `validateHarness`는 모든 SCN-* error를 차단하고, `validateRequirementCard*`는 선택 카드에 귀속된 SCN-* error만 차단한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-009-scenario-validator-layer-2.feature`
 
-### 요건 Skeleton 승인 이력
+### 요건 설계 승인 이력
 
 - 승인일: 2026-05-23
   검증 설계: `.feature`의 5개 Scenario가 카드 수용 기준 5개를 1:1로 `Covers:`로 연결한다.
-  검사기 Skeleton: `harness/tools/validate-scenarios.mjs` 신규. 입력은 `build/harness/indexes/scenarios.index.json`, 출력은 `build/harness/findings/scenarios.findings.json`. CLI 인자 `--scenarios-index=PATH`, `--out=PATH`를 받아 fixture 테스트 가능 구조 유지. `scenario-index.mjs`는 issue에 `kind` 필드 추가만.
-  데이터 계약: Skeleton 단계에서 `docs/harness/data-contracts.md`에 `scenarios.index.json` `issues[]` 스키마(`{line, message, kind}`)와 7개 `kind` enum, `scenarios.findings.json` owner 한 줄을 명시한다. `rule-namespaces.md`에 SCN-* 7개 룰 등록.
+  검사기 설계: `harness/tools/validate-scenarios.mjs` 신규. 입력은 `build/harness/indexes/scenarios.index.json`, 출력은 `build/harness/findings/scenarios.findings.json`. CLI 인자 `--scenarios-index=PATH`, `--out=PATH`를 받아 fixture 테스트 가능 구조 유지. `scenario-index.mjs`는 issue에 `kind` 필드 추가만.
+  데이터 계약: 설계 단계에서 `docs/harness/data-contracts.md`에 `scenarios.index.json` `issues[]` 스키마(`{line, message, kind}`)와 7개 `kind` enum, `scenarios.findings.json` owner 한 줄을 명시한다. `rule-namespaces.md`에 SCN-* 7개 룰 등록.
   추적 정책: `대상 시스템: harness`. 사용자-facing API/화면 연결 요구 없음. 5개 Scenario `Covers:`가 5개 AC를 1:1 커버하면 GREEN.
   Gradle 실행 순서: `tasks.register('validateScenarios', Exec)` 신규. `generateScenarioIndex`에 dependsOn. `traceRequirements`, `validateHarness`, `traceRequirementCard`, `validateRequirementCard`, `validateRequirementCardBlue`에 dependsOn 추가.
   게이트 정책: `gate-trace.mjs`의 `--check`/`--require-blue`가 SCN-* error finding을 게이트 실패 사유에 추가한다. `summary.scenarioStandardsErrors`로 noun 도입.
   표준 용어: 추가 등록 없음.
-  검증: `./gradlew compileJava`, `./gradlew compileTestJava`, `./gradlew generateHarnessSourceIndex`, `./gradlew generateFrontEndSourceIndex` BUILD SUCCESSFUL. `./gradlew validateScenarios`는 `scenarios.findings.json: 0 finding(s)` (현재 `.feature`는 모두 깨끗). `./gradlew traceRequirementCard -Preq=REQ-009`는 State=RED, Card structure issues=0, Scenario standards findings error=0. RED는 Acceptance Test 부재로 인한 정상 Skeleton 단계 상태. 전체 trace에서 total=9 red=1 (REQ-009) blue=8 (REQ-001~008 유지).
+  검증: `./gradlew compileJava`, `./gradlew compileTestJava`, `./gradlew generateHarnessSourceIndex`, `./gradlew generateFrontEndSourceIndex` BUILD SUCCESSFUL. `./gradlew validateScenarios`는 `scenarios.findings.json: 0 finding(s)` (현재 `.feature`는 모두 깨끗). `./gradlew traceRequirementCard -Preq=REQ-009`는 State=RED, Card structure issues=0, Scenario standards findings error=0. RED는 Acceptance Test 부재로 인한 정상 설계 단계 상태. 전체 trace에서 total=9 red=1 (REQ-009) blue=8 (REQ-001~008 유지).
   승인자: 사용자
-  Skeleton 결과: 승인
+  설계 결과: 승인
 
 ### 테스트 리뷰
 

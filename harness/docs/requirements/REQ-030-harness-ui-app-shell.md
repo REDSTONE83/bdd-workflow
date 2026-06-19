@@ -51,42 +51,13 @@
 - (UI) 산출물보다 늦게 바뀐 원본 문서가 있으면 오래된 데이터 경고가 표시된다
 - (UI) 산출물 파일이 바뀌면 새로 고침 없이 화면 내용이 갱신된다
 
-## 검증 대상
-
-- API: 불필요
-- DB: 불필요
-- UI: 필요
-- Storybook: 필요
-- E2E: 불필요
-- STATIC: 필요
-
-## API Skeleton
-
-- 해당 없음
-
-## DB Skeleton
-
-- 해당 없음
-
-## UI Skeleton
-
-- 화면 표면: `harness/ui/src/features/shell/AppShell.tsx`가 모든 route를 감싸고 기본 진입은 `/requirements`로 둔다. 라우트는 `/requirements`, `/requirements/:requirementId`, `/terminology`, `/gate`, `/change-sets`, `/runs`를 가진다.
-- 주요 영역: 상단 머리 영역에는 제품명, 현재 scope, scope 전환, 표시 중인 산출물 생성 시각, 오래된 데이터 경고를 둔다. 좌측 LNB는 요건, 표준 용어, 게이트, Change Set, 실행 화면 순서로 둔다. 본문은 LNB 오른쪽의 현재 route 화면에 표시한다.
-- 표시 필드: 현재 scope(`application` 또는 `harness`), 산출물 생성 시각, 산출물 없음 안내, 오래된 원본 문서 경로, 현재 활성 내비, 자동 갱신 상태를 표시한다.
-- 상태 목록: 기본 산출물 있음, 산출물 없음, 오래된 데이터, scope 전환 후 산출물 표시, 파일 변경 후 자동 갱신을 검토 상태로 둔다.
-- 사용자 행위: scope를 전환하고, 좌측 LNB로 화면을 이동하며, 산출물 없음 안내에서 검증 명령 실행 화면으로 이동할 수 있다. 화면은 추적 상태와 게이트 판정을 재계산하지 않는다.
-
-## Storybook 계약
-
-- Harness/Shell/AppShell: DefaultArtifacts, MissingArtifacts, StaleArtifacts, ScopeSwitch, AutoRefreshUpdated
-
 ## 의사결정 로그
 
 - 결정일: 2026-06-10
   결정: 하네스 UI는 `harness/ui`에 두고 React + Vite + TypeScript + Tailwind로 작성한다.
   이유: 기술 스택은 익숙한 조합을 쓰되, 화면 구조와 검증 기준은 `harness/docs/standards/harness-ui.md`가 별도로 소유한다.
   결정자: REDSTONE
-  영향: AGENTS.md 직접 관리 산출물 목록에 `harness/ui` 경로 추가가 필요하다. app 표준이나 app 구현을 하네스 UI Skeleton의 입력으로 쓰지 않는다.
+  영향: AGENTS.md 직접 관리 산출물 목록에 `harness/ui` 경로 추가가 필요하다. app 표준이나 app 구현을 하네스 UI 설계의 입력으로 쓰지 않는다.
 
 - 결정일: 2026-06-10
   결정: 하네스 UI는 추적 상태와 게이트 판정을 재계산하지 않는 표시 전용 화면으로 한다.
@@ -106,26 +77,26 @@
   결정자: REDSTONE
   영향: 기동 안내 문서와 self-test가 기본 포트 5180을 기준으로 작성된다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-030-harness-ui-app-shell.feature`
 
-### 요건 Skeleton 설계 이력
+### 요건 설계 승인 이력
 
 - 설계일: 2026-06-10
   검증 설계: `.feature`의 5개 Scenario가 카드 수용 기준 7개를 `Covers:`로 연결한다. localhost 제한은 `(STATIC)`, 내비와 scope/산출물 상태는 `(UI)`로 검증한다.
-  UI Skeleton: `AppShell` route wrapper와 `src/lib/harness-data`의 scope별 산출물 summary DTO를 기준으로 구현한다. 파일 watch와 cache 무효화는 shell provider에서 한 번만 처리하고, 개별 화면은 선택 scope의 화면 모델만 받는다.
-  Storybook 계약: `Harness/Shell/AppShell`의 `DefaultArtifacts`, `MissingArtifacts`, `StaleArtifacts`, `ScopeSwitch` 상태가 있어야 한다.
-  서버 Skeleton: `npm run harness:ui`는 loopback 주소에만 bind하고 기본 포트 5180을 사용한다. `HARNESS_UI_PORT`는 포트만 바꾸며 외부 bind 주소를 열지 않는다.
+  UI 설계: `AppShell` route wrapper와 `src/lib/harness-data`의 scope별 산출물 summary DTO를 기준으로 구현한다. 파일 watch와 cache 무효화는 shell provider에서 한 번만 처리하고, 개별 화면은 선택 scope의 화면 모델만 받는다.
+  UI 설계 검토 표면: `Harness/Shell/AppShell`의 `DefaultArtifacts`, `MissingArtifacts`, `StaleArtifacts`, `ScopeSwitch` 상태가 있어야 한다.
+  서버 설계: `npm run harness:ui`는 loopback 주소에만 bind하고 기본 포트 5180을 사용한다. `HARNESS_UI_PORT`는 포트만 바꾸며 외부 bind 주소를 열지 않는다.
   추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다. `(STATIC)` localhost 제한은 하네스 self-test 또는 서버 단위 검증으로 판정한다.
-  검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-030`로 카드/시나리오/용어 정합성을 확인한다.
-  Skeleton 결과: 승인 대기
+  검증: 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-030`로 카드/시나리오/용어 정합성을 확인한다.
+  설계 결과: 승인 대기
 
 ### 테스트 리뷰
 
 - 리뷰일: 2026-06-10
   리뷰자: REDSTONE
-  확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
+  확인: 설계 검토중 단계. UI 설계와 UI 설계 검토 표면을 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
 
 - 리뷰일: 2026-06-17

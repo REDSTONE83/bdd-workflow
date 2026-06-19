@@ -53,36 +53,6 @@
 - (UI) 검색 결과가 없으면 빈 결과 안내를 표시한다
 - (UI) Storybook Docs에서 요건 검색/선택 대화상자 story는 닫힌 호출 화면 프레임으로 렌더링되어 문서 본문을 가리지 않고 Canvas에서는 열린 대화상자 상태를 검토할 수 있다
 
-## 검증 대상
-
-- API: 불필요
-- DB: 불필요
-- UI: 필요
-- Storybook: 필요
-- E2E: 불필요
-- STATIC: 불필요
-
-## API Skeleton
-
-- 해당 없음
-
-## DB Skeleton
-
-- 해당 없음
-
-## UI Skeleton
-
-- 화면 표면: `harness/ui/src/features/requirements/RequirementPickerDialog.tsx`를 공용 요건 선택 대화상자 컴포넌트로 둔다.
-- 주요 영역: 대화상자 제목과 설명, 검색 입력, 검색 입력 안의 선택 해제 버튼, 상하 스크롤 가능한 후보 요건 목록형 카드, 빈 결과 안내를 둔다.
-- 표시 필드: 요건 ID, 제목, 추적 상태, 명세 역할, 상위 요건 ID, 하위 요건 수, 후보 목록 안의 현재 선택 여부를 표시한다. 요건 ID와 제목은 한 줄로 배치하고, 추적 상태 뱃지는 카드 우측 끝에 둔다. 카드 상태, 제품 영역, 우선순위는 검색 대상에 남기되 후보 카드에는 표시하지 않는다.
-- 구조 표시: 별도 구조 영역을 크게 두지 않고 카드 안의 역할/상위/하위 뱃지와 하위 후보 카드의 좌측 들여쓰기·세로선으로 표시한다. 전체 관련 요건 목록은 카드에 노출하지 않는다.
-- 상태 목록: 기본 열림, Docs 닫힌 호출 화면 프레임, 상위/하위 요건 구조, 검색 결과, 상위 검색 하위 포함, 선택 요건 있음, 긴 후보 목록 스크롤, 빈 결과를 검토 상태로 둔다.
-- 사용자 행위: 호출 화면에서 대화상자를 열고, 검색어를 입력하고, 후보 요건 하나를 선택하거나 현재 선택을 해제한다. 후보 목록의 출처와 선택값의 적용 방식은 호출 화면이 소유한다.
-
-## Storybook 계약
-
-- Harness/Requirements/RequirementPickerDialog: Open, DocsClosedFrame, Hierarchy, SearchResults, ParentSearchIncludesChildren, WithSelection, ScrollableList, EmptyResult
-
 ## 의사결정 로그
 
 - 결정일: 2026-06-12
@@ -115,26 +85,26 @@
   결정자: REDSTONE
   영향: Storybook에 `ScrollableList` 상태를 유지하고, 후보 목록 컨테이너는 대화상자 안에서 남는 고정 높이 영역을 사용해 빈 상태와 스크롤 상태를 처리한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-037-harness-ui-requirement-picker-dialog.feature`
 
-### 요건 Skeleton 설계 이력
+### 요건 설계 승인 이력
 
 - 설계일: 2026-06-12
   검증 설계: `.feature`의 6개 Scenario가 카드 수용 기준 8개를 `Covers:`로 연결한다. 모든 AC는 사용자가 관찰하는 대화상자 UI 결과이므로 `(UI)`로 검증한다.
-  UI Skeleton: `RequirementPickerDialog`는 호출 화면이 전달한 `RequirementRow` 후보 목록을 기준으로 요건 ID와 제목을 한 줄에 표시하고, 추적 상태는 우측 끝 뱃지로, 명세 역할과 상위/하위 요건 구조는 같은 줄의 보조 뱃지로 축약 표시한다. 상위 검색 하위 포함, 검색, 단일 선택, 선택 해제, 검색 결과 수와 무관한 viewport 기준 고정 높이, 긴 후보 목록 스크롤, 빈 결과 상태를 제공한다. 현재 선택 요약은 두지 않고 선택 후보만 강조한다. 호출 화면별 제목·설명 문구는 props로 바꿀 수 있지만 후보 목록과 선택값의 의미 적용은 부모 화면이 소유한다.
-  Storybook 계약: `Harness/Requirements/RequirementPickerDialog`의 `Open`, `DocsClosedFrame`, `Hierarchy`, `SearchResults`, `ParentSearchIncludesChildren`, `WithSelection`, `ScrollableList`, `EmptyResult` 상태가 있어야 한다. Docs에서는 열린 portal이 문서 본문을 가리지 않도록 닫힌 호출 화면 프레임으로 렌더링한다.
-  서버 Skeleton: 해당 없음. 대화상자는 부모 화면 DTO의 요건 후보 목록을 받는다.
+  UI 설계: `RequirementPickerDialog`는 호출 화면이 전달한 `RequirementRow` 후보 목록을 기준으로 요건 ID와 제목을 한 줄에 표시하고, 추적 상태는 우측 끝 뱃지로, 명세 역할과 상위/하위 요건 구조는 같은 줄의 보조 뱃지로 축약 표시한다. 상위 검색 하위 포함, 검색, 단일 선택, 선택 해제, 검색 결과 수와 무관한 viewport 기준 고정 높이, 긴 후보 목록 스크롤, 빈 결과 상태를 제공한다. 현재 선택 요약은 두지 않고 선택 후보만 강조한다. 호출 화면별 제목·설명 문구는 props로 바꿀 수 있지만 후보 목록과 선택값의 의미 적용은 부모 화면이 소유한다.
+  UI 설계 검토 표면: `Harness/Requirements/RequirementPickerDialog`의 `Open`, `DocsClosedFrame`, `Hierarchy`, `SearchResults`, `ParentSearchIncludesChildren`, `WithSelection`, `ScrollableList`, `EmptyResult` 상태가 있어야 한다. Docs에서는 열린 portal이 문서 본문을 가리지 않도록 닫힌 호출 화면 프레임으로 렌더링한다.
+  서버 설계: 해당 없음. 대화상자는 부모 화면 DTO의 요건 후보 목록을 받는다.
   추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다.
-  검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-037`로 카드/시나리오 정합성을 확인한다.
-  Skeleton 결과: 승인 대기
+  검증: 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-037`로 카드/시나리오 정합성을 확인한다.
+  설계 결과: 승인 대기
 
 ### 테스트 리뷰
 
 - 리뷰일: 2026-06-12
   리뷰자: REDSTONE
-  확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
+  확인: 설계 검토중 단계. UI 설계와 UI 설계 검토 표면을 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
 
 - 리뷰일: 2026-06-17

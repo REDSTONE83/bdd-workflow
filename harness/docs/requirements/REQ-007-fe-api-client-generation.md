@@ -72,21 +72,21 @@
   결정자: 사용자
   영향: 생성 script는 순수 OpenAPI 파일을 사람이 따로 관리하지 않는다. 도구가 인덱스에서 `rawOpenApi`를 임시 입력으로 추출해 `openapi-typescript`에 전달하고, 성공 후 `.openapi-source.sha256`을 갱신한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-007-fe-api-client-generation.feature`
 
-### 요건 Skeleton 승인 이력
+### 요건 설계 승인 이력
 
 - 승인일: 2026-05-23
   검증 설계: `.feature`의 5개 Scenario가 카드 수용 기준 5개를 1:1로 `Covers:`로 연결. `validate-cross-artifact`에서 TRC-COV-* 0건.
-  API Skeleton: 해당 없음.
-  DB Skeleton: 해당 없음.
-  Service Skeleton: 해당 없음. 도구 파이프라인은 `app/front-end/tools/generate-api-client.mjs`로 구현. `build/app/indexes/openapi.index.json`의 `rawOpenApi`를 `openapi-typescript` 입력으로 쓰고, 생성 타입은 `schema.d.ts`로 두며, canonical `sha256`을 `.openapi-source.sha256`에 기록한다.
-  화면/라우팅 Skeleton: 해당 없음.
+  API 설계: 해당 없음.
+  DB 설계: 해당 없음.
+  Service 설계: 해당 없음. 도구 파이프라인은 `app/front-end/tools/generate-api-client.mjs`로 구현. `build/app/indexes/openapi.index.json`의 `rawOpenApi`를 `openapi-typescript` 입력으로 쓰고, 생성 타입은 `schema.d.ts`로 두며, canonical `sha256`을 `.openapi-source.sha256`에 기록한다.
+  화면/라우팅 설계: 해당 없음.
   검증: `cd app/front-end && npm run api:generate`, `cd app/front-end && npm run api:check`, `cd app/front-end && npm run typecheck`, `cd app/front-end && npm run lint`, `cd app/back-end && ./gradlew compileTestJava`, `npm run harness:self-test`, `npm run harness:validate` 통과. 카드 구조 위반 0건, scenario index issue 0건, terminology finding 0건. 실행 테스트 5개가 수용 기준을 커버해 REQ-007은 GREEN.
   승인자: 사용자
-  Skeleton 결과: 승인
+  설계 결과: 승인
 
 ### 테스트 리뷰
 

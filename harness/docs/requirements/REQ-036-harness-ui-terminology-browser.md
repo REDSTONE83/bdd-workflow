@@ -50,35 +50,6 @@
 - (UI) 표준 용어를 선택하면 의미, 허용 표현, 금지 표현, 코드 이름, note, reason을 확인할 수 있다
 - (STATIC) 하네스 UI 서버가 제공하는 표준 용어 데이터는 `terminology.index.json`의 term key, status, sourceFile, meaning, allow, ban, names 값을 보존한다
 
-## 검증 대상
-
-- API: 불필요
-- DB: 불필요
-- UI: 필요
-- Storybook: 필요
-- E2E: 불필요
-- STATIC: 필요
-
-## API Skeleton
-
-- 해당 없음
-
-## DB Skeleton
-
-- 해당 없음
-
-## UI Skeleton
-
-- 화면 표면: `harness/ui/src/features/terminology/TerminologyBrowserPage.tsx`를 `/terminology` route에 두고, `AppShell` 좌측 LNB에 표준 용어 메뉴를 추가한다.
-- 주요 영역: 표준 용어 요약, 검색 입력, 도메인 필터, 승인 상태 필터, 표준 용어 목록, 선택한 표준 용어 상세, 빈 결과 안내를 둔다.
-- 표시 필드: term key, domain, status, 한국어 이름, 영어 이름, meaning, allow, ban, names, note, reason, sourceFile, scope, 산출물 생성 시각을 표시한다.
-- 상태 목록: 전체 목록, 검색 결과, 도메인 필터, 승인 상태 필터, 선택 상세, 빈 결과, 산출물 없음, 조회 실패를 검토 상태로 둔다.
-- 사용자 행위: AppShell 좌측 LNB로 `/terminology`에 진입하고, 검색어와 필터를 바꾸고, 목록 항목을 선택해 상세를 확인한다. 표준 용어 편집 액션은 제공하지 않는다.
-
-## Storybook 계약
-
-- Harness/Terminology/TerminologyBrowser: AllTerms, SearchResults, FilteredByDomain, FilteredByStatus, TermDetail, EmptyResult
-
 ## 의사결정 로그
 
 - 결정일: 2026-06-12
@@ -93,26 +64,26 @@
   결정자: REDSTONE
   영향: REQ-030 AppShell 내비 계약과 하네스 UI 표준의 route 목록을 함께 갱신한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `harness/docs/scenarios/REQ-036-harness-ui-terminology-browser.feature`
 
-### 요건 Skeleton 설계 이력
+### 요건 설계 승인 이력
 
 - 설계일: 2026-06-12
   검증 설계: `.feature`의 6개 Scenario가 카드 수용 기준 6개를 1:1 `Covers:`로 연결한다. 메뉴 진입, 목록, 검색, 필터, 상세는 `(UI)`, 산출물 DTO 값 보존은 `(STATIC)`으로 검증한다.
-  UI Skeleton: `/terminology` route는 `src/lib/harness-data`의 terminology browser view model을 받아 표준 용어 목록과 상세를 만든다. React 컴포넌트는 `terminology.index.json` 원형을 직접 순회하지 않는다.
-  Storybook 계약: `Harness/Terminology/TerminologyBrowser`의 `AllTerms`, `SearchResults`, `FilteredByDomain`, `FilteredByStatus`, `TermDetail`, `EmptyResult` 상태가 있어야 한다.
-  서버 Skeleton: terminology DTO는 선택한 scope의 `build/{scope}/indexes/terminology.index.json`에서 term key, status, sourceFile, meaning, allow, ban, names 값을 보존해 제공한다. 검색/필터는 화면 모델 필드 기준으로 수행한다.
+  UI 설계: `/terminology` route는 `src/lib/harness-data`의 terminology browser view model을 받아 표준 용어 목록과 상세를 만든다. React 컴포넌트는 `terminology.index.json` 원형을 직접 순회하지 않는다.
+  UI 설계 검토 표면: `Harness/Terminology/TerminologyBrowser`의 `AllTerms`, `SearchResults`, `FilteredByDomain`, `FilteredByStatus`, `TermDetail`, `EmptyResult` 상태가 있어야 한다.
+  서버 설계: terminology DTO는 선택한 scope의 `build/{scope}/indexes/terminology.index.json`에서 term key, status, sourceFile, meaning, allow, ban, names 값을 보존해 제공한다. 검색/필터는 화면 모델 필드 기준으로 수행한다.
   추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다. `(STATIC)` AC는 DTO fixture 또는 서버 self-test로 산출물 값 보존을 검증한다.
-  검증: Skeleton 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-036`로 카드/시나리오/용어 정합성을 확인한다.
-  Skeleton 결과: 승인 대기
+  검증: 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-036`로 카드/시나리오/용어 정합성을 확인한다.
+  설계 결과: 승인 대기
 
 ### 테스트 리뷰
 
 - 리뷰일: 2026-06-12
   리뷰자: REDSTONE
-  확인: Skeleton 검토중 단계. UI Skeleton과 Storybook surface를 작성했고 실행 테스트는 아직 작성하지 않았다.
+  확인: 설계 검토중 단계. UI 설계와 UI 설계 검토 표면을 작성했고 실행 테스트는 아직 작성하지 않았다.
   결과: 미완료
 
 - 리뷰일: 2026-06-17
