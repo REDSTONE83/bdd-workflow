@@ -304,6 +304,23 @@ function parseCard(file) {
     for (const sec of REQUIRED_SECTIONS) {
         sectionPresent[sec] = hasSection(content, sec);
     }
+    for (const sec of [
+        '검증 대상',
+        'API 설계',
+        'DB 설계',
+        'UI 설계',
+        'UI 설계 검토 표면',
+        'API Skeleton',
+        'DB Skeleton',
+        'UI Skeleton',
+        '화면/라우팅 Skeleton',
+        'Storybook 검토 표면',
+        'Storybook 계약',
+        'UI / Storybook 계약',
+        'UI Storybook 계약'
+    ]) {
+        sectionPresent[sec] = hasSection(content, sec);
+    }
     sectionPresent['BDD 테스트 리뷰'] = hasSection(content, 'BDD 테스트 리뷰');
     sectionPresent['수용 테스트 리뷰'] = hasSection(content, '수용 테스트 리뷰');
     const referencedRequirementIds = [...new Set(content.match(/\bREQ-\d{3,}\b/g) ?? [])];

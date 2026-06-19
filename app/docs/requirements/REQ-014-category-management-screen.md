@@ -44,7 +44,7 @@
   결정자: Product Owner, Tech Lead
   영향: 기존 REQ-014의 Scenario, FE BDD Test, Storybook metadata, 화면 annotation은 새 원자 요건으로 이동한다. 본 카드는 `대체됨` 상태로 추적에서 INACTIVE가 된다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 대체 카드로 종료한다. 실행 검증은 REQ-016~REQ-019에서 관리한다.
 

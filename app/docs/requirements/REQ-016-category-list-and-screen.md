@@ -60,39 +60,6 @@
 - (UI) 데스크톱 화면에서 카테고리 목록과 입력 영역의 주요 요소가 화면 밖으로 넘치지 않는다
 - (UI) 카테고리 화면은 자동 접근성 검사에서 위반이 없어야 한다
 
-## 검증 대상
-
-- API: 필요
-- DB: 필요
-- UI: 필요
-- Storybook: 필요
-- E2E: 필요
-- STATIC: 불필요
-
-## API Skeleton
-
-- `GET /categories`: 인증 사용자 기준 `PageResponse<CategoryResponse>`를 반환하고 기본 `size=20`, `sort=displayOrder,asc`를 사용한다.
-- 목록 응답 DTO는 `categoryId`, `name`, `color`, `description`, `displayOrder`를 포함한다.
-- FE API client는 `/categories` GET을 카테고리 화면 mount 시 호출하고 `page`/`size` query를 generated client 경유로 전달한다.
-
-## DB Skeleton
-
-- `Category` entity/table `category`: `id`, `user_id`, `name`, `color`, `description`, `display_order`, `created_at`, `updated_at`를 가진다.
-- 목록 조회는 `user_id`로 사용자 데이터를 격리하고 `displayOrder` 오름차순, 동률이면 `id` 오름차순으로 정렬한다.
-
-## UI Skeleton
-
-- Page: `CategoriesPage`, route `/categories`, 보호 화면 앱 셸 안에서 렌더링한다.
-- Component: `CategoryList`, 이름과 색상 표시, 빈 상태, 한 묶음 20개 이후 추가 로딩 상태를 제공한다.
-- Route guard: 비인증 사용자는 로그인 화면으로 이동하고 로그인 후 `/categories`로 돌아온다.
-- Accessibility: 데스크톱 viewport overflow와 자동 접근성 검사를 FE BDD 테스트로 확인한다.
-
-## Storybook 계약
-
-- `Routes/CategoriesPage`: RouteCategories, Empty, ManyItems
-- `Categories/CategoryList`: Default, Empty, ManyItemsLoadingMore
-- `Components/ProtectedLayout`: CategoriesActive, TodosActive
-
 ## 의사결정 로그
 
 - 결정일: 2026-05-21
@@ -113,7 +80,7 @@
   결정자: Product Owner, Tech Lead
   영향: 목록은 한 묶음 20개로 이어 불러오고 사용자에게 페이지 이동 컨트롤을 보여주지 않는다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-016-category-list-and-screen.feature`
 - 검증 설계: API 목록 정렬 AC와 UI 목록/보호 라우트/접근성 AC를 기존 Acceptance Test와 Playwright FE BDD 테스트로 연결한다.

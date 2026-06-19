@@ -18,6 +18,27 @@ const traceStatePath = path.join(stateDir, 'trace.state.json');
 const reportMdPath = path.join(reportsDir, 'change-set-report.md');
 const reportJsonPath = path.join(reportsDir, 'change-set-report.json');
 
+function requirementIndexPaths() {
+    const defaults = [
+        requirementsIndexPath,
+        path.join(workspaceRoot, 'build', 'app', 'indexes', 'requirements.index.json'),
+        path.join(workspaceRoot, 'build', 'harness', 'indexes', 'requirements.index.json')
+    ];
+    const additional = (process.env.HARNESS_ADDITIONAL_REQUIREMENTS_INDEXES ?? '')
+        .split(path.delimiter)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => path.resolve(item));
+    const seen = new Set();
+    return [...defaults, ...additional]
+        .map((item) => path.resolve(item))
+        .filter((item) => {
+            if (seen.has(item)) return false;
+            seen.add(item);
+            return true;
+        });
+}
+
 function parseCliArgs(argv) {
     let quiet = false;
     for (const arg of argv) {
@@ -41,10 +62,14 @@ function requirementIdsFromFinding(finding) {
     return Array.isArray(finding.requirements) ? finding.requirements : [];
 }
 
-function buildIndexes(requirementsPayload, findingsPayload, tracePayload) {
-    const cardsById = new Map((requirementsPayload?.entries ?? [])
-        .filter((entry) => entry.id)
-        .map((entry) => [entry.id, entry]));
+function buildIndexes(requirementsPayloads, findingsPayload, tracePayload) {
+    const cardsById = new Map();
+    for (const payload of requirementsPayloads ?? []) {
+        for (const entry of payload?.entries ?? []) {
+            if (!entry.id || cardsById.has(entry.id)) continue;
+            cardsById.set(entry.id, entry);
+        }
+    }
     const findingsByReq = new Map();
     for (const finding of findingsPayload?.findings ?? []) {
         for (const reqId of requirementIdsFromFinding(finding)) {
@@ -99,8 +124,8 @@ function issueForChangeSet(changeSet, ruleId, message, evidence = {}) {
     };
 }
 
-function buildModel(changeSetsPayload, requirementsPayload, findingsPayload, tracePayload) {
-    const indexes = buildIndexes(requirementsPayload, findingsPayload, tracePayload);
+function buildModel(changeSetsPayload, requirementsPayloads, findingsPayload, tracePayload) {
+    const indexes = buildIndexes(requirementsPayloads, findingsPayload, tracePayload);
     const changeSets = (changeSetsPayload.entries ?? []).map((entry) => {
         const affectedRequirementIds = entry.affectedRequirementIds ?? [];
         const affectedRequirements = affectedRequirementIds.map((reqId) => buildAffectedRequirement(reqId, indexes));
@@ -249,10 +274,12 @@ function buildMarkdown(model) {
 function main() {
     const cli = parseCliArgs(process.argv.slice(2));
     const changeSetsPayload = readJsonRequired(changeSetsIndexPath);
-    const requirementsPayload = readJsonOptional(requirementsIndexPath);
+    const requirementsPayloads = requirementIndexPaths()
+        .map((file) => readJsonOptional(file))
+        .filter(Boolean);
     const findingsPayload = readJsonOptional(cardFindingsPath);
     const tracePayload = readJsonOptional(traceStatePath);
-    const model = buildModel(changeSetsPayload, requirementsPayload, findingsPayload, tracePayload);
+    const model = buildModel(changeSetsPayload, requirementsPayloads, findingsPayload, tracePayload);
     const markdown = buildMarkdown(model);
     fs.mkdirSync(reportsDir, { recursive: true });
     fs.writeFileSync(reportMdPath, markdown);

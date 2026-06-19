@@ -301,7 +301,7 @@
   결정자: REDSTONE
   영향: 본 카드의 보호 라우트, 헤더, 로그인 redirect, 로그아웃 책임은 유지되고 `/todos` 본문 표시 책임은 REQ-023과 할 일 원자 요건으로 이동한다. 본 카드의 UI 수용 기준이 22개에서 21개로 줄어 API 20 + UI 21 + E2E 3 = 44개가 된다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 시나리오 문서: [`docs/scenarios/REQ-011-login-logout.feature`](../scenarios/REQ-011-login-logout.feature) (36개 Scenario로 API 20 + UI 21 + E2E 3 = 44개 AC 모두 `Covers:` 매핑). `/signup` placeholder AC/시나리오/테스트는 2026-05-30 결정으로 REQ-001 에, `/todos` placeholder AC/시나리오/테스트는 2026-06-06 결정으로 REQ-023 과 할 일 원자 요건에 이관해 제거했다.
 

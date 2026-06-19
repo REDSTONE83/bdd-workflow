@@ -42,27 +42,6 @@
 
 - (API) 신규 사용자가 가입하면 업무(#2563EB), 개인(#16A34A), 기타(#6B7280) 세 개의 기본 카테고리가 준비된다
 
-## 검증 대상
-
-- API: 필요
-- DB: 필요
-- UI: 불필요
-- Storybook: 불필요
-- E2E: 불필요
-- STATIC: 불필요
-
-## API Skeleton
-
-- `POST /users/signup`: 신규 사용자 계정을 만든 뒤 같은 가입 흐름에서 기본 카테고리 seed를 실행한다.
-- 가입 직후 인증된 `GET /categories` 응답에는 업무, 개인, 기타 3개 기본 카테고리가 정해진 순서로 보인다.
-- 기본 카테고리 값은 업무 `#2563EB`/`1024`, 개인 `#16A34A`/`2048`, 기타 `#6B7280`/`3072`로 고정한다.
-
-## DB Skeleton
-
-- `CategorySeedService`는 신규 사용자 `userId` 기준으로 기본 카테고리 3개를 `category` table에 저장한다.
-- 기본 카테고리는 일반 `Category` row와 동일하게 저장되며 별도 보호 플래그를 두지 않는다.
-- 가입 트랜잭션 안에서 사용자 생성과 기본 카테고리 생성이 함께 수행된다.
-
 ## 의사결정 로그
 
 - 결정일: 2026-05-21
@@ -83,7 +62,7 @@
   결정자: Product Owner
   영향: 별도 system default 보호 정책을 두지 않는다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-020-default-categories.feature`
 - 검증 설계: 신규 사용자 가입 후 기본 카테고리 생성 AC를 기존 Acceptance Test로 연결한다.

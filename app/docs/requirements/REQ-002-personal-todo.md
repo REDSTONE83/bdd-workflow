@@ -42,7 +42,7 @@
   결정자: REDSTONE
   영향: 기존 `REQ-002`의 상세 AC, Scenario, Test, 코드 annotation은 신규 요건으로 이동한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: 해당 없음. 신규 시나리오는 `docs/scenarios/REQ-021-*`~`docs/scenarios/REQ-026-*`에 둔다.
 

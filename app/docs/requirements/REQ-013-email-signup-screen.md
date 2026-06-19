@@ -44,7 +44,7 @@
   결정자: Product Owner, Tech Lead
   영향: 본 카드의 상세 AC, Scenario, Test, FE page/story metadata는 `REQ-001`로 이동한다. 본 카드는 `대체 요건: REQ-001`만 유지한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 시나리오 문서: `docs/scenarios/REQ-001-email-signup-screen.feature`
 

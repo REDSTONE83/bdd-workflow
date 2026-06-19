@@ -44,7 +44,7 @@
   결정자: Product Owner, Tech Lead
   영향: 기존 REQ-003의 상세 AC, Scenario, Test, 코드 annotation은 REQ-016~REQ-020으로 이동한다. 본 카드는 `대체됨` 상태로 추적에서 INACTIVE가 된다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 대체 카드로 종료한다. 실행 검증은 REQ-016~REQ-020에서 관리한다.
 

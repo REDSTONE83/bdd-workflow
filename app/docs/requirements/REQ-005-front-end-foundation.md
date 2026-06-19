@@ -76,7 +76,7 @@
   결정자: Product Owner, Tech Lead
   영향: 카드 헤더를 새 스키마로 보강하고 모든 AC에 `(UI)` 마커를 부여한다. Scenario `Covers:`와 Playwright BDD `Covers` 문장은 마커 없이 기존 문장을 유지한다. 기존 승인된 동작과 검증 범위는 바꾸지 않는다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-005-front-end-foundation.feature`
 

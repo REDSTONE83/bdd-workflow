@@ -79,36 +79,6 @@
 - (UI) 새 할 일을 만들면 목록에 미완료 할 일로 보인다
 - (UI) 할 일 생성 요청이 실패하면 실패 안내가 보이고 사용자가 다시 시도할 수 있다
 
-## 검증 대상
-
-- API: 필요
-- DB: 필요
-- UI: 필요
-- Storybook: 필요
-- E2E: 불필요
-- STATIC: 불필요
-
-## API Skeleton
-
-- `POST /todos`: 인증 사용자 기준 `CreateTodoRequest`를 받아 새 할 일을 만들고 `TodoResponse`를 반환한다.
-- 요청 DTO는 제목, 설명, 마감일, 우선순위, 카테고리 ID를 받고 제목/설명/마감일/우선순위/카테고리 소유권 검증을 수행한다.
-- FE API client는 `/todos` POST를 새 할 일 만들기 입력 대화상자 submit 시 generated client 경유로 호출한다.
-
-## DB Skeleton
-
-- `Todo` entity/table은 `id`, `user_id`, `title`, `description`, `due_date`, `priority`, `completed`, `category_id`, `created_at`, `updated_at`를 가진다.
-- 생성 시 `completed=false`, 기본 우선순위 `MEDIUM`, nullable 선택 필드와 사용자 소유 카테고리 연결을 저장한다.
-
-## UI Skeleton
-
-- Component: `TodoFormDialog` create mode, 제목/설명/마감일/우선순위/카테고리 입력과 만들기 버튼을 제공한다.
-- Validation: 제목 필수, 설명 길이 제한, 저장 중 비활성, 저장 실패 재시도 상태를 표시한다.
-- Page integration: `TodosPage`는 생성 성공 후 새 미완료 할 일을 목록에 반영한다.
-
-## Storybook 계약
-
-- Todos/TodoFormDialog: Create, TitleRequiredError, DescriptionTooLongError, Submitting, SaveFailure
-
 ## 의사결정 로그
 
 - 결정일: 2026-05-21
@@ -135,7 +105,7 @@
   결정자: REDSTONE
   영향: 새 할 일 만들기 입력 대화상자, 생성 입력 검증, 생성 실패 재시도, 목록 반영 UI AC와 FE BDD 커버리지를 본 카드로 이동한다.
 
-## BDD 테스트 리뷰
+## 수용 테스트 리뷰
 
 - 시나리오 문서: `docs/scenarios/REQ-022-todo-create.feature`
 
