@@ -1,6 +1,6 @@
 # Change Set: Playwright canonical 결과 freshness 게이트
 
-상태: 진행중
+상태: 보류
 요청일: 2026-06-06
 변경 유형: 하네스 개선, 수정
 영향 요건: REQ-010, REQ-012

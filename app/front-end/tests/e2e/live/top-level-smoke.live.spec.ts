@@ -41,7 +41,7 @@ test.describe("상위 요건 통합 스모크", () => {
 
     await signupAndLogin(page, "category-smoke")
     await page.getByRole("link", { name: "카테고리" }).click()
-    await expect(page.getByRole("heading", { name: "카테고리" })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "카테고리", level: 1 })).toBeVisible()
     await expect(page.getByRole("button", { name: "새 카테고리" })).toBeVisible()
 
     const categoryName = `통합 카테고리 ${Date.now()}`
@@ -72,7 +72,7 @@ test.describe("상위 요건 통합 스모크", () => {
     await expect(
       page.getByRole("listitem").filter({ hasText: updatedName }),
     ).toHaveCount(0)
-    await expect(page.getByRole("heading", { name: "카테고리" })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "카테고리", level: 1 })).toBeVisible()
   })
 
   test("실서버 할 일 관리 화면 여정이 동작한다", async ({
