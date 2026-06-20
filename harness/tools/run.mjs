@@ -247,6 +247,10 @@ function harnessUi() {
     harnessUiNpm('harness:ui', 'dev');
 }
 
+function harnessUiServe() {
+    harnessUiNpm('harness:ui:serve', 'serve');
+}
+
 function harnessUiBuildStorybook() {
     harnessUiNpm('harness:ui:build-storybook', 'build-storybook');
 }
@@ -358,6 +362,7 @@ Commands:
   harness:test                       Run Node tool tests and harness self-test.
   harness:front-end-source-index     Generate build/harness/indexes/front-end.source-index.json from harness/ui.
   harness:ui                         Start the local harness UI dev server.
+  harness:ui:serve                   Build and serve the harness UI with the Express production server.
   harness:change-sets                Render harness change set report.
   harness:terminology [args...]       Run terminology tool in harness scope.
   harness:standards                  Emit harness standards findings.
@@ -430,6 +435,9 @@ switch (command) {
         break;
     case 'harness:ui':
         harnessUi();
+        break;
+    case 'harness:ui:serve':
+        harnessUiServe();
         break;
     case 'harness:change-sets':
         changeSetsReport('harness');

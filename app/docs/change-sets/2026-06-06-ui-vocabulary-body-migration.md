@@ -1,6 +1,6 @@
 # Change Set: 2026-06-06 UI 어휘 본문 정규화
 
-상태: 진행중
+상태: 완료
 요청일: 2026-06-06
 변경 유형: 마이그레이션, 수정
 영향 요건: REQ-011, REQ-017, REQ-018, REQ-019, REQ-022, REQ-024, REQ-025
@@ -38,6 +38,14 @@
 - `npm run app:validate`
 - `npm run app:trace -- --requirement REQ-019`
 - `node harness/tools/terminology.mjs validate --strict`
+
+## 검증 결과
+
+- 2026-06-19: 대상 카드 `REQ-011`, `REQ-017`, `REQ-018`, `REQ-019`, `REQ-022`, `REQ-024`, `REQ-025` 본문에서 `모달`, `다이얼로그`, `팝업`, `확인창` 잔여 검색 결과가 0건임을 확인했다.
+- 2026-06-19: 치환 대상 별칭은 AC 문장 밖에 있었으므로 `.feature`, `@Covers`, FE `Covers` 변경 없이 추적 매칭이 유지됨을 확인했다.
+- 2026-06-19: `npm run app:trace -- --requirement REQ-019`는 `gate: pass`, REQ-019 단일 trace는 BLUE다.
+- 2026-06-19: `node harness/tools/terminology.mjs validate --strict`는 error 0 / warning 0 / strictError 0으로 통과했다.
+- 2026-06-19: `npm run app:validate`는 RED 0 / GREEN 0 / BLUE 17 / INACTIVE 4, terminology finding 0, Change Set warnings 0으로 통과했다.
 
 ## 결정 로그
 

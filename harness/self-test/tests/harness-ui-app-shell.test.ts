@@ -36,14 +36,36 @@ harnessTest({
     assert.equal(harnessUiHost, '127.0.0.1');
     assert.equal(harnessUiPort, 5180);
 
+    const rootPackageJson = JSON.parse(fs.readFileSync(path.join(workspaceRoot, 'package.json'), 'utf8'));
+    assert.equal(rootPackageJson.scripts['harness:ui'], 'node harness/tools/run.mjs harness:ui');
+    assert.equal(rootPackageJson.scripts['harness:ui:serve'], 'node harness/tools/run.mjs harness:ui:serve');
+
+    const runner = fs.readFileSync(path.join(workspaceRoot, 'harness', 'tools', 'run.mjs'), 'utf8');
+    assert.match(runner, /harnessUiNpm\('harness:ui', 'dev'\)/);
+    assert.match(runner, /harnessUiNpm\('harness:ui:serve', 'serve'\)/);
+    assert.match(runner, /case 'harness:ui:serve'/);
+
     const packageJson = JSON.parse(fs.readFileSync(path.join(workspaceRoot, 'harness', 'ui', 'package.json'), 'utf8'));
     assert.match(packageJson.scripts.dev, /--host 127\.0\.0\.1/);
+    assert.equal(packageJson.scripts.server, 'tsx server/index.ts');
+    assert.equal(packageJson.scripts.serve, 'npm run build && npm run server');
     assert.doesNotMatch(packageJson.scripts.dev, /--host 0\.0\.0\.0/);
     assert.match(packageJson.scripts.storybook, /--host 127\.0\.0\.1/);
+    assert.ok(packageJson.dependencies.express, 'Express 런타임 의존성이 필요하다');
+    assert.ok(
+        packageJson.dependencies['@types/express'] || packageJson.devDependencies['@types/express'],
+        'Express 타입 의존성이 필요하다'
+    );
 
     const viteConfig = fs.readFileSync(path.join(workspaceRoot, 'harness', 'ui', 'vite.config.ts'), 'utf8');
     assert.match(viteConfig, /host:\s*"127\.0\.0\.1"/);
     assert.doesNotMatch(viteConfig, /host:\s*"0\.0\.0\.0"/);
+    assert.match(viteConfig, /createHarnessExpressApp/);
+
+    const serverSource = fs.readFileSync(path.join(workspaceRoot, 'harness', 'ui', 'server', 'index.ts'), 'utf8');
+    assert.match(serverSource, /from "express"/);
+    assert.match(serverSource, /express\.static/);
+    assert.match(serverSource, /createHarnessExpressApp/);
 
     const server = createHarnessUiServer();
     const address = await listen(server, harnessUiHost);
@@ -52,6 +74,51 @@ harnessTest({
         const response = await fetch(`http://127.0.0.1:${address.port}/api/health`);
         assert.equal(response.status, 200);
         assert.deepEqual(await response.json(), {
+            status: 'ok',
+            host: '127.0.0.1',
+            port: 5180
+        });
+    } finally {
+        await close(server);
+    }
+});
+
+harnessTest({
+    requirement: 'REQ-030',
+    name: '하네스 UI 서버는 빌드된 SPA와 API를 단일 Express 서버에서 제공한다',
+    covers: ['하네스 UI 서버는 빌드된 SPA 정적 자산과 JSON API를 같은 localhost 서버에서 제공하고 클라이언트 route 요청은 index.html로 폴백한다']
+}, async () => {
+    const { createHarnessUiServer, harnessUiHost } = await loadHarnessUiServer();
+
+    const root = tempDir('harness-ui-spa-');
+    const distDir = path.join(root, 'harness', 'ui', 'dist');
+    const assetDir = path.join(distDir, 'assets');
+    fs.mkdirSync(assetDir, { recursive: true });
+    fs.writeFileSync(
+        path.join(distDir, 'index.html'),
+        '<!doctype html><html><head><title>Harness UI</title></head><body><div id="root"></div></body></html>'
+    );
+    fs.writeFileSync(path.join(assetDir, 'app.js'), 'globalThis.__harnessUiFixture = true;\n');
+
+    const server = createHarnessUiServer({ workspaceRoot: root });
+    const address = await listen(server, harnessUiHost);
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    try {
+        const shell = await fetch(`${baseUrl}/`);
+        assert.equal(shell.status, 200);
+        assert.match(await shell.text(), /<div id="root"><\/div>/);
+
+        const clientRoute = await fetch(`${baseUrl}/requirements/REQ-030`);
+        assert.equal(clientRoute.status, 200);
+        assert.match(await clientRoute.text(), /<title>Harness UI<\/title>/);
+
+        const asset = await fetch(`${baseUrl}/assets/app.js`);
+        assert.equal(asset.status, 200);
+        assert.match(await asset.text(), /__harnessUiFixture/);
+
+        const api = await fetch(`${baseUrl}/api/health`);
+        assert.equal(api.status, 200);
+        assert.deepEqual(await api.json(), {
             status: 'ok',
             host: '127.0.0.1',
             port: 5180

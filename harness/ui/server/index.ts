@@ -2,6 +2,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import express, { type Request, type Response } from "express";
 import {
   buildChangeSetRows,
   buildCommandRunnerModel,
@@ -34,9 +35,13 @@ type CommandRunValidation =
 
 type HarnessUiScope = keyof typeof scopeOutputDirs;
 
-function json(response: http.ServerResponse, status: number, payload: unknown) {
-  response.statusCode = status;
-  response.end(JSON.stringify(payload));
+interface HarnessUiServerOptions {
+  workspaceRoot?: string;
+  serveStatic?: boolean;
+}
+
+function sendJson(response: Response, status: number, payload: unknown) {
+  response.status(status).json(payload);
 }
 
 async function readJsonBody(request: http.IncomingMessage) {
@@ -206,215 +211,241 @@ export function buildArtifactSummary(scope: HarnessUiScope, workspaceRoot = defa
   return { scope, generatedAt, missing: false, stale: staleSources.length > 0, staleSources, autoRefresh: "idle" };
 }
 
-export async function handleHarnessApiRequest(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  options: { workspaceRoot?: string } = {},
-) {
-    const workspaceRoot = options.workspaceRoot ?? defaultWorkspaceRoot;
-    const url = new URL(request.url ?? "/", `http://${harnessUiHost}:${harnessUiPort}`);
-    response.setHeader("content-type", "application/json; charset=utf-8");
-
-    if (url.pathname === "/api/health") {
-      json(response, 200, { status: "ok", host: harnessUiHost, port: harnessUiPort });
-      return;
-    }
-
-    if (url.pathname === "/api/commands") {
-      json(response, 200, { commands: commandDefinitions });
-      return;
-    }
-
-    if (url.pathname === "/api/requirements") {
-      const scope = scopeFromParam(url.searchParams.get("scope"));
-      if (!scope) {
-        json(response, 400, { error: "지원하지 않는 범위다." });
-        return;
-      }
-
-      try {
-        json(response, 200, buildRequirementBoardModel(scope, workspaceRoot));
-      } catch {
-        json(response, 404, { error: "요건 추적 산출물을 읽을 수 없다." });
-      }
-      return;
-    }
-
-    const requirementMatch = url.pathname.match(/^\/api\/requirements\/([^/]+)$/);
-    if (requirementMatch) {
-      const scope = scopeFromParam(url.searchParams.get("scope"));
-      if (!scope) {
-        json(response, 400, { error: "지원하지 않는 범위다." });
-        return;
-      }
-
-      try {
-        const detail = buildRequirementDetailModel(scope, decodeURIComponent(requirementMatch[1]), workspaceRoot);
-        if (!detail) {
-          json(response, 404, { error: "요건 상세를 찾을 수 없다." });
-          return;
-        }
-        json(response, 200, detail);
-      } catch {
-        json(response, 404, { error: "요건 상세 산출물을 읽을 수 없다." });
-      }
-      return;
-    }
-
-    if (url.pathname === "/api/gate") {
-      const scope = scopeFromParam(url.searchParams.get("scope"));
-      if (!scope) {
-        json(response, 400, { error: "지원하지 않는 범위다." });
-        return;
-      }
-
-      try {
-        json(response, 200, buildGateViewModel(scope, workspaceRoot));
-      } catch {
-        json(response, 404, { error: "게이트 산출물을 읽을 수 없다." });
-      }
-      return;
-    }
-
-    if (url.pathname === "/api/change-sets") {
-      const scope = scopeFromParam(url.searchParams.get("scope"));
-      if (!scope) {
-        json(response, 400, { error: "지원하지 않는 범위다." });
-        return;
-      }
-
-      try {
-        json(response, 200, { rows: buildChangeSetRows(scope, workspaceRoot) });
-      } catch {
-        json(response, 404, { error: "Change Set 산출물을 읽을 수 없다." });
-      }
-      return;
-    }
-
-    if (url.pathname === "/api/command-runner") {
-      const scope = scopeFromParam(url.searchParams.get("scope"));
-      if (!scope) {
-        json(response, 400, { error: "지원하지 않는 범위다." });
-        return;
-      }
-
-      try {
-        json(response, 200, buildCommandRunnerModel(scope, workspaceRoot));
-      } catch {
-        json(response, 404, { error: "명령 실행 화면 데이터를 읽을 수 없다." });
-      }
-      return;
-    }
-
-    if (url.pathname === "/api/terminology") {
-      const scope = scopeFromParam(url.searchParams.get("scope"));
-      if (!scope) {
-        json(response, 400, { error: "지원하지 않는 범위다." });
-        return;
-      }
-
-      try {
-        json(response, 200, readTerminologyBrowserModel(scope, workspaceRoot));
-      } catch {
-        json(response, 404, { error: "표준 용어 산출물을 읽을 수 없다." });
-      }
-      return;
-    }
-
-    if (url.pathname === "/api/artifact-summary") {
-      const scope = scopeFromParam(url.searchParams.get("scope"));
-      if (!scope) {
-        json(response, 400, { error: "지원하지 않는 범위다." });
-        return;
-      }
-      json(response, 200, buildArtifactSummary(scope, workspaceRoot));
-      return;
-    }
-
-    if (url.pathname === "/api/events") {
-      const scope = scopeFromParam(url.searchParams.get("scope"));
-      if (!scope) {
-        json(response, 400, { error: "지원하지 않는 범위다." });
-        return;
-      }
-
-      response.setHeader("content-type", "text/event-stream; charset=utf-8");
-      response.setHeader("cache-control", "no-cache");
-      response.setHeader("connection", "keep-alive");
-      response.statusCode = 200;
-
-      const send = () => {
-        response.write(`event: artifacts-changed\ndata: ${JSON.stringify(buildArtifactSummary(scope, workspaceRoot))}\n\n`);
-      };
-      send();
-
-      const watchTargets = [
-        path.join(workspaceRoot, "build", scopeOutputDirs[scope], "state"),
-        path.join(workspaceRoot, scopeDocDirs[scope]),
-      ];
-      const watchers: fs.FSWatcher[] = [];
-      let timer: ReturnType<typeof setTimeout> | null = null;
-      const onChange = () => {
-        if (timer) return;
-        timer = setTimeout(() => {
-          timer = null;
-          send();
-        }, 50);
-      };
-      for (const target of watchTargets) {
-        try {
-          watchers.push(fs.watch(target, { recursive: true }, onChange));
-        } catch {
-          // 감시 대상 디렉터리가 아직 없으면 건너뛴다.
-        }
-      }
-
-      request.on("close", () => {
-        for (const watcher of watchers) {
-          try {
-            watcher.close();
-          } catch {
-            // 이미 닫힌 watcher는 무시한다.
-          }
-        }
-        if (timer) clearTimeout(timer);
-        response.end();
-      });
-      return;
-    }
-
-    if (url.pathname === "/api/commands/run") {
-      if (request.method !== "POST") {
-        json(response, 405, { error: "POST만 지원한다." });
-        return;
-      }
-
-      try {
-        const validation = validateCommandRunRequest(await readJsonBody(request));
-        if (!validation.ok) {
-          json(response, validation.status, { error: validation.error, allowedCommands });
-          return;
-        }
-
-        json(response, 202, {
-          status: "accepted",
-          commandId: validation.commandId,
-          requirementId: validation.requirementId ?? null,
-          execution: "command execution backend is not wired in this skeleton",
-        });
-      } catch {
-        json(response, 400, { error: "명령 실행 요청 JSON을 읽을 수 없다." });
-      }
-      return;
-    }
-
-    json(response, 404, { error: "not found" });
+function queryParam(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+  return null;
 }
 
-export function createHarnessUiServer(options: { workspaceRoot?: string } = {}) {
-  return http.createServer((request, response) => {
-    void handleHarnessApiRequest(request, response, options);
+function scopeFromRequest(request: Request): HarnessUiScope | null {
+  return scopeFromParam(queryParam(request.query.scope));
+}
+
+function sendUnsupportedScope(response: Response) {
+  sendJson(response, 400, { error: "지원하지 않는 범위다." });
+}
+
+function sendArtifactEvent(response: Response, scope: HarnessUiScope, workspaceRoot: string) {
+  response.write(`event: artifacts-changed\ndata: ${JSON.stringify(buildArtifactSummary(scope, workspaceRoot))}\n\n`);
+}
+
+export function createHarnessExpressApp(options: HarnessUiServerOptions = {}) {
+  const workspaceRoot = options.workspaceRoot ?? defaultWorkspaceRoot;
+  const app = express();
+  app.disable("x-powered-by");
+
+  app.get("/api/health", (_request, response) => {
+    sendJson(response, 200, { status: "ok", host: harnessUiHost, port: harnessUiPort });
   });
+
+  app.get("/api/commands", (_request, response) => {
+    sendJson(response, 200, { commands: commandDefinitions });
+  });
+
+  app.get("/api/requirements", (request, response) => {
+    const scope = scopeFromRequest(request);
+    if (!scope) {
+      sendUnsupportedScope(response);
+      return;
+    }
+
+    try {
+      sendJson(response, 200, buildRequirementBoardModel(scope, workspaceRoot));
+    } catch {
+      sendJson(response, 404, { error: "요건 추적 산출물을 읽을 수 없다." });
+    }
+  });
+
+  app.get("/api/requirements/:requirementId", (request, response) => {
+    const scope = scopeFromRequest(request);
+    if (!scope) {
+      sendUnsupportedScope(response);
+      return;
+    }
+
+    try {
+      const detail = buildRequirementDetailModel(scope, request.params.requirementId, workspaceRoot);
+      if (!detail) {
+        sendJson(response, 404, { error: "요건 상세를 찾을 수 없다." });
+        return;
+      }
+      sendJson(response, 200, detail);
+    } catch {
+      sendJson(response, 404, { error: "요건 상세 산출물을 읽을 수 없다." });
+    }
+  });
+
+  app.get("/api/gate", (request, response) => {
+    const scope = scopeFromRequest(request);
+    if (!scope) {
+      sendUnsupportedScope(response);
+      return;
+    }
+
+    try {
+      sendJson(response, 200, buildGateViewModel(scope, workspaceRoot));
+    } catch {
+      sendJson(response, 404, { error: "게이트 산출물을 읽을 수 없다." });
+    }
+  });
+
+  app.get("/api/change-sets", (request, response) => {
+    const scope = scopeFromRequest(request);
+    if (!scope) {
+      sendUnsupportedScope(response);
+      return;
+    }
+
+    try {
+      sendJson(response, 200, { rows: buildChangeSetRows(scope, workspaceRoot) });
+    } catch {
+      sendJson(response, 404, { error: "Change Set 산출물을 읽을 수 없다." });
+    }
+  });
+
+  app.get("/api/command-runner", (request, response) => {
+    const scope = scopeFromRequest(request);
+    if (!scope) {
+      sendUnsupportedScope(response);
+      return;
+    }
+
+    try {
+      sendJson(response, 200, buildCommandRunnerModel(scope, workspaceRoot));
+    } catch {
+      sendJson(response, 404, { error: "명령 실행 화면 데이터를 읽을 수 없다." });
+    }
+  });
+
+  app.get("/api/terminology", (request, response) => {
+    const scope = scopeFromRequest(request);
+    if (!scope) {
+      sendUnsupportedScope(response);
+      return;
+    }
+
+    try {
+      sendJson(response, 200, readTerminologyBrowserModel(scope, workspaceRoot));
+    } catch {
+      sendJson(response, 404, { error: "표준 용어 산출물을 읽을 수 없다." });
+    }
+  });
+
+  app.get("/api/artifact-summary", (request, response) => {
+    const scope = scopeFromRequest(request);
+    if (!scope) {
+      sendUnsupportedScope(response);
+      return;
+    }
+    sendJson(response, 200, buildArtifactSummary(scope, workspaceRoot));
+  });
+
+  app.get("/api/events", (request, response) => {
+    const scope = scopeFromRequest(request);
+    if (!scope) {
+      sendUnsupportedScope(response);
+      return;
+    }
+
+    response.setHeader("content-type", "text/event-stream; charset=utf-8");
+    response.setHeader("cache-control", "no-cache");
+    response.setHeader("connection", "keep-alive");
+    response.status(200);
+    sendArtifactEvent(response, scope, workspaceRoot);
+
+    const watchTargets = [
+      path.join(workspaceRoot, "build", scopeOutputDirs[scope], "state"),
+      path.join(workspaceRoot, scopeDocDirs[scope]),
+    ];
+    const watchers: fs.FSWatcher[] = [];
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onChange = () => {
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        sendArtifactEvent(response, scope, workspaceRoot);
+      }, 50);
+    };
+    for (const target of watchTargets) {
+      try {
+        watchers.push(fs.watch(target, { recursive: true }, onChange));
+      } catch {
+        // 감시 대상 디렉터리가 아직 없으면 건너뛴다.
+      }
+    }
+
+    request.on("close", () => {
+      for (const watcher of watchers) {
+        try {
+          watcher.close();
+        } catch {
+          // 이미 닫힌 watcher는 무시한다.
+        }
+      }
+      if (timer) clearTimeout(timer);
+      response.end();
+    });
+  });
+
+  app.all("/api/commands/run", async (request, response) => {
+    if (request.method !== "POST") {
+      sendJson(response, 405, { error: "POST만 지원한다." });
+      return;
+    }
+
+    try {
+      const validation = validateCommandRunRequest(await readJsonBody(request));
+      if (!validation.ok) {
+        sendJson(response, validation.status, { error: validation.error, allowedCommands });
+        return;
+      }
+
+      sendJson(response, 202, {
+        status: "accepted",
+        commandId: validation.commandId,
+        requirementId: validation.requirementId ?? null,
+        execution: "command execution backend is not wired in this skeleton",
+      });
+    } catch {
+      sendJson(response, 400, { error: "명령 실행 요청 JSON을 읽을 수 없다." });
+    }
+  });
+
+  app.use("/api", (_request, response) => {
+    sendJson(response, 404, { error: "not found" });
+  });
+
+  if (options.serveStatic !== false) {
+    const distRoot = path.join(workspaceRoot, "harness", "ui", "dist");
+    app.use(express.static(distRoot));
+    app.use((request, response) => {
+      if (request.method !== "GET") {
+        sendJson(response, 404, { error: "not found" });
+        return;
+      }
+      const indexFile = path.join(distRoot, "index.html");
+      if (!fs.existsSync(indexFile)) {
+        sendJson(response, 404, { error: "not found" });
+        return;
+      }
+      response.sendFile(indexFile);
+    });
+  }
+
+  return app;
+}
+
+export function handleHarnessApiRequest(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: HarnessUiServerOptions = {},
+) {
+  const app = createHarnessExpressApp({ ...options, serveStatic: false });
+  app(request as Request, response as Response);
+}
+
+export function createHarnessUiServer(options: HarnessUiServerOptions = {}) {
+  return http.createServer(createHarnessExpressApp(options));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
