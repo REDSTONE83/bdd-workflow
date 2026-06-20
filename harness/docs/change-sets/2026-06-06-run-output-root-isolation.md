@@ -12,7 +12,7 @@
 - fail-fast lock이 아니라 격리로 푼다. 단발 실행 동작과 canonical 호환 경로는 유지한다.
 - 이 작업은 app 산출물·포트도 바꾸는 혼합 작업이라 app Change Set과 짝을 이룬다(AGENTS.md 혼합 작업 분리 규칙). 짝: [app: e2e run 격리와 동적 포트](../../../app/docs/change-sets/2026-06-06-e2e-run-isolation-and-dynamic-ports.md).
 - 이 카드는 harness 소유 작업만 다룬다: runner 오케스트레이션, run root, env 전파, 포트 할당, 인덱서/게이트 경로, Gradle 호출 격리 플래그, canonical publish. app 소유(build.gradle 출력·buildDir 파생, playwright/vite/Spring 포트·출력 경로 소비, e2e 스크립트)는 짝 카드가 다룬다.
-- Playwright 결과 신선도(stale 결과 차단)는 직교 문제라 별도 Change Set이 다룬다: [harness: FE 실행 결과 freshness 게이트](2026-06-06-fe-test-result-freshness-gate.md). 단 e2e wrapper와 `index-test-results.mjs`의 Playwright 수집을 공유한다. 접점 소유권: 이 카드가 e2e wrapper 골격(포트·출력 경로)과 Playwright 결과 수집 경로를 만들고, freshness 카드가 그 위에 manifest 생성·fingerprint 필터를 얹는다.
+- FE 실행 결과 신선도(stale 결과 차단)는 직교 문제라 별도 Change Set이 다룬다: [harness: FE 실행 결과 freshness 게이트](2026-06-06-fe-test-result-freshness-gate.md). 단 e2e wrapper와 `index-test-results.mjs`의 Storybook Vitest/Playwright 수집을 공유한다. 접점 소유권: 이 카드가 e2e wrapper 골격(포트·출력 경로)과 FE 결과 수집 경로를 만들고, freshness 카드가 그 위에 manifest 생성·fingerprint 필터를 얹는다.
 
 ## 2026-06-20 재검토 결과
 
@@ -63,7 +63,7 @@
 - app 소유 파일 수정: `app/back-end/build.gradle`의 `outputLocation`/`buildDir` 파생, `app/front-end`의 `playwright.config`·`playwright.live.config` 포트·출력 env화, vite proxy origin 스레딩, `e2e`/`e2e:live` 스크립트. → 짝 app 카드.
 - `HARNESS_OUTPUT_ROOT`보다 우선하는 `--output-root` CLI override. env만 지원, 후속.
 - 오래된 `build/<scope>/runs/*` 자동 정리. 후속 cleanup 정책.
-- Playwright 결과 freshness/stale 검사. 별도 카드가 다룬다: [FE 실행 결과 freshness 게이트](2026-06-06-fe-test-result-freshness-gate.md).
+- FE 실행 결과 freshness/stale 검사. 별도 카드가 다룬다: [FE 실행 결과 freshness 게이트](2026-06-06-fe-test-result-freshness-gate.md).
 - Change Set metadata enum 승격, 용어 오류 메시지 개선.
 - 병렬 실행 중 canonical을 읽는 외부 도구(`app/front-end/tools/generate-api-client.mjs` 등)의 강한 일관성. 병렬 안전은 각 invocation의 run root 기준으로만 보장한다.
 - 수동 장기 실행 UI 서버(`npm run harness:ui`, `npm run harness:ui:serve`)의 포트 자동 할당. 이번 작업은 검증 파이프라인 runner가 소유한 서버와 산출물만 격리한다.

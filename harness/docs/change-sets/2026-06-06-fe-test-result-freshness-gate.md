@@ -22,16 +22,16 @@
   - Storybook Vitest: `app/front-end/test-results/storybook-junit.manifest.json`
   - live Playwright: `app/front-end/test-results/e2e-live-results.manifest.json`
 - manifest에는 실행 시점의 FE BDD fingerprint와 실행 metadata를 기록한다.
-  - test 식별자(`identity`와 `alternateIdentities`)
+  - source test 식별자(`identity`)와 결과 매칭 키(`resultKeys`). `test-results.index.json`의 실행 결과 엔트리는 기존대로 `identity`와 `alternateIdentities`를 emit한다.
   - `Requirement` 목록
-  - `Covers` 목록과 AC `target` 마커
+  - `Covers` 목록과 AC `target` 마커. `target`은 `requirements.index.json`의 `acceptanceCriteria[].target`에서 얻는다.
   - runtime (`storybook-vitest` | `playwright`)
   - fingerprint: 위 식별자·`Requirement`·`Covers`·`target` metadata만으로 계산한 hash. 결과 매칭과 무관한 렌더 코드/테스트 본문 편집으로는 stale이 나지 않도록 파일 전체 hash는 쓰지 않는다.
   - startedAt, completedAt, exitStatus
   - resultFile, resultFileSha256
-- fingerprint 기준은 현재 FE source index(`front-end.source-index.json`)가 수집한 Storybook Vitest/Playwright BDD metadata로 둔다. manifest 생성과 trace 비교가 같은 source-of-truth를 쓴다.
+- fingerprint 기준은 현재 FE source index(`front-end.source-index.json`)가 수집한 Storybook Vitest/Playwright BDD metadata와 요구사항 index(`requirements.index.json`)의 AC `target` metadata로 둔다. manifest 생성과 trace 비교가 같은 source-of-truth를 쓴다.
 - `app:e2e`와 `app:e2e:live`는 하네스 wrapper를 통해 실행한다.
-  - manifest fingerprint는 실행 시점 source metadata가 필요하므로, 단독 실행 경로도 테스트 전에 FE source index를 먼저 생성한다. (현재 `app:e2e`/`app:e2e:live`는 source index를 돌리지 않고 `app:validate`만 `collectAppStaticInputs`로 먼저 인덱싱한다.)
+  - manifest fingerprint는 실행 시점 source/AC metadata가 필요하므로, 단독 실행 경로도 테스트 전에 FE source index와 requirements index를 먼저 생성한다. (현재 `app:e2e`/`app:e2e:live`는 source index를 돌리지 않고 `app:validate`만 `collectAppStaticInputs`로 먼저 인덱싱한다.)
   - 실행 시작 전에 해당 run root의 결과 파일과 manifest를 비운다.
   - 테스트 실행 뒤 결과 파일이 있으면 manifest를 생성한다.
   - 테스트가 실패해도 결과 파일이 생성되면 manifest를 생성하고, 실패 결과는 최신 `FAIL`로 trace에 반영 가능해야 한다.
@@ -41,6 +41,8 @@
 - `app:trace`는 테스트를 실행하지 않는다. canonical 결과를 run root로 hydrate할 때(`hydrateTraceTestResults`) manifest sidecar도 함께 hydrate하고, 현재 FE source index fingerprint와 manifest fingerprint를 비교해 불일치하거나 manifest가 없으면 stale로 본다.
 - `harness/tools/index-test-results.mjs`는 manifest fingerprint가 현재 source fingerprint와 일치하는 결과만 `test-results.index.json`에 수집한다. 필터는 Storybook Vitest 수집(`collectStorybookVitestJUnit`)과 Playwright 수집(`collectPlaywright`) 양쪽에 적용하되 app scope에만 건다. 이를 위해 인덱서는 `front-end.source-index.json`을 신규 입력으로 읽는다.
 - stale 또는 manifest 누락은 `index-test-results.mjs`가 `test-results.index.json`의 `issues[]`로 남기고, `validate-front-end-standards.mjs`가 이를 `FE-TEST-RESULT-STALE` error finding으로 정규화한다. 이를 위해 검사기는 `test-results.index.json`을 신규 입력으로 읽는다. (현재는 `front-end.source-index.json`만 읽는다.)
+- `harness/docs/data-contracts.md`에 FE 실행 결과 manifest와 `test-results.index.json`의 freshness `issues[]` 계약을 추가한다.
+- `harness/docs/rule-namespaces.md`에 `FE-TEST-RESULT-STALE` ruleId를 등록한다.
 - `FE-TEST-RESULT-STALE` finding은 결과 종류(Storybook Vitest/live Playwright) 구분과 재실행 명령을 remediation에 포함한다.
   - Storybook Vitest: `npm run app:e2e`
   - live Playwright: `npm run app:e2e:live`
@@ -69,6 +71,7 @@
 - `npm run app:validate`는 두 manifest를 모두 새로 만든 뒤 trace/gate를 판정한다.
 - `app:validate`에서 테스트가 실패하더라도 결과 파일과 manifest가 생성됐으면 trace는 오래된 PASS가 아니라 최신 FAIL을 본다.
 - 결과 파일에 대응하는 manifest가 없으면 그 결과는 stale로 보고된다.
+- manifest의 `resultFileSha256`이 실제 결과 파일 SHA-256과 다르면 그 결과는 stale로 보고되고 AC 커버 결과로 인정되지 않는다.
 - `e2e-results.partial.json`은 manifest가 있어도 canonical trace 입력에 포함되지 않는다.
 - harness scope 결과는 manifest가 없어도 stale로 처리되지 않아 `npm run harness:validate`가 회귀 없이 통과한다.
 - `npm run harness:self-test`가 manifest freshness fixture(두 런타임)를 검증한다.
@@ -95,6 +98,7 @@
 - 테스트 실패는 freshness 실패가 아니다. 결과 파일과 manifest가 같은 실행에서 생성되면 최신 실패 결과로 trace에 반영한다.
 - manifest 누락은 하위 호환으로 통과시키지 않고 stale로 차단한다. 최초 적용 후 한 번은 canonical E2E 재실행이 필요하다.
 - stale 판정은 결과와 source를 함께 보는 `index-test-results.mjs`가 수행해 `test-results.index.json`의 issue로 남기고, `validate-front-end-standards.mjs`가 `FE-TEST-RESULT-STALE`로 정규화한다. 두 도구 모두 비교에 필요한 신규 입력을 받는다(인덱서는 source index, 검사기는 test-results index).
+- `FE-TEST-RESULT-STALE`은 새 FE ruleId이므로 룰 네임스페이스와 data contract에 먼저 등록한 뒤 구현한다.
 - fingerprint 필터·stale 판정은 app scope에만 적용한다. harness scope Storybook Vitest는 manifest가 없으므로, scope 구분 없이 적용하면 manifest 누락으로 전부 stale 처리되어 `harness:validate`가 깨진다.
 - 결과 파일과 manifest는 publish·hydrate에서 한 단위로 함께 교체/복사한다. 분리하면 `resultFileSha256`으로 정합성은 지키되 불필요한 false-stale이 생긴다.
 - partial 실행 결과는 빠른 디버깅용으로만 남기고 canonical trace/gate 입력에서 계속 제외한다. 현재 인덱서가 이미 partial을 읽지 않으므로 self-test로 회귀만 막는다.
