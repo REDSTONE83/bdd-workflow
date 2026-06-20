@@ -150,6 +150,19 @@ harnessTest({
     assert.equal(keptIdentities(missing).length, 0, 'storybook result without manifest is dropped');
     assert.equal(staleIssues(missing, 'storybook-vitest')[0]?.reason, 'manifest-missing');
 
+    // 결과 파일만 갱신되고 manifest는 옛 resultFileSha256 → hash 불일치로 stale
+    // (프런트엔드 패키지 직접 실행 `test:storybook`이 canonical 결과만 덮어쓴 경우)
+    const hashMismatch = indexFixture({
+        sourceTests: [current],
+        storybookXml: xml,
+        storybookManifest: {
+            ...buildManifest('storybook-vitest', 'storybook-junit.xml', xml, [current]),
+            resultFileSha256: '0'.repeat(64)
+        }
+    });
+    assert.equal(keptIdentities(hashMismatch).length, 0, 'storybook result with mismatched file hash is dropped');
+    assert.equal(staleIssues(hashMismatch, 'storybook-vitest')[0]?.reason, 'result-file-hash-mismatch');
+
     // stable key 같고 source line 만 이동 → 유지(line 독립)
     const moved = indexFixture({
         sourceTests: [{ ...current, line: 99, identity: 'fixture:99 > Fresh' }],
