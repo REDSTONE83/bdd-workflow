@@ -103,6 +103,8 @@
 - 2026-06-20: `npm run app:validate` 2회 병렬 실행 통과. run root `build/app/runs/20260620144833-40563-364904`(frontend=55269/backend=55270)와 `build/app/runs/20260620144833-40578-84fef0`(frontend=55271/backend=55272)이 각각 `gate: pass`.
 - 2026-06-20: `npm run harness:self-test` 통과. self-test 62개 PASS, self-test fixture env 격리 확인.
 - 2026-06-20: `npm run harness:validate` 통과. tool-test 59개 PASS, harness/ui Storybook Vitest 69개 PASS, self-test 62개 PASS, `gate: pass`, canonical publish 확인.
+- 2026-06-20: 보완 후 `npm run harness:tool-test` 통과. 신규 `run-context`/`fs-mirror` 단위 테스트 포함 tool-test 80개 PASS.
+- 2026-06-20: 보완 후 `npm run harness:trace -- --requirement REQ-010` 통과. REQ-010 BLUE 1, `gate: pass filter=REQ-010`.
 
 ## 결정 로그
 
