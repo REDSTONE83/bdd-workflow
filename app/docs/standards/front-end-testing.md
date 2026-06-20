@@ -191,6 +191,18 @@ Storybook Vitest 실행 결과는 루트 runner 실행 중에는 run root의 `te
 
 `npm run app:trace`는 테스트를 재실행하지 않고 직전 성공 canonical 결과를 현재 run root로 복사해 읽는다. 테스트 코드나 서버 동작을 바꾼 뒤에는 stale PASS를 피하기 위해 `npm run app:validate`, `npm run app:e2e`, `npm run test:storybook`, `npm run app:e2e:live`, 또는 `npm run e2e:live`로 해당 결과 파일을 먼저 갱신한다.
 
+### 실행 결과 freshness
+
+canonical 결과(Storybook Vitest JUnit, live Playwright JSON)는 각 결과 파일 옆 sidecar manifest(`*.manifest.json`)에 실행 시점 FE BDD source fingerprint를 함께 기록한다. `npm run app:trace`는 manifest fingerprint가 현재 FE BDD source fingerprint와 일치하는 결과만 AC 커버 결과로 인정한다.
+
+- 테스트의 `Requirement`/`Covers`/식별자를 바꾼 뒤에는 결과를 재실행해야 stale이 해소된다. 원자 요건 `(UI)` AC는 `npm run app:e2e`, 상위 요건 `(E2E)` AC는 `npm run app:e2e:live`로 재실행한다. 루트 runner가 결과 파일과 manifest를 한 단위로 새로 publish한다.
+- stale 또는 manifest가 없는 결과는 AC 커버 PASS로 인정되지 않고, 해당 FE BDD 결과는 trace에서 `NOT_RUN`/`MISSING`으로 계산되며 `FE-TEST-RESULT-STALE` error가 보고된다. 최초 적용 후에는 canonical E2E를 한 번 재실행해 manifest를 만든다.
+- fingerprint는 line을 제거한 stable 식별자(`resultKeys`)·`Requirement`·`Covers`만 쓴다. 따라서 story/spec 본문이나 렌더 코드 편집, 위쪽 줄 이동만으로는 stale이 되지 않고, AC `target` 마커 편집도 stale을 만들지 않는다.
+- `npm run app:validate`는 두 결과와 manifest를 항상 새로 만든 뒤 trace/gate를 판정하므로 stale이 생기지 않는다. 테스트가 실패해도 결과 파일과 manifest는 같은 실행에서 생성되어 최신 `FAIL`이 trace에 반영된다.
+- `e2e-results.partial.json`은 빠른 디버깅용 잔재이며 canonical trace/gate 입력이 아니다.
+
+이 정책의 정의·검사기·manifest 형식은 하네스 표준 [`acceptance-test.md`](../../../harness/docs/standards/acceptance-test.md)와 [`data-contracts.md`](../../../harness/docs/data-contracts.md)가 소유한다.
+
 ### live E2E 네트워크 경계
 
 live Playwright는 통합 smoke이므로 API를 mock하지 않는다. `page.route(...)` 사용은 ESLint `bdd-workflow/no-raw-page-route`가 차단한다. 화면 상태별 API 응답은 Storybook/MSW 또는 컴포넌트 주입 데이터로 표현하고, live smoke는 Vite proxy를 통해 실 백엔드를 호출한다.
