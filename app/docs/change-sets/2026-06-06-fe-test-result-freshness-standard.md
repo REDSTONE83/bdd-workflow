@@ -8,14 +8,14 @@
 
 ## 요청 요약
 
-- Playwright canonical 결과 freshness 게이트 정책을 app 소유 FE 테스트 표준에 반영한다.
-- 정책·검사기·wrapper 구현은 harness 짝 Change Set이 다루고, 이 카드는 app 표준 문서 반영만 다룬다: [harness: Playwright canonical 결과 freshness 게이트](../../../harness/docs/change-sets/2026-06-06-playwright-result-freshness.md).
+- FE 실행 결과(Storybook Vitest·live Playwright) freshness 게이트 정책을 app 소유 FE 테스트 표준에 반영한다.
+- 정책·검사기·wrapper 구현은 harness 짝 Change Set이 다루고, 이 카드는 app 표준 문서 반영만 다룬다: [harness: FE 실행 결과 freshness 게이트](../../../harness/docs/change-sets/2026-06-06-fe-test-result-freshness-gate.md).
 
 ## 작업 범위
 
-- `app/docs/standards/front-end-testing.md`에 canonical Playwright 결과 freshness 정책을 반영한다.
-  - canonical 결과는 sidecar manifest fingerprint가 현재 FE BDD source fingerprint와 일치할 때만 AC 커버 결과로 인정된다.
-  - `Covers` metadata 변경 후에는 canonical E2E(`npm run app:e2e`, `npm run app:e2e:live`)를 재실행해야 stale이 해소된다.
+- `app/docs/standards/front-end-testing.md`에 FE 실행 결과 freshness 정책을 반영한다.
+  - canonical 결과(Storybook Vitest JUnit, live Playwright JSON)는 sidecar manifest fingerprint가 현재 FE BDD source fingerprint와 일치할 때만 AC 커버 결과로 인정된다.
+  - `Covers` metadata 변경 후에는 canonical 결과를 재실행해야 stale이 해소된다. `UI` AC는 `npm run app:e2e`, 상위 요건 `E2E` AC는 `npm run app:e2e:live`로 재실행한다.
   - stale 또는 manifest 누락 결과는 AC 커버 PASS로 인정되지 않고, 해당 FE BDD 결과는 trace에서 `NOT_RUN`/`MISSING`으로 계산된다.
   - `e2e-results.partial.json`은 canonical trace/gate 입력이 아니다.
 
@@ -27,7 +27,7 @@
 
 ## 완료 조건
 
-- `app/docs/standards/front-end-testing.md`가 canonical 결과 freshness 정책과 stale 해소 절차(재실행 명령)를 설명한다.
+- `app/docs/standards/front-end-testing.md`가 FE 실행 결과(Storybook Vitest·live Playwright) freshness 정책과 stale 해소 절차(런타임별 재실행 명령)를 설명한다.
 - harness 짝 카드의 정책 설명과 모순되지 않는다.
 
 ## 검증 명령
@@ -36,7 +36,8 @@
 
 ## 결정 로그
 
-- freshness 정책의 원천은 harness 카드이고, app 표준 문서는 FE 작성자 관점의 절차(stale 해소 재실행 명령 등)만 반영한다.
+- freshness 정책의 원천은 harness 카드이고, app 표준 문서는 FE 작성자 관점의 절차(런타임별 stale 해소 재실행 명령 등)만 반영한다.
+- mock e2e는 Storybook Vitest, live e2e는 Playwright이므로 표준 문구도 두 런타임을 함께 설명한다. "Playwright"만 가리키지 않는다.
 - 영향 요건 REQ-005(front-end foundation/테스트 표준)는 수용 기준이 바뀌지 않는다. FE 테스트 표준 문서가 영향을 받아 regression 확인 대상이다.
 
 ## 열린 논의
