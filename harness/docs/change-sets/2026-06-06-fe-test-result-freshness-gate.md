@@ -22,11 +22,11 @@
   - Storybook Vitest: `app/front-end/test-results/storybook-junit.manifest.json`
   - live Playwright: `app/front-end/test-results/e2e-live-results.manifest.json`
 - manifest에는 실행 시점의 FE BDD fingerprint와 실행 metadata를 기록한다.
-  - source test 식별자(`identity`)와 결과 매칭 키(`resultKeys`). `test-results.index.json`의 실행 결과 엔트리는 기존대로 `identity`와 `alternateIdentities`를 emit한다.
+  - line을 제거한 stable 테스트 식별자: Storybook은 `resultKeys`(정규형 `title / story`), Playwright는 `identityNoLine`(`fileRel > titlePath`). line을 포함한 source `identity`(`fileRel:line > ...`)는 fingerprint·매칭 키에서 제외한다. (`test-results.index.json` 결과 엔트리는 기존대로 `identity`/`alternateIdentities`를 emit하며, trace `resultForTest`가 `resultKeys`로 fallback 매칭하는 것과 같은 line-안정 키를 쓴다.)
   - `Requirement` 목록
   - `Covers` 목록
   - runtime (`storybook-vitest` | `playwright`)
-  - fingerprint: 위 식별자·`Requirement`·`Covers` metadata만으로 계산한 hash. 결과 매칭과 무관한 렌더 코드/테스트 본문 편집으로는 stale이 나지 않도록 파일 전체 hash는 쓰지 않는다.
+  - fingerprint: 위 line-independent 식별자·`Requirement`·`Covers` metadata만으로 계산한 hash. 결과 매칭과 무관한 렌더 코드/본문 편집이나 story/spec 위쪽 편집에 따른 line 이동으로 stale이 나지 않도록, 파일 전체 hash와 line 포함 identity는 쓰지 않는다.
   - startedAt, completedAt, exitStatus
   - resultFile, resultFileSha256
 - fingerprint 기준은 현재 FE source index(`front-end.source-index.json`)가 수집한 Storybook Vitest/Playwright BDD metadata로 둔다. manifest 생성과 trace 비교가 같은 source-of-truth를 쓴다.
@@ -91,7 +91,7 @@
 
 - FE 실행 결과는 sidecar manifest fingerprint가 현재 FE BDD source fingerprint와 일치할 때만 AC 커버 결과로 인정한다.
 - freshness 대상은 Playwright만이 아니라 FE 실행 결과 두 종류(Storybook Vitest JUnit, live Playwright JSON)다. mock e2e가 Storybook Vitest 경로라 `UI` AC 커버 대부분이 여기서 나오므로, Playwright만 다루면 주력 경로의 stale을 못 막는다.
-- fingerprint는 test 식별자·`Requirement`·`Covers` metadata만으로 계산한다(전부 test-side). 파일 전체 hash는 결과 매칭과 무관한 편집으로 false-stale을 유발하므로 쓰지 않는다.
+- fingerprint는 test 식별자·`Requirement`·`Covers` metadata만으로 계산한다(전부 test-side). 식별자는 line을 제거한 stable key(Storybook `resultKeys`, Playwright `identityNoLine`)를 쓴다 — source `identity`는 `fileRel:line`을 포함해 위쪽 편집만으로 바뀌므로 그대로 hash하면 false-stale이 난다. trace `resultForTest`(evaluate-trace-state.mjs)도 같은 line-안정 키로 fallback 매칭한다. 파일 전체 hash도 같은 이유로 쓰지 않는다.
 - AC `target`은 fingerprint에서 제외한다. AC↔테스트(Covers 문장)와 runtime 적격성(현재 `target`)은 트레이스마다 `evaluate-trace-state.mjs`가 라이브로 재계산하므로 AC만 바뀌면 stale-PASS가 생기지 않는다. target을 넣으면 무관한 AC 마커 편집이 false-stale과 잘못된 재실행 안내를 만든다. stale-PASS는 오직 test 선언(Covers/Requirement/identity) 변경 후 재실행 누락일 때만 생기며 그건 test-side fingerprint가 잡는다.
 - manifest fingerprint가 일치하지 않으면 `app:trace`는 테스트를 실행하지 않고 `FE-TEST-RESULT-STALE` 메시지와 재실행 명령을 반환한다.
 - `app:validate`는 stale fingerprint를 보고 멈추는 명령이 아니라, 두 결과와 manifest를 반드시 새로 생성한 뒤 판정하는 명령이다.
