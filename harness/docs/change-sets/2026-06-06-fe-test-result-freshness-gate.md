@@ -24,14 +24,14 @@
 - manifest에는 실행 시점의 FE BDD fingerprint와 실행 metadata를 기록한다.
   - source test 식별자(`identity`)와 결과 매칭 키(`resultKeys`). `test-results.index.json`의 실행 결과 엔트리는 기존대로 `identity`와 `alternateIdentities`를 emit한다.
   - `Requirement` 목록
-  - `Covers` 목록과 AC `target` 마커. `target`은 `requirements.index.json`의 `acceptanceCriteria[].target`에서 얻는다.
+  - `Covers` 목록
   - runtime (`storybook-vitest` | `playwright`)
-  - fingerprint: 위 식별자·`Requirement`·`Covers`·`target` metadata만으로 계산한 hash. 결과 매칭과 무관한 렌더 코드/테스트 본문 편집으로는 stale이 나지 않도록 파일 전체 hash는 쓰지 않는다.
+  - fingerprint: 위 식별자·`Requirement`·`Covers` metadata만으로 계산한 hash. 결과 매칭과 무관한 렌더 코드/테스트 본문 편집으로는 stale이 나지 않도록 파일 전체 hash는 쓰지 않는다.
   - startedAt, completedAt, exitStatus
   - resultFile, resultFileSha256
-- fingerprint 기준은 현재 FE source index(`front-end.source-index.json`)가 수집한 Storybook Vitest/Playwright BDD metadata와 요구사항 index(`requirements.index.json`)의 AC `target` metadata로 둔다. manifest 생성과 trace 비교가 같은 source-of-truth를 쓴다.
+- fingerprint 기준은 현재 FE source index(`front-end.source-index.json`)가 수집한 Storybook Vitest/Playwright BDD metadata로 둔다. manifest 생성과 trace 비교가 같은 source-of-truth를 쓴다.
 - `app:e2e`와 `app:e2e:live`는 하네스 wrapper를 통해 실행한다.
-  - manifest fingerprint는 실행 시점 source/AC metadata가 필요하므로, 단독 실행 경로도 테스트 전에 FE source index와 requirements index를 먼저 생성한다. (현재 `app:e2e`/`app:e2e:live`는 source index를 돌리지 않고 `app:validate`만 `collectAppStaticInputs`로 먼저 인덱싱한다.)
+  - manifest fingerprint는 실행 시점 source metadata가 필요하므로, 단독 실행 경로도 테스트 전에 FE source index를 먼저 생성한다. (현재 `app:e2e`/`app:e2e:live`는 source index를 돌리지 않고 `app:validate`만 `collectAppStaticInputs`로 먼저 인덱싱한다.)
   - 실행 시작 전에 해당 run root의 결과 파일과 manifest를 비운다.
   - 테스트 실행 뒤 결과 파일이 있으면 manifest를 생성한다.
   - 테스트가 실패해도 결과 파일이 생성되면 manifest를 생성하고, 실패 결과는 최신 `FAIL`로 trace에 반영 가능해야 한다.
@@ -91,7 +91,8 @@
 
 - FE 실행 결과는 sidecar manifest fingerprint가 현재 FE BDD source fingerprint와 일치할 때만 AC 커버 결과로 인정한다.
 - freshness 대상은 Playwright만이 아니라 FE 실행 결과 두 종류(Storybook Vitest JUnit, live Playwright JSON)다. mock e2e가 Storybook Vitest 경로라 `UI` AC 커버 대부분이 여기서 나오므로, Playwright만 다루면 주력 경로의 stale을 못 막는다.
-- fingerprint는 test 식별자·`Requirement`·`Covers`·`target` metadata만으로 계산한다. 파일 전체 hash는 결과 매칭과 무관한 편집으로 false-stale을 유발하므로 쓰지 않는다.
+- fingerprint는 test 식별자·`Requirement`·`Covers` metadata만으로 계산한다(전부 test-side). 파일 전체 hash는 결과 매칭과 무관한 편집으로 false-stale을 유발하므로 쓰지 않는다.
+- AC `target`은 fingerprint에서 제외한다. AC↔테스트(Covers 문장)와 runtime 적격성(현재 `target`)은 트레이스마다 `evaluate-trace-state.mjs`가 라이브로 재계산하므로 AC만 바뀌면 stale-PASS가 생기지 않는다. target을 넣으면 무관한 AC 마커 편집이 false-stale과 잘못된 재실행 안내를 만든다. stale-PASS는 오직 test 선언(Covers/Requirement/identity) 변경 후 재실행 누락일 때만 생기며 그건 test-side fingerprint가 잡는다.
 - manifest fingerprint가 일치하지 않으면 `app:trace`는 테스트를 실행하지 않고 `FE-TEST-RESULT-STALE` 메시지와 재실행 명령을 반환한다.
 - `app:validate`는 stale fingerprint를 보고 멈추는 명령이 아니라, 두 결과와 manifest를 반드시 새로 생성한 뒤 판정하는 명령이다.
 - manifest 생성 실패는 `app:e2e`, `app:e2e:live`, `app:validate`의 실패 사유다.
