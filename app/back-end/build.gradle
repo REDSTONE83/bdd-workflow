@@ -12,6 +12,17 @@ java {
     }
 }
 
+def harnessOutputRootFile = System.getenv('HARNESS_OUTPUT_ROOT')
+    ? file(System.getenv('HARNESS_OUTPUT_ROOT'))
+    : layout.projectDirectory.dir('../../build/app').asFile
+def harnessOutputDir = { String relativePath ->
+    layout.dir(providers.provider { new File(harnessOutputRootFile, relativePath) })
+}
+def harnessGradleBuildDir = System.getenv('HARNESS_GRADLE_BUILD_DIR')
+if (harnessGradleBuildDir) {
+    layout.buildDirectory.set(file(harnessGradleBuildDir))
+}
+
 sourceSets {
     openApiIndex {
         java {
@@ -66,6 +77,10 @@ tasks.named('test') {
     testLogging {
         events 'passed', 'skipped', 'failed'
     }
+    reports {
+        html.outputLocation = harnessOutputDir('reports/tests/test')
+        junitXml.outputLocation = harnessOutputDir('test-results/test')
+    }
 }
 
 tasks.register('generateOpenApiIndex', Test) {
@@ -75,7 +90,7 @@ tasks.register('generateOpenApiIndex', Test) {
     testClassesDirs = sourceSets.openApiIndex.output.classesDirs
     classpath = sourceSets.openApiIndex.runtimeClasspath
     include '**/OpenApiContractDumpTest.class'
-    systemProperty 'harness.outputRoot', System.getenv('HARNESS_OUTPUT_ROOT') ?: layout.projectDirectory.dir('../../build/app').asFile.absolutePath
+    systemProperty 'harness.outputRoot', harnessOutputRootFile.absolutePath
     testLogging {
         events 'passed', 'skipped', 'failed'
     }
@@ -84,8 +99,8 @@ tasks.register('generateOpenApiIndex', Test) {
         delete layout.buildDirectory.dir('reports/tests/generateOpenApiIndex').get().asFile
     }
     reports {
-        html.outputLocation = layout.projectDirectory.dir('../../build/app/reports/tests/generateOpenApiIndex')
-        junitXml.outputLocation = layout.projectDirectory.dir('../../build/app/test-results/generateOpenApiIndex')
+        html.outputLocation = harnessOutputDir('reports/tests/generateOpenApiIndex')
+        junitXml.outputLocation = harnessOutputDir('test-results/generateOpenApiIndex')
     }
     outputs.upToDateWhen { false }
 }

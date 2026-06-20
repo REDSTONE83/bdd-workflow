@@ -6,6 +6,11 @@ base {
     archivesName = 'bdd-workflow-harness-source-indexer'
 }
 
+def harnessGradleBuildDir = System.getenv('HARNESS_GRADLE_BUILD_DIR')
+if (harnessGradleBuildDir) {
+    layout.buildDirectory.set(file(harnessGradleBuildDir))
+}
+
 dependencies {
     implementation 'com.github.javaparser:javaparser-core:3.26.4'
 }
