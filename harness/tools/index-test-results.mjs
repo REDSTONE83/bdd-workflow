@@ -5,7 +5,8 @@
 // identity + alternateIdentities 두 키를 emit해 line 변동에도 매칭이 유지되게 한다.
 import fs from 'node:fs';
 import path from 'node:path';
-import { currentScope, frontEndRoot, outputRootFor, workspaceRoot } from './workspace-config.mjs';
+import { currentScope, frontEndRoot, outputRootFor, repoRelative, workspaceRoot } from './workspace-config.mjs';
+import { FRONT_END_RESULT_FILES, computeTestFingerprint, sha256 } from './test-result-fingerprint.mjs';
 
 const scope = currentScope();
 const outputRoot = outputRootFor(scope);
@@ -14,6 +15,8 @@ const frontEndTestResultPaths = [
     path.join(outputRoot, 'test-results', 'e2e-live-results.json')
 ];
 const storybookVitestJunitPath = path.join(outputRoot, 'test-results', 'storybook-junit.xml');
+// app scope freshness 입력: 실행 시점 source metadata와 비교할 현재 FE BDD source index.
+const frontEndSourceIndexPath = path.join(outputRoot, 'indexes', 'front-end.source-index.json');
 const outDir = path.join(outputRoot, 'indexes');
 const outFile = path.join(outDir, 'test-results.index.json');
 
@@ -307,14 +310,133 @@ function collectStorybookVitestJUnit() {
     return entries;
 }
 
+function readFrontEndSourceTests() {
+    if (!fs.existsSync(frontEndSourceIndexPath)) return [];
+    try {
+        const index = JSON.parse(fs.readFileSync(frontEndSourceIndexPath, 'utf8'));
+        return index.tests ?? [];
+    } catch {
+        return [];
+    }
+}
+
+function readManifest(manifestPath) {
+    if (!fs.existsSync(manifestPath)) return null;
+    try {
+        return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    } catch {
+        return null;
+    }
+}
+
+function entryStableKeys(entry) {
+    return [entry.identity, ...(entry.alternateIdentities ?? [])].filter(Boolean);
+}
+
+function staleIssue(runtime, config, reason, entry) {
+    const issue = {
+        kind: 'FE_TEST_RESULT_STALE',
+        runtime,
+        reason,
+        resultFile: repoRelative(path.join(frontEndRoot, 'test-results', config.resultFile))
+    };
+    if (entry) {
+        issue.identity = entry.identity;
+        issue.location = entry.location ?? { file: '', line: 0, identity: entry.identity };
+    }
+    return issue;
+}
+
+// app scope FE 실행 결과는 sidecar manifest fingerprint가 현재 FE BDD source fingerprint와
+// 일치할 때만 AC 커버 결과로 인정한다. 불일치/manifest 누락/결과 파일 hash 불일치는 stale로
+// 빼고 issues[]에 남긴다. harness scope는 manifest가 없어 이 필터를 적용하지 않는다.
+function filterFreshFrontEndResults(entries, runtime, sourceTests) {
+    const config = FRONT_END_RESULT_FILES[runtime];
+    const resultFilePath = path.join(outputRoot, 'test-results', config.resultFile);
+    const manifestPath = path.join(outputRoot, 'test-results', config.manifestFile);
+
+    const currentByKey = new Map();
+    for (const test of sourceTests) {
+        if (test.runtime !== runtime) continue;
+        const fingerprint = computeTestFingerprint(test);
+        for (const key of [test.identity, ...(test.resultKeys ?? [])]) {
+            if (key) currentByKey.set(key, fingerprint);
+        }
+    }
+
+    const manifest = readManifest(manifestPath);
+    const manifestByKey = new Map();
+    let fileReason = null;
+    if (!manifest) {
+        fileReason = 'manifest-missing';
+    } else {
+        for (const manifestEntry of manifest.entries ?? []) {
+            for (const key of manifestEntry.resultKeys ?? []) {
+                if (key) manifestByKey.set(key, manifestEntry.fingerprint);
+            }
+        }
+        const actualSha = fs.existsSync(resultFilePath) ? sha256(fs.readFileSync(resultFilePath)) : null;
+        if (!actualSha || manifest.resultFileSha256 !== actualSha) {
+            fileReason = 'result-file-hash-mismatch';
+        }
+    }
+
+    const fresh = [];
+    const issues = [];
+    let fileIssueRecorded = false;
+    for (const entry of entries) {
+        const keys = entryStableKeys(entry);
+        let currentFp;
+        for (const key of keys) {
+            if (currentByKey.has(key)) { currentFp = currentByKey.get(key); break; }
+        }
+        if (currentFp === undefined) {
+            // 현재 source에 대응 test가 없으면 어떤 AC도 커버하지 않으므로 무해하게 통과시킨다.
+            fresh.push(entry);
+            continue;
+        }
+        if (fileReason) {
+            // 파일 단위 사유(manifest 누락/hash 불일치)는 결과당 1회만 기록하고 전부 stale 처리한다.
+            if (!fileIssueRecorded) {
+                issues.push(staleIssue(runtime, config, fileReason, null));
+                fileIssueRecorded = true;
+            }
+            continue;
+        }
+        let runFp;
+        for (const key of keys) {
+            if (manifestByKey.has(key)) { runFp = manifestByKey.get(key); break; }
+        }
+        if (runFp === undefined || runFp !== currentFp) {
+            issues.push(staleIssue(runtime, config, 'fingerprint-mismatch', entry));
+            continue;
+        }
+        fresh.push(entry);
+    }
+    return { fresh, issues };
+}
+
 function main() {
-    const entries = [...collectJUnit(), ...collectNodeJUnit(), ...collectPlaywright(), ...collectStorybookVitestJUnit()];
+    const junitEntries = [...collectJUnit(), ...collectNodeJUnit()];
+    let playwrightEntries = collectPlaywright();
+    let storybookEntries = collectStorybookVitestJUnit();
+    const issues = [];
+    if (scope === 'application') {
+        const sourceTests = readFrontEndSourceTests();
+        const storybookResult = filterFreshFrontEndResults(storybookEntries, 'storybook-vitest', sourceTests);
+        storybookEntries = storybookResult.fresh;
+        issues.push(...storybookResult.issues);
+        const playwrightResult = filterFreshFrontEndResults(playwrightEntries, 'playwright', sourceTests);
+        playwrightEntries = playwrightResult.fresh;
+        issues.push(...playwrightResult.issues);
+    }
+    const entries = [...junitEntries, ...playwrightEntries, ...storybookEntries];
     const payload = {
         generatedAt: new Date().toISOString(),
         schemaVersion: '1',
         source: 'test-results.index',
         entries,
-        issues: []
+        issues
     };
     fs.mkdirSync(outDir, { recursive: true });
     fs.writeFileSync(outFile, `${JSON.stringify(payload, null, 2)}\n`);
@@ -324,7 +446,8 @@ function main() {
         return acc;
     }, {});
     const breakdown = Object.entries(byRuntime).map(([k, v]) => `${k}=${v}`).join(', ') || 'none';
-    console.log(`test-results.index.json: ${entries.length} result(s) (${breakdown})`);
+    const staleNote = payload.issues.length > 0 ? `, ${payload.issues.length} stale issue(s)` : '';
+    console.log(`test-results.index.json: ${entries.length} result(s) (${breakdown})${staleNote}`);
 }
 
 main();

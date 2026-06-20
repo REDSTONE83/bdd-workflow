@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { appRoot, backendRoot, frontEndRoot, workspaceRoot } from './workspace-config.mjs';
 import { createPortContext, generateRunId } from './run-context.mjs';
 import { atomicCopyFile, mirrorDirectory } from './fs-mirror.mjs';
+import { FRONT_END_RESULT_FILES, manifestEntryForTest, sha256 } from './test-result-fingerprint.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -105,7 +106,14 @@ function envFor(scope, options = {}) {
     return env;
 }
 
-function run(label, command, args, options = {}) {
+// 테스트 실패는 freshness 실패가 아니므로, FE 실행 결과 wrapper는 즉시 종료하지 않고
+// manifest를 만든 뒤 실패 코드를 미뤘다가 publish 이후에 종료한다.
+let deferredExitCode = 0;
+function deferFailure(status) {
+    if (status && !deferredExitCode) deferredExitCode = status;
+}
+
+function spawnStep(label, command, args, options = {}) {
     const cwd = options.cwd ?? workspaceRoot;
     const scope = options.scope ?? 'application';
     const useRunRoot = options.useRunRoot ?? true;
@@ -119,11 +127,16 @@ function run(label, command, args, options = {}) {
         console.error(`[${label}] spawn failed: ${result.error.message}`);
         process.exit(2);
     }
-    const status = result.status ?? 1;
+    return result.status ?? 1;
+}
+
+function run(label, command, args, options = {}) {
+    const status = spawnStep(label, command, args, options);
     if (status !== 0) {
         console.error(`[${label}] failed with exit ${status}`);
         process.exit(status);
     }
+    return status;
 }
 
 function runNodeTool(scope, label, name, args = []) {
@@ -148,11 +161,14 @@ function publishFrontEndArtifacts() {
     const root = appOutputRoot();
     const published = [];
     const testResultsDir = path.join(frontEndRoot, 'test-results');
-    if (atomicCopyFile(path.join(root, 'test-results', 'storybook-junit.xml'), path.join(testResultsDir, 'storybook-junit.xml'))) {
-        published.push('app/front-end/test-results/storybook-junit.xml');
-    }
-    if (atomicCopyFile(path.join(root, 'test-results', 'e2e-live-results.json'), path.join(testResultsDir, 'e2e-live-results.json'))) {
-        published.push('app/front-end/test-results/e2e-live-results.json');
+    // 결과 파일과 그 freshness manifest는 한 단위로 함께 publish한다(분리하면 false-stale).
+    for (const { resultFile, manifestFile } of Object.values(FRONT_END_RESULT_FILES)) {
+        if (atomicCopyFile(path.join(root, 'test-results', resultFile), path.join(testResultsDir, resultFile))) {
+            published.push(`app/front-end/test-results/${resultFile}`);
+        }
+        if (atomicCopyFile(path.join(root, 'test-results', manifestFile), path.join(testResultsDir, manifestFile))) {
+            published.push(`app/front-end/test-results/${manifestFile}`);
+        }
     }
     if (mirrorDirectory(path.join(root, 'test-results', 'live-artifacts'), path.join(testResultsDir, 'live-artifacts'), { deleteExtraneous: true })) {
         published.push('app/front-end/test-results/live-artifacts');
@@ -204,14 +220,18 @@ function hydrateTraceTestResults(scope) {
             path.join(appOutputRoot(), 'test-results', 'test'),
             { deleteExtraneous: true }
         );
-        atomicCopyFile(
-            path.join(frontEndRoot, 'test-results', 'storybook-junit.xml'),
-            path.join(appOutputRoot(), 'test-results', 'storybook-junit.xml')
-        );
-        atomicCopyFile(
-            path.join(frontEndRoot, 'test-results', 'e2e-live-results.json'),
-            path.join(appOutputRoot(), 'test-results', 'e2e-live-results.json')
-        );
+        // 결과 파일과 그 manifest sidecar를 한 단위로 hydrate한다. index-test-results는
+        // manifest fingerprint를 현재 FE source fingerprint와 비교해 stale을 판정한다.
+        for (const { resultFile, manifestFile } of Object.values(FRONT_END_RESULT_FILES)) {
+            atomicCopyFile(
+                path.join(frontEndRoot, 'test-results', resultFile),
+                path.join(appOutputRoot(), 'test-results', resultFile)
+            );
+            atomicCopyFile(
+                path.join(frontEndRoot, 'test-results', manifestFile),
+                path.join(appOutputRoot(), 'test-results', manifestFile)
+            );
+        }
         return;
     }
     mirrorDirectory(
@@ -395,23 +415,76 @@ function backEndTest() {
     runBackEndGradle('back-end:test', 'test');
 }
 
-function frontEndNpm(label, script) {
-    run(label, 'npm', ['run', script], { cwd: frontEndRoot, scope: 'application' });
+function frontEndNpm(label, script, options = {}) {
+    if (options.allowFailure) {
+        return spawnStep(label, 'npm', ['run', script], { cwd: frontEndRoot, scope: 'application' });
+    }
+    return run(label, 'npm', ['run', script], { cwd: frontEndRoot, scope: 'application' });
 }
 
 function frontEndE2e() {
     frontEndStorybookTest();
 }
 
+// 결과 파일과 같은 실행의 FE BDD source fingerprint를 sidecar manifest로 기록한다.
+// 테스트가 실패해도 결과 파일이 있으면 manifest를 만들고(최신 FAIL을 trace에 반영),
+// 결과 파일조차 없으면(실행 중단) 명령을 실패시킨다.
+function finalizeFrontEndManifest({ runtime, resultFile, manifestFile, status, startedAt, completedAt }) {
+    const config = FRONT_END_RESULT_FILES[runtime];
+    if (!fs.existsSync(resultFile)) {
+        console.error(`[manifest:${runtime}] result file missing: ${rel(resultFile)} — cannot record freshness manifest`);
+        process.exit(status || 1);
+    }
+    const sourceIndexPath = path.join(appOutputRoot(), 'indexes', 'front-end.source-index.json');
+    if (!fs.existsSync(sourceIndexPath)) {
+        console.error(`[manifest:${runtime}] FE source index missing: ${rel(sourceIndexPath)} — run app:front-end-source-index first`);
+        process.exit(1);
+    }
+    let sourceTests;
+    try {
+        const index = JSON.parse(fs.readFileSync(sourceIndexPath, 'utf8'));
+        sourceTests = (index.tests ?? []).filter((test) => test.runtime === runtime);
+    } catch (error) {
+        console.error(`[manifest:${runtime}] cannot read FE source index: ${error.message}`);
+        process.exit(1);
+    }
+    const manifest = {
+        schemaVersion: '1',
+        source: 'fe-test-result-manifest',
+        runtime,
+        resultFile: rel(path.join(frontEndRoot, 'test-results', config.resultFile)),
+        resultFileSha256: sha256(fs.readFileSync(resultFile)),
+        startedAt,
+        completedAt,
+        exitStatus: status,
+        entries: sourceTests.map(manifestEntryForTest)
+    };
+    fs.writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`);
+    console.log(`[manifest:${runtime}] ${rel(manifestFile)}: ${manifest.entries.length} fingerprint(s), exit=${status}`);
+}
+
+function runFrontEndResultStep({ runtime, label, script }) {
+    const config = FRONT_END_RESULT_FILES[runtime];
+    const testResultsDir = path.join(appOutputRoot(), 'test-results');
+    const resultFile = path.join(testResultsDir, config.resultFile);
+    const manifestFile = path.join(testResultsDir, config.manifestFile);
+    fs.mkdirSync(testResultsDir, { recursive: true });
+    // 실행 시작 전에 이 run root의 결과 파일과 manifest를 비운다.
+    fs.rmSync(resultFile, { force: true });
+    fs.rmSync(manifestFile, { force: true });
+    const startedAt = new Date().toISOString();
+    const status = frontEndNpm(label, script, { allowFailure: true });
+    const completedAt = new Date().toISOString();
+    finalizeFrontEndManifest({ runtime, resultFile, manifestFile, status, startedAt, completedAt });
+    deferFailure(status);
+}
+
 function frontEndLiveE2e() {
-    frontEndNpm('front-end:e2e:live', 'e2e:live');
+    runFrontEndResultStep({ runtime: 'playwright', label: 'front-end:e2e:live', script: 'e2e:live' });
 }
 
 function frontEndStorybookTest() {
-    const junitFile = path.join(appOutputRoot(), 'test-results', 'storybook-junit.xml');
-    fs.mkdirSync(path.dirname(junitFile), { recursive: true });
-    fs.rmSync(junitFile, { force: true });
-    frontEndNpm('front-end:test-storybook', 'test:storybook');
+    runFrontEndResultStep({ runtime: 'storybook-vitest', label: 'front-end:test-storybook', script: 'test:storybook' });
 }
 
 function frontEndBuildStorybook() {
@@ -486,10 +559,13 @@ function appTest() {
 }
 
 function appE2e() {
+    // manifest fingerprint는 실행 시점 source metadata가 필요하므로 단독 경로도 먼저 인덱싱한다.
+    frontEndSourceIndex();
     frontEndE2e();
 }
 
 function appLiveE2e() {
+    frontEndSourceIndex();
     frontEndLiveE2e();
 }
 
@@ -677,4 +753,9 @@ switch (command) {
     default:
         usage();
         process.exit(2);
+}
+
+// FE 실행 결과 wrapper가 미뤄 둔 테스트 실패는 결과/manifest publish 이후에 종료시킨다.
+if (deferredExitCode) {
+    process.exit(deferredExitCode);
 }
