@@ -31,6 +31,12 @@
 - 성공한 실행은 run root의 indexes/findings/reports/state/test-results/playwright-report와 UI 패키지 canonical test-results를 파일 단위 atomic copy/rename으로 publish한다.
 - self-test fixture 하위 명령은 runner의 run root/env를 의도치 않게 상속하지 않도록 지원 헬퍼에서 runner 전용 env를 제거하되 기본 `HARNESS_SCOPE=harness`는 유지한다.
 
+## 2026-06-20 보완
+
+- 검토 후속(1): `run.mjs`가 주입하던 dead env `E2E_RESULTS_FILE`(mock Playwright 잔재, 소비처 없음)를 제거했다. mock e2e는 Storybook Vitest 경로라 결과 파일이 더는 산출되지 않는다.
+- 검토 후속(2): `run.mjs`의 순수 로직을 import 가능한 모듈로 분리해 단위 테스트를 추가했다. runId 생성·실행 소유 포트 할당/충돌 fail-fast는 `harness/tools/run-context.mjs`, run root→canonical publish의 atomic copy/mirror는 `harness/tools/fs-mirror.mjs`로 옮기고, `harness/tools/__tests__/run-context.test.mjs`·`fs-mirror.test.mjs`가 `harness:tool-test` 게이트에서 함께 실행된다.
+- 검토 후속(3): PR 본문 `영향 요건`을 두 Change Set 합집합(REQ-005·006·007·008·010·011)으로 정렬했다. REQ-006/007/008은 AC 불변 회귀 확인 대상이다.
+
 ## 작업 범위
 
 - `harness/tools/run.mjs`가 실행 시작 시 `runId`를 생성하고 scope별 run output root `build/<scope>/runs/<runId>`를 정한다.
@@ -45,7 +51,7 @@
   - Gradle 9.5에서 `buildDir` 프로퍼티·`-Dorg.gradle.project.buildDir`는 deprecated이므로 build dir 재배치는 `layout.buildDirectory.set(...)` env-read로 한다(app back-end `build.gradle` + harness source-indexer `build.gradle` 양쪽). `outputLocation` 파생과 app back-end build.gradle의 env-read는 app 카드, harness source-indexer build.gradle의 env-read는 이 카드.
 - 동적 포트 오케스트레이션: `run.mjs`가 실행마다 free 포트를 할당해 front-end 포트와 (live) back-end 포트를 env로 주입한다: `E2E_FRONTEND_PORT`, `E2E_BACKEND_PORT`, `E2E_BASE_URL`, `VITE_BACKEND_ORIGIN`. 값 할당·주입·로깅은 이 카드가, 그 env를 읽어 vite `--port`/Spring `--server.port`/Playwright `baseURL`·webServer·proxy origin에 반영하는 config는 app 카드가 맡는다.
 - 포트 충돌 진단(mock·live 공통): 사용자가 `E2E_FRONTEND_PORT`/`E2E_BACKEND_PORT`를 명시하면 그 포트를 존중하되 점유돼 있으면 실행 전에 fail-fast로 중단하고 점유 PID/command/해결 안내를 출력한다. 자동 할당 포트가 실행 직전 점유되면 새 free 포트를 재선택하거나 fail-fast한다. 기존 프로세스는 자동 kill하지 않는다(사용자 소유 프로세스 보호). 이 정책으로 기존 dev server(8080/5173)가 떠 있어도 별도 포트로 실행된다.
-- Playwright 결과·아티팩트도 run root로 보낸다: `E2E_RESULTS_FILE`/`E2E_LIVE_RESULTS_FILE`와 `outputDir`/html 리포트 폴더용 env를 run root 경로로 주입한다.
+- Playwright 결과·아티팩트도 run root로 보낸다: `E2E_LIVE_RESULTS_FILE`와 `outputDir`/html 리포트 폴더용 env를 run root 경로로 주입한다. (mock Playwright는 Storybook Vitest로 대체되어 `E2E_RESULTS_FILE`은 주입하지 않는다.)
 - Storybook Vitest JUnit 결과도 run root로 보낸다. app과 harness UI 모두 JUnit output path를 env로 받을 수 있게 하고, `run.mjs`가 app/harness scope별 run root 아래의 test-results 경로를 주입한다. 이때 `run.mjs`의 `frontEndStorybookTest`/`harnessUiStorybookTest`가 실행 전 canonical `test-results/storybook-junit.xml`을 rm하는 현재 패턴을 run root 기록으로 바꾸고, mock Playwright 잔재인 `e2e-results.json` rm은 제거한다(mock e2e가 Storybook Vitest로 바뀌어 더는 산출되지 않음).
 - 성공한 실행은 run root 최신 스냅샷을 canonical 위치에 파일 단위 atomic replace로 publish한다. 산출물 종류별 canonical은 다르다: 하네스 인덱스/findings/리포트/state는 `build/<scope>`, Playwright 결과는 `app/front-end/test-results/`(`index-test-results.mjs`가 읽는 위치). 세트(디렉터리) 단위 원자성은 보장하지 않는다.
 - 단, Playwright 결과 JSON과 같은 디렉터리의 sidecar(예: freshness manifest), Storybook JUnit 결과와 같은 검증 결과 묶음은 한 publish 단위로 함께 교체한다. 짝을 분리해 publish하지 않는다(분리 시 freshness 카드의 `resultFileSha256` 덕분에 정합성은 fail-safe로 유지되나 불필요한 false-stale이 생긴다).
@@ -103,7 +109,7 @@
 - runId 형식은 사람이 로그에서 식별할 수 있도록 `<yyyyMMddHHmmss>-<pid>-<shortRandom>`로 둔다.
 - run output root는 `build/<scope>/runs/<runId>`로 둔다.
 - `run.mjs`는 runId 기반 root를 내부 경로 계산과 하위 프로세스 env 양쪽에 일관되게 쓴다. 모듈 로드 시점 canonical 고정값을 쓰지 않는다.
-- 하위 프로세스 env: `HARNESS_RUN_ID`, `HARNESS_OUTPUT_ROOT`, 포트·결과 경로(`E2E_FRONTEND_PORT`, `E2E_BACKEND_PORT`, `E2E_BASE_URL`, `VITE_BACKEND_ORIGIN`, `E2E_RESULTS_FILE`, `E2E_LIVE_RESULTS_FILE` 등), Storybook JUnit 경로, Gradle 격리 dir(`HARNESS_GRADLE_BUILD_DIR`, `HARNESS_GRADLE_PROJECT_CACHE_DIR` 등). 값 할당 주체는 오케스트레이터(`run.mjs`)이고 config·build.gradle은 env 소비만 한다(app config·app back-end build.gradle는 app 카드, harness source-indexer build.gradle는 이 카드).
+- 하위 프로세스 env: `HARNESS_RUN_ID`, `HARNESS_OUTPUT_ROOT`, 포트·결과 경로(`E2E_FRONTEND_PORT`, `E2E_BACKEND_PORT`, `E2E_BASE_URL`, `VITE_BACKEND_ORIGIN`, `E2E_LIVE_RESULTS_FILE` 등), Storybook JUnit 경로, Gradle 격리 dir(`HARNESS_GRADLE_BUILD_DIR`, `HARNESS_GRADLE_PROJECT_CACHE_DIR` 등). 값 할당 주체는 오케스트레이터(`run.mjs`)이고 config·build.gradle은 env 소비만 한다(app config·app back-end build.gradle는 app 카드, harness source-indexer build.gradle는 이 카드).
 - 포트 충돌은 기존 프로세스 자동 kill이 아니라 실행 소유 포트 격리 + fail-fast 진단으로 처리한다. 사용자가 명시한 포트가 점유되면 진단 메시지(점유 PID/command/해결 안내)와 함께 차단한다. 동시 실행 안전은 자동 할당 free 포트로 구조적으로 보장되고, 충돌 진단은 사용자 소유 프로세스와의 우발 충돌을 막는 보조 장치다.
 - Gradle 격리는 report 위치 재지정만으로 부족하므로(컴파일 산출물·binary results·빌드 락 공유) run별 project-cache-dir + build dir 재배치로 한다. project-cache-dir는 CLI startup flag(env 등가물 없음)라 `run.mjs` 직접 호출은 CLI로 붙이고, Playwright-중첩 `bootRun`은 app config가 env→flag로 append한다. build dir는 Gradle 9.5 deprecation을 피해 build.gradle `layout.buildDirectory.set` env-read로 옮겨 bootRun까지 자동 적용한다.
 - 혼합 작업이라 AGENTS.md 규칙에 따라 harness/app 두 Change Set으로 나누고 cross-link한다.

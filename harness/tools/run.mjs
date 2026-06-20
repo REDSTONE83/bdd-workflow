@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import crypto from 'node:crypto';
 import fs from 'node:fs';
-import net from 'node:net';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { appRoot, backendRoot, frontEndRoot, workspaceRoot } from './workspace-config.mjs';
+import { createPortContext, generateRunId } from './run-context.mjs';
+import { atomicCopyFile, mirrorDirectory } from './fs-mirror.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,108 +22,6 @@ const portIsolatedCommands = new Set(['app:validate', 'app:e2e:live', 'repo:vali
 
 function rel(file) {
     return path.relative(workspaceRoot, file).replace(/\\/g, '/');
-}
-
-function generateRunId() {
-    const now = new Date();
-    const stamp = [
-        now.getFullYear(),
-        String(now.getMonth() + 1).padStart(2, '0'),
-        String(now.getDate()).padStart(2, '0'),
-        String(now.getHours()).padStart(2, '0'),
-        String(now.getMinutes()).padStart(2, '0'),
-        String(now.getSeconds()).padStart(2, '0')
-    ].join('');
-    return `${stamp}-${process.pid}-${crypto.randomBytes(3).toString('hex')}`;
-}
-
-function parsePortEnv(name) {
-    const value = process.env[name];
-    if (!value) return null;
-    const port = Number(value);
-    if (!Number.isInteger(port) || port < 1 || port > 65535) {
-        throw new Error(`${name} must be a TCP port number: ${value}`);
-    }
-    return port;
-}
-
-function portFromUrlEnv(name) {
-    const value = process.env[name];
-    if (!value) return null;
-    try {
-        const parsed = new URL(value);
-        if (!parsed.port) return null;
-        const port = Number(parsed.port);
-        return Number.isInteger(port) ? port : null;
-    } catch {
-        throw new Error(`${name} must be a valid URL when provided: ${value}`);
-    }
-}
-
-function isPortAvailable(port) {
-    return new Promise((resolve) => {
-        const server = net.createServer();
-        server.once('error', () => resolve(false));
-        server.listen({ host: '127.0.0.1', port }, () => {
-            server.close(() => resolve(true));
-        });
-    });
-}
-
-async function findFreePort(excluded = new Set()) {
-    for (let attempt = 0; attempt < 30; attempt += 1) {
-        const port = await new Promise((resolve, reject) => {
-            const server = net.createServer();
-            server.once('error', reject);
-            server.listen({ host: '127.0.0.1', port: 0 }, () => {
-                const address = server.address();
-                const selected = typeof address === 'object' && address ? address.port : null;
-                server.close(() => {
-                    if (selected) resolve(selected);
-                    else reject(new Error('Could not allocate a TCP port'));
-                });
-            });
-        });
-        if (!excluded.has(port)) return port;
-    }
-    throw new Error('Could not allocate a unique TCP port for this run');
-}
-
-function portOwner(port) {
-    const result = spawnSync('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN'], {
-        encoding: 'utf8'
-    });
-    if (result.status !== 0 || !result.stdout.trim()) {
-        return 'owner process unavailable from lsof';
-    }
-    return result.stdout.trim().split('\n').slice(0, 4).join('\n');
-}
-
-async function assertExplicitPortAvailable(name, port) {
-    if (await isPortAvailable(port)) return;
-    throw new Error(`${name}=${port} is already in use.\n${portOwner(port)}\nChoose a free port or unset ${name} so the runner can allocate one.`);
-}
-
-async function createPortContext() {
-    const frontendFromEnv = parsePortEnv('E2E_FRONTEND_PORT') ?? portFromUrlEnv('E2E_BASE_URL');
-    const backendFromEnv = parsePortEnv('E2E_BACKEND_PORT') ?? portFromUrlEnv('VITE_BACKEND_ORIGIN');
-    const frontendPort = frontendFromEnv ?? await findFreePort();
-    if (frontendFromEnv) {
-        await assertExplicitPortAvailable('E2E_FRONTEND_PORT', frontendPort);
-    }
-    const backendPort = backendFromEnv ?? await findFreePort(new Set([frontendPort]));
-    if (backendFromEnv) {
-        await assertExplicitPortAvailable('E2E_BACKEND_PORT', backendPort);
-    }
-    if (frontendPort === backendPort) {
-        throw new Error(`E2E_FRONTEND_PORT and E2E_BACKEND_PORT must be different: ${frontendPort}`);
-    }
-    return {
-        frontendPort,
-        backendPort,
-        baseUrl: process.env.E2E_BASE_URL ?? `http://127.0.0.1:${frontendPort}`,
-        backendOrigin: process.env.VITE_BACKEND_ORIGIN ?? `http://127.0.0.1:${backendPort}`
-    };
 }
 
 async function createRunContext(options = {}) {
@@ -199,7 +97,6 @@ function envFor(scope, options = {}) {
             env.E2E_BACKEND_PORT = String(runContext.ports.backendPort);
             env.E2E_BASE_URL = runContext.ports.baseUrl;
             env.VITE_BACKEND_ORIGIN = runContext.ports.backendOrigin;
-            env.E2E_RESULTS_FILE = path.join(outputRoot, 'test-results', 'e2e-results.json');
             env.E2E_LIVE_RESULTS_FILE = path.join(outputRoot, 'test-results', 'e2e-live-results.json');
             env.E2E_LIVE_ARTIFACTS_DIR = path.join(outputRoot, 'test-results', 'live-artifacts');
             env.E2E_LIVE_HTML_REPORT_DIR = path.join(outputRoot, 'playwright-report', 'live');
@@ -231,44 +128,6 @@ function run(label, command, args, options = {}) {
 
 function runNodeTool(scope, label, name, args = []) {
     run(label, process.execPath, [path.join(__dirname, name), ...args], { scope });
-}
-
-function atomicCopyFile(source, destination) {
-    if (!fs.existsSync(source)) return false;
-    fs.mkdirSync(path.dirname(destination), { recursive: true });
-    if (fs.existsSync(destination) && fs.statSync(destination).isDirectory()) {
-        fs.rmSync(destination, { recursive: true, force: true });
-    }
-    const temp = `${destination}.tmp-${process.pid}-${crypto.randomBytes(3).toString('hex')}`;
-    fs.copyFileSync(source, temp);
-    fs.renameSync(temp, destination);
-    return true;
-}
-
-function mirrorDirectory(source, destination, options = {}) {
-    if (!fs.existsSync(source)) return false;
-    fs.mkdirSync(destination, { recursive: true });
-    const sourceEntries = new Map(fs.readdirSync(source, { withFileTypes: true }).map((entry) => [entry.name, entry]));
-    for (const [name, entry] of sourceEntries) {
-        const sourcePath = path.join(source, name);
-        const destinationPath = path.join(destination, name);
-        if (entry.isDirectory()) {
-            if (fs.existsSync(destinationPath) && !fs.statSync(destinationPath).isDirectory()) {
-                fs.rmSync(destinationPath, { force: true });
-            }
-            mirrorDirectory(sourcePath, destinationPath, options);
-        } else if (entry.isFile()) {
-            atomicCopyFile(sourcePath, destinationPath);
-        }
-    }
-    if (options.deleteExtraneous) {
-        for (const entry of fs.readdirSync(destination, { withFileTypes: true })) {
-            if (!sourceEntries.has(entry.name)) {
-                fs.rmSync(path.join(destination, entry.name), { recursive: true, force: true });
-            }
-        }
-    }
-    return true;
 }
 
 function publishPath(scope, relativePath, options = {}) {
