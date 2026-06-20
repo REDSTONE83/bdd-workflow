@@ -20,6 +20,7 @@
     "harness:self-test-index": "node harness/tools/run.mjs harness:self-test-index",
     "harness:front-end-source-index": "node harness/tools/run.mjs harness:front-end-source-index",
     "harness:ui": "node harness/tools/run.mjs harness:ui",
+    "harness:ui:serve": "node harness/tools/run.mjs harness:ui:serve",
     "harness:change-sets": "node harness/tools/run.mjs harness:change-sets",
     "harness:terminology": "node harness/tools/run.mjs harness:terminology",
     "harness:standards": "node harness/tools/run.mjs harness:standards",

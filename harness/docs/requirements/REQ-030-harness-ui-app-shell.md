@@ -19,7 +19,7 @@
 
 ## 범위
 
-- `npm run harness:ui`로 하네스 UI 서버를 기동한다. 서버는 localhost 전용이며 외부 주소 접근을 받지 않는다.
+- 개발 중에는 `npm run harness:ui`로 Vite HMR 하네스 UI 서버를 기동한다. 운영 확인에는 `npm run harness:ui:serve`로 빌드된 SPA를 Express 서버에서 기동한다. 두 서버는 localhost 전용이며 외부 주소 접근을 받지 않는다.
 - 기본 포트는 5180이고 `HARNESS_UI_PORT` 환경변수로 변경할 수 있다.
 - 독립 실행 서버는 빌드된 SPA 정적 자산과 JSON API를 같은 localhost 서버에서 제공하고, 클라이언트 route 요청은 `index.html`로 폴백한다.
 - 앱셸은 상단 머리 영역(제품명, scope 전환)과 요건, 표준 용어, 게이트, Change Set, 실행 화면으로 이동하는 좌측 LNB로 구성한다.
@@ -89,7 +89,7 @@
   검증 설계: `.feature`의 5개 Scenario가 카드 수용 기준 7개를 `Covers:`로 연결한다. localhost 제한은 `(STATIC)`, 내비와 scope/산출물 상태는 `(UI)`로 검증한다.
   UI 설계: `AppShell` route wrapper와 `src/lib/harness-data`의 scope별 산출물 summary DTO를 기준으로 구현한다. 파일 watch와 cache 무효화는 shell provider에서 한 번만 처리하고, 개별 화면은 선택 scope의 화면 모델만 받는다.
   UI 설계 검토 표면: `Harness/Shell/AppShell`의 `DefaultArtifacts`, `MissingArtifacts`, `StaleArtifacts`, `ScopeSwitch` 상태가 있어야 한다.
-  서버 설계: `npm run harness:ui`는 loopback 주소에만 bind하고 기본 포트 5180을 사용한다. `HARNESS_UI_PORT`는 포트만 바꾸며 외부 bind 주소를 열지 않는다.
+  서버 설계: `npm run harness:ui`와 `npm run harness:ui:serve`는 loopback 주소에만 bind하고 기본 포트 5180을 사용한다. `HARNESS_UI_PORT`는 포트만 바꾸며 외부 bind 주소를 열지 않는다.
   추적 정책: `(UI)` AC는 harness/ui Storybook Vitest 결과로 판정한다. `(STATIC)` localhost 제한은 하네스 self-test 또는 서버 단위 검증으로 판정한다.
   검증: 설계 단계이므로 실행 테스트는 아직 작성하지 않는다. `npm run harness:trace -- --requirement REQ-030`로 카드/시나리오/용어 정합성을 확인한다.
   설계 결과: 승인 대기
@@ -114,6 +114,11 @@
 - 리뷰일: 2026-06-19
   리뷰자: REDSTONE
   확인: 하네스 UI 서버를 Express 앱으로 전환하고 독립 실행 서버가 빌드된 SPA 정적 자산, 클라이언트 route `index.html` 폴백, `/api/health` JSON 응답을 같은 localhost 서버에서 제공하는지 `harness-ui-app-shell.test.ts`로 검증했다.
+  결과: 승인
+
+- 리뷰일: 2026-06-20
+  리뷰자: REDSTONE
+  확인: 루트 운영 기동 명령 `npm run harness:ui:serve`를 추가하고, 이 명령이 `harness/ui`의 `serve` 스크립트를 통해 production build 후 Express 서버를 기동하도록 self-test로 검증했다.
   결과: 승인
 
 ## 열린 질문

@@ -355,6 +355,7 @@ npm run lint
 npm run test
 npm run test:storybook
 npm run build
+npm run serve
 npm run build-storybook
 npm run source-index
 npm run validate
@@ -364,7 +365,10 @@ npm run validate
 
 ```bash
 npm run harness:ui
+npm run harness:ui:serve
 npm run harness:front-end-source-index
 ```
+
+`npm run harness:ui`는 Vite HMR 개발 서버를 띄운다. `npm run harness:ui:serve`는 `harness/ui`의 production build를 만든 뒤 Express 서버로 빌드된 SPA와 `/api/*`를 함께 제공한다.
 
 `npm run harness:validate`는 REQ-029 구현 이후 harness/ui source index, Storybook build, Storybook Vitest 테스트 결과를 하네스 범위 추적에 포함한다.

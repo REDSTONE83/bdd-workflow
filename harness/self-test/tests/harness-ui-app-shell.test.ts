@@ -36,8 +36,19 @@ harnessTest({
     assert.equal(harnessUiHost, '127.0.0.1');
     assert.equal(harnessUiPort, 5180);
 
+    const rootPackageJson = JSON.parse(fs.readFileSync(path.join(workspaceRoot, 'package.json'), 'utf8'));
+    assert.equal(rootPackageJson.scripts['harness:ui'], 'node harness/tools/run.mjs harness:ui');
+    assert.equal(rootPackageJson.scripts['harness:ui:serve'], 'node harness/tools/run.mjs harness:ui:serve');
+
+    const runner = fs.readFileSync(path.join(workspaceRoot, 'harness', 'tools', 'run.mjs'), 'utf8');
+    assert.match(runner, /harnessUiNpm\('harness:ui', 'dev'\)/);
+    assert.match(runner, /harnessUiNpm\('harness:ui:serve', 'serve'\)/);
+    assert.match(runner, /case 'harness:ui:serve'/);
+
     const packageJson = JSON.parse(fs.readFileSync(path.join(workspaceRoot, 'harness', 'ui', 'package.json'), 'utf8'));
     assert.match(packageJson.scripts.dev, /--host 127\.0\.0\.1/);
+    assert.equal(packageJson.scripts.server, 'tsx server/index.ts');
+    assert.equal(packageJson.scripts.serve, 'npm run build && npm run server');
     assert.doesNotMatch(packageJson.scripts.dev, /--host 0\.0\.0\.0/);
     assert.match(packageJson.scripts.storybook, /--host 127\.0\.0\.1/);
     assert.ok(packageJson.dependencies.express, 'Express 런타임 의존성이 필요하다');

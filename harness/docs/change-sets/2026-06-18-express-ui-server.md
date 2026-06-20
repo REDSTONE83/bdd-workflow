@@ -50,6 +50,7 @@
 - `npm run harness:validate`
 - `cd harness/ui && npm run typecheck && npm run test && npm run build`
 - `npm run harness:ui`
+- `npm run harness:ui:serve`
 - `curl -s http://127.0.0.1:5180/api/health`
 
 ## 검증 결과
@@ -60,6 +61,7 @@
 - `npm run harness:self-test`: 통과. 62개 self-test가 모두 PASS. REQ-030 self-test에 단일 Express 서버의 SPA 정적 서빙, 클라이언트 라우트 `index.html` 폴백, `/api/health` JSON 응답 검증을 추가했다.
 - `npm run harness:validate`: 통과. RED 0 / GREEN 0 / BLUE 16, gate PASS.
 - `npm run harness:ui` + `curl -s http://127.0.0.1:5180/api/health`: 통과. dev 서버가 `http://127.0.0.1:5180/`에서 기동했고 health 응답은 `{"status":"ok","host":"127.0.0.1","port":5180}`.
+- 2026-06-20: `npm run harness:ui:serve`를 추가했다. 루트 명령은 `harness/tools/run.mjs harness:ui:serve`를 거쳐 `harness/ui`의 `serve` 스크립트를 실행하고, `serve`는 production build 후 Express 서버를 기동한다. self-test가 루트 명령, runner 배선, `harness/ui` package script를 검증한다. 실제 실행 결과 production build 후 `http://127.0.0.1:5180`에서 서버가 기동했고, `/api/health`는 `{"status":"ok","host":"127.0.0.1","port":5180}`, `/requirements/REQ-030`은 `index.html` 폴백 200을 반환했다.
 - `npm install --save-dev @types/express@^5`: `express` 런타임 의존성과 `@types/express` 개발 의존성 배치를 lockfile에 반영했다. npm audit 기준 5건(1 low, 4 critical) 취약점 알림이 남아 있으나 이번 Express 전환 게이트 실패 요인은 아니다.
 
 ## 결정 로그
