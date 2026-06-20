@@ -48,7 +48,7 @@
   - live Playwright: `npm run app:e2e:live`
 - stale 결과는 AC 커버 결과로 인정하지 않는다. 해당 FE BDD 테스트 결과는 trace에서 `NOT_RUN` 또는 `MISSING` 상태로 계산된다.
 - `harness/docs/standards/acceptance-test.md`에 FE 실행 결과(Storybook Vitest·live Playwright) freshness 정책을 반영한다. app 소유 표준 `app/docs/standards/front-end-testing.md` 반영은 짝 app 카드가 다룬다.
-- 하네스 self-test에 manifest 일치, manifest 불일치, manifest 누락, partial 결과 제외 fixture를 추가한다. Storybook Vitest와 live Playwright 두 런타임을 모두 fixture로 다룬다.
+- 하네스 self-test에 manifest 일치, manifest 불일치, manifest 누락, stable key는 같고 source line만 이동한 결과, partial 결과 제외 fixture를 추가한다. Storybook Vitest와 live Playwright 두 런타임을 모두 fixture로 다룬다.
 
 ## 제외 범위
 
@@ -72,6 +72,7 @@
 - `app:validate`에서 테스트가 실패하더라도 결과 파일과 manifest가 생성됐으면 trace는 오래된 PASS가 아니라 최신 FAIL을 본다.
 - 결과 파일에 대응하는 manifest가 없으면 그 결과는 stale로 보고된다.
 - manifest의 `resultFileSha256`이 실제 결과 파일 SHA-256과 다르면 그 결과는 stale로 보고되고 AC 커버 결과로 인정되지 않는다.
+- source line만 바뀌고 stable key(`resultKeys`/`identityNoLine`)·`Requirement`·`Covers`가 같으면 stale로 보고되지 않는다. Storybook Vitest와 live Playwright 두 런타임 모두에서 성립한다.
 - `e2e-results.partial.json`은 manifest가 있어도 canonical trace 입력에 포함되지 않는다.
 - harness scope 결과는 manifest가 없어도 stale로 처리되지 않아 `npm run harness:validate`가 회귀 없이 통과한다.
 - `npm run harness:self-test`가 manifest freshness fixture(두 런타임)를 검증한다.
