@@ -5,23 +5,21 @@
 // identity + alternateIdentities 두 키를 emit해 line 변동에도 매칭이 유지되게 한다.
 import fs from 'node:fs';
 import path from 'node:path';
-import { backendRoot, currentScope, frontEndRoot, outputRootFor, workspaceRoot } from './workspace-config.mjs';
+import { currentScope, frontEndRoot, outputRootFor, workspaceRoot } from './workspace-config.mjs';
 
 const scope = currentScope();
 const outputRoot = outputRootFor(scope);
 const harnessUiRoot = path.join(workspaceRoot, 'harness', 'ui');
 const frontEndTestResultPaths = [
-    path.join(frontEndRoot, 'test-results', 'e2e-live-results.json')
+    path.join(outputRoot, 'test-results', 'e2e-live-results.json')
 ];
-const appStorybookVitestJunitPath = path.join(frontEndRoot, 'test-results', 'storybook-junit.xml');
-const harnessStorybookVitestJunitPath = path.join(harnessUiRoot, 'test-results', 'storybook-junit.xml');
+const storybookVitestJunitPath = path.join(outputRoot, 'test-results', 'storybook-junit.xml');
 const outDir = path.join(outputRoot, 'indexes');
 const outFile = path.join(outDir, 'test-results.index.json');
 
 const junitRoots = scope === 'application'
     ? [
-        { scope: 'application', root: path.join(backendRoot, 'target', 'surefire-reports') },
-        { scope: 'application', root: path.join(backendRoot, 'build', 'test-results', 'test') },
+        { scope: 'application', root: path.join(outputRoot, 'test-results', 'test') },
         { scope: 'application', root: path.join(outputRoot, 'test-results', 'generateOpenApiIndex') }
     ]
     : [];
@@ -265,8 +263,8 @@ function normalizeStorybookPath(filePath, storybookRoot, defaultResultPath) {
 
 function collectStorybookVitestJUnit() {
     const config = scope === 'application'
-        ? { scope: 'application', root: frontEndRoot, junitPath: appStorybookVitestJunitPath }
-        : { scope: 'harness', root: harnessUiRoot, junitPath: harnessStorybookVitestJunitPath };
+        ? { scope: 'application', root: frontEndRoot, junitPath: storybookVitestJunitPath }
+        : { scope: 'harness', root: harnessUiRoot, junitPath: storybookVitestJunitPath };
     if (!fs.existsSync(config.junitPath)) {
         return [];
     }

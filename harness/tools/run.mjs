@@ -3,24 +3,78 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { appRoot, backendRoot, frontEndRoot, outputRootFor, workspaceRoot } from './workspace-config.mjs';
+import { appRoot, backendRoot, frontEndRoot, workspaceRoot } from './workspace-config.mjs';
+import { createPortContext, generateRunId } from './run-context.mjs';
+import { atomicCopyFile, mirrorDirectory } from './fs-mirror.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const gradleWrapper = path.join(backendRoot, 'gradlew');
 const harnessRoot = path.join(workspaceRoot, 'harness');
 const harnessUiRoot = path.join(harnessRoot, 'ui');
-const appOutputRoot = outputRootFor('application');
-const harnessOutputRoot = outputRootFor('harness');
+const canonicalOutputRoots = {
+    application: path.join(workspaceRoot, 'build', 'app'),
+    harness: path.join(workspaceRoot, 'build', 'harness')
+};
+const publishableTopLevelDirs = ['indexes', 'findings', 'reports', 'state', 'test-results', 'playwright-report'];
+const manualUiCommands = new Set(['harness:ui', 'harness:ui:serve']);
+const portIsolatedCommands = new Set(['app:validate', 'app:e2e:live', 'repo:validate']);
 
 function rel(file) {
     return path.relative(workspaceRoot, file).replace(/\\/g, '/');
 }
 
-function envFor(scope) {
-    const outputRoot = scope === 'harness' ? harnessOutputRoot : appOutputRoot;
-    const docsRoot = path.join(workspaceRoot, scope === 'harness' ? 'harness' : 'app', 'docs');
+async function createRunContext(options = {}) {
+    const runId = process.env.HARNESS_RUN_ID || generateRunId();
+    const outputRoots = {
+        application: path.join(canonicalOutputRoots.application, 'runs', runId),
+        harness: path.join(canonicalOutputRoots.harness, 'runs', runId)
+    };
+    fs.mkdirSync(outputRoots.application, { recursive: true });
+    fs.mkdirSync(outputRoots.harness, { recursive: true });
     return {
+        enabled: true,
+        runId,
+        outputRoots,
+        ports: options.allocatePorts ? await createPortContext() : null
+    };
+}
+
+function createCanonicalContext() {
+    return {
+        enabled: false,
+        runId: null,
+        outputRoots: canonicalOutputRoots,
+        ports: null
+    };
+}
+
+function outputRootForScope(scope, useRunRoot = true) {
+    if (!useRunRoot || !runContext.enabled) return canonicalOutputRoots[scope];
+    return runContext.outputRoots[scope];
+}
+
+function gradleBuildDirFor(scope) {
+    return path.join(outputRootForScope(scope), 'gradle-build');
+}
+
+function gradleProjectCacheDirFor(scope) {
+    return path.join(outputRootForScope(scope), 'gradle-cache');
+}
+
+function appOutputRoot() {
+    return outputRootForScope('application');
+}
+
+function harnessOutputRoot() {
+    return outputRootForScope('harness');
+}
+
+function envFor(scope, options = {}) {
+    const useRunRoot = options.useRunRoot ?? true;
+    const outputRoot = outputRootForScope(scope, useRunRoot);
+    const docsRoot = path.join(workspaceRoot, scope === 'harness' ? 'harness' : 'app', 'docs');
+    const env = {
         ...process.env,
         HARNESS_SCOPE: scope,
         HARNESS_OUTPUT_ROOT: outputRoot,
@@ -33,16 +87,33 @@ function envFor(scope) {
         BACKEND_ROOT: backendRoot,
         FRONTEND_ROOT: frontEndRoot
     };
+    if (runContext.enabled && useRunRoot) {
+        env.HARNESS_RUN_ID = runContext.runId;
+        env.HARNESS_GRADLE_BUILD_DIR = gradleBuildDirFor(scope);
+        env.HARNESS_GRADLE_PROJECT_CACHE_DIR = gradleProjectCacheDirFor(scope);
+        env.STORYBOOK_JUNIT_FILE = path.join(outputRoot, 'test-results', 'storybook-junit.xml');
+        if (scope === 'application' && runContext.ports) {
+            env.E2E_FRONTEND_PORT = String(runContext.ports.frontendPort);
+            env.E2E_BACKEND_PORT = String(runContext.ports.backendPort);
+            env.E2E_BASE_URL = runContext.ports.baseUrl;
+            env.VITE_BACKEND_ORIGIN = runContext.ports.backendOrigin;
+            env.E2E_LIVE_RESULTS_FILE = path.join(outputRoot, 'test-results', 'e2e-live-results.json');
+            env.E2E_LIVE_ARTIFACTS_DIR = path.join(outputRoot, 'test-results', 'live-artifacts');
+            env.E2E_LIVE_HTML_REPORT_DIR = path.join(outputRoot, 'playwright-report', 'live');
+        }
+    }
+    return env;
 }
 
 function run(label, command, args, options = {}) {
     const cwd = options.cwd ?? workspaceRoot;
     const scope = options.scope ?? 'application';
+    const useRunRoot = options.useRunRoot ?? true;
     console.log(`\n[${label}] ${[rel(command), ...args].join(' ')}`);
     const result = spawnSync(command, args, {
         cwd,
         stdio: 'inherit',
-        env: envFor(scope)
+        env: envFor(scope, { useRunRoot })
     });
     if (result.error) {
         console.error(`[${label}] spawn failed: ${result.error.message}`);
@@ -59,12 +130,119 @@ function runNodeTool(scope, label, name, args = []) {
     run(label, process.execPath, [path.join(__dirname, name), ...args], { scope });
 }
 
+function publishPath(scope, relativePath, options = {}) {
+    const source = path.join(outputRootForScope(scope), relativePath);
+    const destination = path.join(canonicalOutputRoots[scope], relativePath);
+    if (!fs.existsSync(source)) return false;
+    const stat = fs.statSync(source);
+    if (stat.isDirectory()) {
+        return mirrorDirectory(source, destination, { deleteExtraneous: options.deleteExtraneous });
+    }
+    if (stat.isFile()) {
+        return atomicCopyFile(source, destination);
+    }
+    return false;
+}
+
+function publishFrontEndArtifacts() {
+    const root = appOutputRoot();
+    const published = [];
+    const testResultsDir = path.join(frontEndRoot, 'test-results');
+    if (atomicCopyFile(path.join(root, 'test-results', 'storybook-junit.xml'), path.join(testResultsDir, 'storybook-junit.xml'))) {
+        published.push('app/front-end/test-results/storybook-junit.xml');
+    }
+    if (atomicCopyFile(path.join(root, 'test-results', 'e2e-live-results.json'), path.join(testResultsDir, 'e2e-live-results.json'))) {
+        published.push('app/front-end/test-results/e2e-live-results.json');
+    }
+    if (mirrorDirectory(path.join(root, 'test-results', 'live-artifacts'), path.join(testResultsDir, 'live-artifacts'), { deleteExtraneous: true })) {
+        published.push('app/front-end/test-results/live-artifacts');
+    }
+    if (mirrorDirectory(path.join(root, 'playwright-report', 'live'), path.join(frontEndRoot, 'playwright-report', 'live'), { deleteExtraneous: true })) {
+        published.push('app/front-end/playwright-report/live');
+    }
+    return published;
+}
+
+function publishHarnessUiArtifacts() {
+    const published = [];
+    if (atomicCopyFile(
+        path.join(harnessOutputRoot(), 'test-results', 'storybook-junit.xml'),
+        path.join(harnessUiRoot, 'test-results', 'storybook-junit.xml')
+    )) {
+        published.push('harness/ui/test-results/storybook-junit.xml');
+    }
+    return published;
+}
+
+function publishScope(scope, options = {}) {
+    if (!runContext.enabled) return;
+    const paths = options.paths ?? publishableTopLevelDirs.filter((name) => {
+        const source = path.join(outputRootForScope(scope), name);
+        return fs.existsSync(source);
+    });
+    const published = [];
+    for (const relativePath of paths) {
+        if (publishPath(scope, relativePath, { deleteExtraneous: options.mirror })) {
+            published.push(`${scope === 'harness' ? 'build/harness' : 'build/app'}/${relativePath}`);
+        }
+    }
+    if (options.frontEndArtifacts) {
+        published.push(...publishFrontEndArtifacts());
+    }
+    if (options.harnessUiArtifacts) {
+        published.push(...publishHarnessUiArtifacts());
+    }
+    const summary = published.length > 0 ? published.join(', ') : 'no publishable artifacts';
+    console.log(`[publish:${scope}] ${rel(outputRootForScope(scope))} -> ${summary}`);
+}
+
+function hydrateTraceTestResults(scope) {
+    if (!runContext.enabled) return;
+    if (scope === 'application') {
+        mirrorDirectory(
+            path.join(canonicalOutputRoots.application, 'test-results', 'test'),
+            path.join(appOutputRoot(), 'test-results', 'test'),
+            { deleteExtraneous: true }
+        );
+        atomicCopyFile(
+            path.join(frontEndRoot, 'test-results', 'storybook-junit.xml'),
+            path.join(appOutputRoot(), 'test-results', 'storybook-junit.xml')
+        );
+        atomicCopyFile(
+            path.join(frontEndRoot, 'test-results', 'e2e-live-results.json'),
+            path.join(appOutputRoot(), 'test-results', 'e2e-live-results.json')
+        );
+        return;
+    }
+    mirrorDirectory(
+        path.join(canonicalOutputRoots.harness, 'test-results', 'nodeSelfTest'),
+        path.join(harnessOutputRoot(), 'test-results', 'nodeSelfTest'),
+        { deleteExtraneous: true }
+    );
+    atomicCopyFile(
+        path.join(harnessUiRoot, 'test-results', 'storybook-junit.xml'),
+        path.join(harnessOutputRoot(), 'test-results', 'storybook-junit.xml')
+    );
+}
+
 function runBackEndGradle(label, ...tasks) {
-    run(label, gradleWrapper, ['-p', backendRoot, ...tasks], { scope: 'application' });
+    run(label, gradleWrapper, [
+        '-p',
+        backendRoot,
+        '--project-cache-dir',
+        gradleProjectCacheDirFor('application'),
+        ...tasks
+    ], { scope: 'application' });
 }
 
 function runHarnessGradle(label, ...tasks) {
-    run(label, gradleWrapper, ['-p', harnessRoot, ...tasks], { scope: 'harness' });
+    run(label, gradleWrapper, [
+        '-p',
+        harnessRoot,
+        '--project-cache-dir',
+        gradleProjectCacheDirFor('harness'),
+        ...tasks
+    ], { scope: 'harness' });
 }
 
 function nodeTestFiles() {
@@ -99,7 +277,7 @@ function toolTest() {
 }
 
 function sourceIndex() {
-    const indexesDir = path.join(appOutputRoot, 'indexes');
+    const indexesDir = path.join(appOutputRoot(), 'indexes');
     fs.mkdirSync(indexesDir, { recursive: true });
     const args = [
         workspaceRoot,
@@ -119,7 +297,7 @@ function frontEndSourceIndex() {
         path.join(frontEndRoot, 'tools', 'source-index.mjs'),
         `--front-end-root=${frontEndRoot}`,
         `--repo-root=${workspaceRoot}`,
-        `--out=${path.join(appOutputRoot, 'indexes', 'front-end.source-index.json')}`
+        `--out=${path.join(appOutputRoot(), 'indexes', 'front-end.source-index.json')}`
     ], { scope: 'application' });
 }
 
@@ -133,7 +311,7 @@ function harnessFrontEndSourceIndex() {
         sourceIndexTool,
         `--front-end-root=${harnessUiRoot}`,
         `--repo-root=${workspaceRoot}`,
-        `--out=${path.join(harnessOutputRoot, 'indexes', 'front-end.source-index.json')}`
+        `--out=${path.join(harnessOutputRoot(), 'indexes', 'front-end.source-index.json')}`
     ], { scope: 'harness' });
 }
 
@@ -168,7 +346,7 @@ function collectAppStaticInputs() {
 }
 
 function collectHarnessStaticInputs() {
-    const indexesDir = path.join(harnessOutputRoot, 'indexes');
+    const indexesDir = path.join(harnessOutputRoot(), 'indexes');
     for (const stale of ['backend.source-index.json', 'front-end.source-index.json', 'openapi.index.json']) {
         fs.rmSync(path.join(indexesDir, stale), { force: true });
     }
@@ -230,8 +408,9 @@ function frontEndLiveE2e() {
 }
 
 function frontEndStorybookTest() {
-    fs.rmSync(path.join(frontEndRoot, 'test-results', 'storybook-junit.xml'), { force: true });
-    fs.rmSync(path.join(frontEndRoot, 'test-results', 'e2e-results.json'), { force: true });
+    const junitFile = path.join(appOutputRoot(), 'test-results', 'storybook-junit.xml');
+    fs.mkdirSync(path.dirname(junitFile), { recursive: true });
+    fs.rmSync(junitFile, { force: true });
     frontEndNpm('front-end:test-storybook', 'test:storybook');
 }
 
@@ -256,7 +435,9 @@ function harnessUiBuildStorybook() {
 }
 
 function harnessUiStorybookTest() {
-    fs.rmSync(path.join(harnessUiRoot, 'test-results', 'storybook-junit.xml'), { force: true });
+    const junitFile = path.join(harnessOutputRoot(), 'test-results', 'storybook-junit.xml');
+    fs.mkdirSync(path.dirname(junitFile), { recursive: true });
+    fs.rmSync(junitFile, { force: true });
     harnessUiNpm('harness:ui:test-storybook', 'test:storybook');
 }
 
@@ -266,7 +447,7 @@ function selfTest() {
         console.log('[harness:self-test] no Node/TypeScript self-test files');
         return;
     }
-    const resultDir = path.join(harnessOutputRoot, 'test-results', 'nodeSelfTest');
+    const resultDir = path.join(harnessOutputRoot(), 'test-results', 'nodeSelfTest');
     fs.rmSync(resultDir, { recursive: true, force: true });
     fs.mkdirSync(resultDir, { recursive: true });
     run('harness:self-test', process.execPath, [
@@ -283,6 +464,7 @@ function selfTest() {
 
 function appTrace(args) {
     collectAppStaticInputs();
+    hydrateTraceTestResults('application');
     indexTestResults('application');
     emitFindingsAndReports('application');
     runNodeTool('application', 'app:trace', 'trace-requirements.mjs', args);
@@ -313,6 +495,7 @@ function appLiveE2e() {
 
 function harnessTrace(args) {
     collectHarnessStaticInputs();
+    hydrateTraceTestResults('harness');
     indexTestResults('harness');
     emitFindingsAndReports('harness');
     runNodeTool('harness', 'harness:trace', 'trace-requirements.mjs', args);
@@ -338,7 +521,9 @@ function harnessTest() {
 
 function repoValidate(args) {
     appValidate(args);
+    publishScope('application', { mirror: true, frontEndArtifacts: true });
     harnessValidate(args);
+    publishScope('harness', { mirror: true, harnessUiArtifacts: true });
 }
 
 function usage() {
@@ -374,64 +559,99 @@ Commands:
 }
 
 const [command, ...args] = process.argv.slice(2);
+const usesRunContext = command && !manualUiCommands.has(command);
+let runContext = createCanonicalContext();
+try {
+    if (usesRunContext) {
+        runContext = await createRunContext({ allocatePorts: portIsolatedCommands.has(command) });
+        console.log(`[run] runId=${runContext.runId}`);
+        console.log(`[run] appRoot=${rel(runContext.outputRoots.application)} harnessRoot=${rel(runContext.outputRoots.harness)}`);
+        if (runContext.ports) {
+            console.log(`[run] ports frontend=${runContext.ports.frontendPort} backend=${runContext.ports.backendPort}`);
+        }
+    }
+} catch (error) {
+    console.error(`[run] ${error.message}`);
+    process.exit(2);
+}
+
 switch (command) {
     case 'app:validate':
         appValidate(args);
+        publishScope('application', { mirror: true, frontEndArtifacts: true });
         break;
     case 'app:trace':
         appTrace(args);
+        publishScope('application', { mirror: true, frontEndArtifacts: true });
         break;
     case 'app:test':
         appTest();
+        publishScope('application');
         break;
     case 'app:e2e':
         appE2e();
+        publishScope('application', { frontEndArtifacts: true });
         break;
     case 'app:e2e:live':
         appLiveE2e();
+        publishScope('application', { frontEndArtifacts: true });
         break;
     case 'app:source-index':
         sourceIndex();
+        publishScope('application');
         break;
     case 'app:front-end-source-index':
         frontEndSourceIndex();
+        publishScope('application');
         break;
     case 'app:scenario-index':
         scenarioIndex('application');
+        publishScope('application');
         break;
     case 'app:openapi-index':
         openApiIndex();
+        publishScope('application');
         break;
     case 'app:change-sets':
         changeSetsReport('application');
+        publishScope('application');
         break;
     case 'app:terminology':
         terminology('application', args);
+        publishScope('application');
         break;
     case 'app:standards':
         standards('application');
+        publishScope('application');
         break;
     case 'harness:validate':
         harnessValidate(args);
+        publishScope('harness', { mirror: true, harnessUiArtifacts: true });
         break;
     case 'harness:trace':
         harnessTrace(args);
+        publishScope('harness', { mirror: true, harnessUiArtifacts: true });
         break;
     case 'harness:test':
         harnessTest();
+        publishScope('harness', { harnessUiArtifacts: true });
         break;
     case 'harness:tool-test':
         toolTest();
+        publishScope('harness');
         break;
     case 'harness:self-test':
         collectHarnessStaticInputs();
         selfTest();
+        publishScope('harness');
         break;
     case 'harness:self-test-index':
         harnessSelfTestIndex();
+        publishScope('harness');
         break;
     case 'harness:front-end-source-index':
         harnessFrontEndSourceIndex();
+        publishScope('harness');
         break;
     case 'harness:ui':
         harnessUi();
@@ -441,12 +661,15 @@ switch (command) {
         break;
     case 'harness:change-sets':
         changeSetsReport('harness');
+        publishScope('harness');
         break;
     case 'harness:terminology':
         terminology('harness', args);
+        publishScope('harness');
         break;
     case 'harness:standards':
         standards('harness');
+        publishScope('harness');
         break;
     case 'repo:validate':
         repoValidate(args);

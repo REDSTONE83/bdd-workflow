@@ -64,6 +64,12 @@ function runEvaluatorFixture(entries: any[]) {
         entries,
         issues: []
     });
+    const env = { ...process.env };
+    for (const key of Object.keys(env)) {
+        if (key.startsWith('HARNESS_') || key === 'STORYBOOK_JUNIT_FILE') {
+            delete env[key];
+        }
+    }
 
     const result = spawnSync(process.execPath, [
         path.join(workspaceRoot, 'harness', 'tools', 'evaluate-trace-state.mjs'),
@@ -72,7 +78,7 @@ function runEvaluatorFixture(entries: any[]) {
         cwd: workspaceRoot,
         encoding: 'utf8',
         env: {
-            ...process.env,
+            ...env,
             HARNESS_SCOPE: 'harness',
             HARNESS_OUTPUT_ROOT: outputRoot
         }

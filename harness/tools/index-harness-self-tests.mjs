@@ -2,12 +2,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { outputRootFor } from './workspace-config.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, '..', '..');
 const selfTestRoot = path.join(workspaceRoot, 'harness', 'self-test');
-const outDir = path.join(workspaceRoot, 'build', 'harness', 'indexes');
+const outDir = path.join(outputRootFor('harness'), 'indexes');
 const outFile = path.join(outDir, 'harness.self-test.index.json');
 
 function walk(dir) {

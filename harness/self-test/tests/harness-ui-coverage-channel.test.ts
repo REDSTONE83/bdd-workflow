@@ -17,13 +17,23 @@ const sourceIndexer = path.join(workspaceRoot, 'harness', 'ui', 'tools', 'source
 const evaluator = path.join(workspaceRoot, 'harness', 'tools', 'evaluate-trace-state.mjs');
 const indexTestResults = path.join(workspaceRoot, 'harness', 'tools', 'index-test-results.mjs');
 const frontEndStandards = path.join(workspaceRoot, 'harness', 'tools', 'validate-front-end-standards.mjs');
-const harnessUiRoot = path.join(workspaceRoot, 'harness', 'ui');
+
+function cleanEnv(extra: Record<string, string> = {}) {
+    const env = { ...process.env };
+    for (const key of Object.keys(env)) {
+        if (key.startsWith('HARNESS_') || key === 'STORYBOOK_JUNIT_FILE') {
+            delete env[key];
+        }
+    }
+    env.HARNESS_SCOPE = 'harness';
+    return { ...env, ...extra };
+}
 
 function runNode(file: string, args: string[], options: { cwd?: string; env?: Record<string, string>; allowNonZero?: boolean } = {}) {
     const result = spawnSync(process.execPath, [file, ...args], {
         cwd: options.cwd ?? workspaceRoot,
         encoding: 'utf8',
-        env: { ...process.env, ...(options.env ?? {}) },
+        env: cleanEnv(options.env),
         maxBuffer: 20 * 1024 * 1024
     });
     const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
@@ -175,24 +185,21 @@ harnessTest({
     covers: ['harness/ui Storybook Vitest 실행 결과가 하네스 scope 테스트 결과 인덱스에 병합되어 수용 기준 판정에 사용된다']
 }, () => {
     const outputRoot = tempDir('harness-ui-results-');
-    const junit = path.join(harnessUiRoot, 'test-results', 'storybook-junit.xml');
-    const targets = [junit];
+    const junit = path.join(outputRoot, 'test-results', 'storybook-junit.xml');
     const indexPath = path.join(outputRoot, 'indexes', 'test-results.index.json');
 
-    withFileBackups(targets, () => {
-        writeText(junit, `<?xml version="1.0" encoding="UTF-8"?>
+    writeText(junit, `<?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
   <testsuite name="storybook">
     <testcase classname="Harness/Foo" name="Default" file="src/Foo.stories.tsx" line="10" />
   </testsuite>
 </testsuites>
 `);
-        runNode(indexTestResults, [], {
-            env: {
-                HARNESS_SCOPE: 'harness',
-                HARNESS_OUTPUT_ROOT: outputRoot
-            }
-        });
+    runNode(indexTestResults, [], {
+        env: {
+            HARNESS_SCOPE: 'harness',
+            HARNESS_OUTPUT_ROOT: outputRoot
+        }
     });
 
     const payload = readJson(indexPath);

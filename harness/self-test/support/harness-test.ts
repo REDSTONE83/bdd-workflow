@@ -49,6 +49,32 @@ const fileOwners = new Map([
     ['terminology.findings.json', 'terminology']
 ]);
 
+const runnerEnvKeys = [
+    'STORYBOOK_JUNIT_FILE',
+    'E2E_RESULTS_FILE',
+    'E2E_LIVE_RESULTS_FILE',
+    'E2E_LIVE_ARTIFACTS_DIR',
+    'E2E_LIVE_HTML_REPORT_DIR',
+    'E2E_FRONTEND_PORT',
+    'E2E_BACKEND_PORT',
+    'E2E_BASE_URL',
+    'VITE_BACKEND_ORIGIN'
+];
+
+function baseCommandEnv() {
+    const env = { ...process.env };
+    for (const key of Object.keys(env)) {
+        if (key.startsWith('HARNESS_')) {
+            delete env[key];
+        }
+    }
+    for (const key of runnerEnvKeys) {
+        delete env[key];
+    }
+    env.HARNESS_SCOPE = 'harness';
+    return env;
+}
+
 export function harnessTest(metadata: HarnessTestMetadata, body: () => void | Promise<void>) {
     assert.match(metadata.requirement, /^REQ-\d{3,}$/);
     assert.ok(metadata.name.length > 0, 'harness test name is required');
@@ -88,7 +114,7 @@ export function runCommand(
     const result = spawnSync(command, args, {
         cwd: options.cwd ?? workspaceRoot,
         encoding: 'utf8',
-        env: { ...process.env, ...(options.env ?? {}) },
+        env: { ...baseCommandEnv(), ...(options.env ?? {}) },
         timeout: options.timeoutMs ?? 30_000,
         maxBuffer: 20 * 1024 * 1024
     });
