@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { requirementDetail } from "../../../lib/harness-data/fixtures";
+import { appRequirementDetail as requirementDetail } from "../../../lib/harness-data/fixtures";
 import { sourceLinksForRequirement } from "./detail-utils";
 
 describe("sourceLinksForRequirement", () => {

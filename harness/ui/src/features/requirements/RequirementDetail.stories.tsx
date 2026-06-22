@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { RequirementDetailView } from "./RequirementDetailView";
-import { requirementDetail } from "../../lib/harness-data/fixtures";
+import { appRequirementDetail, requirementDetail } from "../../lib/harness-data/fixtures";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { ErrorState } from "../../components/ui/ErrorState";
 
@@ -174,8 +174,9 @@ export const BlueBlocked: Story = {
 };
 
 export const LinkedArtifacts: Story = {
-  args: { detail: requirementDetail },
+  args: { detail: appRequirementDetail },
   parameters: {
+    router: { initialEntries: ["/requirements/REQ-022"] },
     harness: {
       covers: [
         "연결 산출물은 요건 카드와 수용 시나리오 종류 뱃지와 파일 위치가 있는 목록형 카드로 표시된다",
@@ -185,7 +186,7 @@ export const LinkedArtifacts: Story = {
     },
     docs: {
       description: {
-        story: "카드 원본과 수용 시나리오 산출물 링크가 표시되는 상태다. 산출물/소스 탭의 연결 산출물에는 요건 카드와 수용 시나리오만 보이고, 소스 위치에는 산출물 파일 없이 API 설계/DB 설계/UI 구현 표면이 종류 뱃지가 있는 목록형 카드로 보이는지 확인한다. 파일 경로와 라인은 별도 열기 버튼 없이 위치 텍스트 자체가 로컬 에디터 바로가기처럼 동작해야 한다.",
+        story: "백엔드 표면이 실재하는 앱 요건 상세에서 산출물/소스 탭을 확인하는 상태다. 연결 산출물에는 요건 카드와 수용 시나리오만 보이고, 소스 위치에는 산출물 파일 없이 API 설계/Request/Response/DB 설계/UI 구현 표면이 종류 뱃지가 있는 목록형 카드로 보이는지 확인한다. 파일 경로와 라인은 별도 열기 버튼 없이 위치 텍스트 자체가 로컬 에디터 바로가기처럼 동작해야 한다.",
       },
     },
   },
@@ -194,7 +195,7 @@ export const LinkedArtifacts: Story = {
     await expect(canvas.getByRole("heading", { name: "연결 산출물" })).toBeVisible();
     await expect(visibleText(canvas, "요건 카드")).toBeVisible();
     await expect(visibleText(canvas, "수용 시나리오")).toBeVisible();
-    await expect(canvas.getByText("harness/docs/requirements/REQ-031-harness-ui-requirement-board.md:1")).toBeVisible();
+    await expect(canvas.getByText("app/docs/requirements/REQ-022-todo-create.md:1")).toBeVisible();
     await expect(canvas.getByRole("heading", { name: "소스코드 위치" })).toBeVisible();
     await expect(visibleText(canvas, "API 설계")).toBeVisible();
     await expect(visibleText(canvas, "Request")).toBeVisible();
@@ -249,8 +250,9 @@ export const AcceptanceAndScenarios: Story = {
 };
 
 export const DesignSurfaces: Story = {
-  args: { detail: requirementDetail },
+  args: { detail: appRequirementDetail },
   parameters: {
+    router: { initialEntries: ["/requirements/REQ-022"] },
     harness: {
       covers: [
         "연결된 API 작업은 세로 목록형 카드로 표시되고 Request, Response 구성과 그 안의 중첩 객체 필드는 펼침으로 확인된다",
@@ -260,36 +262,36 @@ export const DesignSurfaces: Story = {
     },
     docs: {
       description: {
-        story: "API 설계 탭에서 요건에 연결된 API 작업 목록형 카드, Request/Response 펼침, Request/Response 필드의 참조 객체 펼침을 확인하고, DB 설계 탭에서 DB 테이블과 컬럼 메타데이터 목록을 확인하는 상태다. UI 설계는 UI 설계 탭에서 description이 있는 목록형 카드로 표시되고 Storybook 검토 버튼과 구현 위치 링크를 제공해야 한다.",
+        story: "백엔드 표면이 실재하는 앱 요건 상세에서, API 설계 탭의 API 작업 목록형 카드와 Request/Response 펼침, Request/Response 필드의 참조 객체 펼침을 확인하고, DB 설계 탭에서 DB 테이블과 컬럼 메타데이터 목록을 확인하는 상태다. dataShapes의 필드 구성은 라이브 buildRequirementDetailModel이 source index에서 채운 값과 동일하다. UI 설계는 description이 있는 목록형 카드로 표시되고 Storybook 검토 버튼과 구현 위치 링크를 제공해야 한다.",
       },
     },
   },
   play: async ({ canvasElement }) => {
     const canvas = await openDetailTab(canvasElement, "API 설계");
     await expect(canvas.getByRole("heading", { name: "API 설계" })).toBeVisible();
-    await expect(canvas.getByText("/api/requirements")).toBeVisible();
-    await expect(canvas.getByText("operationId: listRequirementTrace")).toBeVisible();
+    await expect(canvas.getByText("/todos")).toBeVisible();
+    await expect(canvas.getByText("operationId: TodoController.createTodo")).toBeVisible();
     await userEvent.click(canvas.getAllByRole("button", { name: /Request/ })[0]);
-    await expect(canvas.getAllByText("RequirementBoardQuery")[0]).toBeVisible();
+    await expect(canvas.getAllByText("CreateTodoRequest")[0]).toBeVisible();
     await userEvent.click(canvas.getAllByRole("button", { name: /Response/ })[0]);
-    await expect(canvas.getAllByText("RequirementBoardResponse")[0]).toBeVisible();
+    await expect(canvas.getAllByText("TodoResponse")[0]).toBeVisible();
+    // TodoResponse.category 필드가 TodoCategoryInfo를 참조하므로 중첩 객체 펼침이 보인다.
     await userEvent.click(canvas.getAllByRole("button", { name: /참조 객체/ })[0]);
-    await expect(canvas.getAllByText("RequirementRow")[0]).toBeVisible();
+    await expect(canvas.getAllByText("TodoCategoryInfo")[0]).toBeVisible();
 
     await userEvent.click(canvas.getByRole("tab", { name: "DB 설계" }));
     await expect(canvas.getByRole("heading", { name: "DB 설계" })).toBeVisible();
-    await expect(visibleText(canvas, "category")).toBeVisible();
     await expect(canvas.getByText("JPA Entity")).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: /컬럼 목록/ }));
-    await expect(visibleText(canvas, "name")).toBeVisible();
+    await expect(visibleText(canvas, "user_id")).toBeVisible();
     await expect(visibleText(canvas, "NOT NULL")).toBeVisible();
 
     await userEvent.click(canvas.getByRole("tab", { name: "UI 설계" }));
     await expect(canvas.getByRole("heading", { name: "UI 설계" })).toBeVisible();
-    await expect(visibleText(canvas, "RequirementBoardPage")).toBeVisible();
-    await expect(canvas.getByText("요건 목록과 상태 요약을 보여주는 하네스 UI 화면 표면이다.")).toBeVisible();
+    await expect(visibleText(canvas, "TodoCreateDialog")).toBeVisible();
+    await expect(canvas.getByText("할 일 생성 입력 대화상자 화면 표면이다.")).toBeVisible();
     await expect(canvas.getAllByRole("button", { name: "Storybook 검토" })[0]).toBeVisible();
-    await expect(visibleText(canvas, "harness/ui/src/features/requirements/RequirementBoardPage.tsx:1")).toBeVisible();
+    await expect(visibleText(canvas, "app/front-end/src/features/todos/TodoCreateDialog.tsx:1")).toBeVisible();
   },
 };
 

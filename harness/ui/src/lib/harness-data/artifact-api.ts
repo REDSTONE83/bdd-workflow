@@ -12,6 +12,7 @@ import type {
   LinkedArtifact,
   RequirementAcceptanceCriterion,
   RequirementApiSurface,
+  RequirementDataField,
   RequirementDataShape,
   RequirementDetail,
   RequirementEntityColumn,
@@ -316,9 +317,11 @@ function findingRow(value: unknown, fallbackRequirement = ""): FindingRow {
   };
 }
 
-function cleanJavaType(value: string) {
+function cleanJavaType(value: string): string {
   const responseEntity = value.match(/^ResponseEntity<(.+)>$/);
-  if (responseEntity) return responseEntity[1];
+  if (responseEntity) return cleanJavaType(responseEntity[1]);
+  const jsonNullable = value.match(/^JsonNullable<(.+)>$/);
+  if (jsonNullable) return cleanJavaType(jsonNullable[1]);
   return value;
 }
 
@@ -340,10 +343,9 @@ function buildApiSurfaces(traceRequirement: Record<string, unknown>): Requiremen
       .filter((parameter) => parameter.springRequestBody === true)
       .map((parameter) => stringValue(parameter.javaType))
       .filter(Boolean);
-    const responseTypes = [
-      cleanJavaType(stringValue(api.returnType)),
-      ...recordArray(api.responses).map((response) => stringValue(response.responseCode)).filter(Boolean),
-    ].filter(Boolean);
+    // 응답 데이터 shape는 반환 DTO만 담는다. 상태 코드(201/400 등)는 DTO shape가 아니므로
+    // dataShapes 대상에서 제외한다(data-contracts.md: dataShapes[]는 Request/Response와 참조 객체 DTO shape).
+    const responseTypes = [cleanJavaType(stringValue(api.returnType))].filter(Boolean);
 
     return {
       method: http.method,
@@ -359,15 +361,66 @@ function buildApiSurfaces(traceRequirement: Record<string, unknown>): Requiremen
   });
 }
 
-function buildDataShapes(apiSurfaces: RequirementApiSurface[]): RequirementDataShape[] {
+function readBackendDtoMap(scope: HarnessScope, workspaceRoot: string): Map<string, Record<string, unknown>> {
+  const payload = maybeReadJson(outputPath(workspaceRoot, scope, "indexes", "backend.source-index.json"));
+  const byName = new Map<string, Record<string, unknown>>();
+  for (const dto of recordArray(asRecord(payload).dtos)) {
+    const name = stringValue(dto.className);
+    if (name) byName.set(name, dto);
+  }
+  return byName;
+}
+
+function isRequiredField(field: Record<string, unknown>): boolean {
+  const annotations = stringArray(field.annotations);
+  return annotations.includes("NotBlank") || annotations.includes("NotNull");
+}
+
+function dtoFields(dto: Record<string, unknown>): RequirementDataField[] {
+  return recordArray(dto.fields).map((field) => {
+    const description = stringValue(field.schemaDescription);
+    return {
+      name: stringValue(field.name),
+      type: cleanJavaType(stringValue(field.javaType)),
+      required: isRequiredField(field),
+      ...(description ? { description } : {}),
+    };
+  });
+}
+
+function buildDataShapes(
+  apiSurfaces: RequirementApiSurface[],
+  dtoMap: Map<string, Record<string, unknown>>,
+): RequirementDataShape[] {
   const shapes = new Map<string, RequirementDataShape>();
+  const hasName = (name: string) => [...shapes.values()].some((shape) => shape.name === name);
+
+  function addShape(kind: RequirementDataShape["kind"], name: string, fallbackFile: string, fallbackLine: number) {
+    const key = `${kind}:${name}`;
+    if (!name || shapes.has(key)) return;
+    const dto = dtoMap.get(name);
+    shapes.set(key, {
+      kind,
+      name,
+      status: "연결됨",
+      file: dto ? stringValue(dto.file, fallbackFile) : fallbackFile,
+      line: dto ? normalizeLine(dto.schemaLine) : fallbackLine,
+      fields: dto ? dtoFields(dto) : [],
+    });
+    if (!dto) return;
+    // 필드가 다른 DTO를 참조하면 그 객체도 shape로 펼쳐 중첩 표시를 가능하게 한다.
+    for (const field of recordArray(dto.fields)) {
+      const referenced = cleanJavaType(stringValue(field.javaType));
+      if (dtoMap.has(referenced) && !hasName(referenced)) {
+        const refDto = dtoMap.get(referenced);
+        if (refDto) addShape("Object", referenced, stringValue(refDto.file), normalizeLine(refDto.schemaLine));
+      }
+    }
+  }
+
   for (const api of apiSurfaces) {
-    for (const request of api.requests) {
-      shapes.set(`Request:${request}`, { kind: "Request", name: request, status: "연결됨", file: api.file, line: api.line, fields: [] });
-    }
-    for (const response of api.responses) {
-      shapes.set(`Response:${response}`, { kind: "Response", name: response, status: "연결됨", file: api.file, line: api.line, fields: [] });
-    }
+    for (const request of api.requests) addShape("Request", request, api.file, api.line);
+    for (const response of api.responses) addShape("Response", response, api.file, api.line);
   }
   return [...shapes.values()];
 }
@@ -473,7 +526,7 @@ export function buildRequirementDetailModel(
   const coverage = buildCoverageRows(traceRequirement);
   const scenarios = buildScenarios(traceRequirement);
   const apiSurfaces = buildApiSurfaces(traceRequirement);
-  const dataShapes = buildDataShapes(apiSurfaces);
+  const dataShapes = buildDataShapes(apiSurfaces, readBackendDtoMap(scope, workspaceRoot));
   const entitySurfaces = buildEntitySurfaces(traceRequirement);
   const uiSurfaces = buildUiSurfaces(scope, traceRequirement);
 
