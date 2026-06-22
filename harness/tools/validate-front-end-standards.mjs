@@ -4,12 +4,14 @@
 // 신규 룰은 후속 step에서 같은 finding 모양으로 추가한다.
 //
 // 입력: build/{app|harness}/indexes/front-end.source-index.json
+//       build/{app|harness}/indexes/test-results.index.json (app scope freshness issues[])
 // 출력: build/{app|harness}/findings/front-end-standards.findings.json
 //
 // 룰 ID:
 //   FE-TEST-DYN              Playwright 수용 테스트 annotation이 literal {type,description} 형태가 아님
 //   FE-TEST-COVERS-NO-REQ    Covers 메타데이터는 있으나 Requirement 메타데이터 없음
 //   FE-TEST-REQ-NO-COVERS    Requirement 메타데이터는 있으나 Covers 메타데이터 없음
+//   FE-TEST-RESULT-STALE     FE 실행 결과가 현재 FE BDD source와 다른 실행에서 나옴(manifest fingerprint 불일치/누락)
 //   FE-E2E-LIVE-LOCATION     상위 요건 E2E AC를 커버하는 Playwright 테스트가 live 디렉터리 밖에 있음
 //   FE-LIVE-MOCK-IMPORT      live Playwright spec이 API mock helper를 import함
 //   FE-STORY-MISSING-SURFACE 요건 UI 설계 검토 표면의 story surface가 누락
@@ -39,6 +41,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { currentScope, frontEndRoot as workspaceFrontEndRoot, outputRootFor, repoRelative, workspaceRoot } from './workspace-config.mjs';
+import { FRONT_END_RESULT_FILES } from './test-result-fingerprint.mjs';
 
 const repoRoot = workspaceRoot;
 const scope = currentScope();
@@ -46,6 +49,7 @@ const outputDir = outputRootFor();
 const DEFAULTS = {
     frontEndRoot: workspaceFrontEndRoot,
     feSourceIndex: path.join(outputDir, 'indexes', 'front-end.source-index.json'),
+    testResultsIndex: path.join(outputDir, 'indexes', 'test-results.index.json'),
     requirementsIndex: path.join(outputDir, 'indexes', 'requirements.index.json'),
     openApiIndex: path.join(outputDir, 'indexes', 'openapi.index.json'),
     generatedMeta: path.join(workspaceFrontEndRoot, 'src', 'api', 'generated', '.openapi-source.sha256'),
@@ -58,6 +62,7 @@ function parseCliArgs(argv) {
     for (const arg of argv) {
         if (arg.startsWith('--front-end-root=')) cfg.frontEndRoot = path.resolve(arg.slice('--front-end-root='.length));
         else if (arg.startsWith('--fe-source-index=')) cfg.feSourceIndex = path.resolve(arg.slice('--fe-source-index='.length));
+        else if (arg.startsWith('--test-results-index=')) cfg.testResultsIndex = path.resolve(arg.slice('--test-results-index='.length));
         else if (arg.startsWith('--requirements-index=')) cfg.requirementsIndex = path.resolve(arg.slice('--requirements-index='.length));
         else if (arg.startsWith('--openapi-index=')) cfg.openApiIndex = path.resolve(arg.slice('--openapi-index='.length));
         else if (arg.startsWith('--generated-meta=')) cfg.generatedMeta = path.resolve(arg.slice('--generated-meta='.length));
@@ -79,6 +84,8 @@ const FE_API_DECLARED_NOT_CALLED_SEVERITY = 'error';
 const FE_API_CALL_NOT_DECLARED_SEVERITY = 'error';
 const FE_API_CLIENT_NO_METADATA_SEVERITY = 'error';
 const FE_API_CLIENT_STALE_SEVERITY = 'error';
+// FE 실행 결과가 현재 FE BDD source와 다른 실행에서 나오면(stale) AC 커버 결과로 인정하지 않고 차단한다.
+const FE_TEST_RESULT_STALE_SEVERITY = 'error';
 const FE_API_PAGEABLE_WIRE_SHAPE_SEVERITY = 'error';
 const FE_API_PATCH_WIRE_SHAPE_SEVERITY = 'error';
 const FE_E2E_LIVE_LOCATION_SEVERITY = 'error';
@@ -872,6 +879,37 @@ function feApiFindings(frontEndIndex, cfg) {
     return findings;
 }
 
+const FE_TEST_RESULT_STALE_REASONS = {
+    'fingerprint-mismatch': 'FE BDD source(Requirement/Covers/식별자)가 바뀐 뒤 재실행되지 않았다',
+    'manifest-missing': '결과 파일에 대응하는 freshness manifest가 없다',
+    'result-file-hash-mismatch': 'manifest의 resultFileSha256이 실제 결과 파일과 다르다'
+};
+
+// test-results.index.json 의 freshness issues[] 를 FE-TEST-RESULT-STALE finding 으로 정규화한다.
+// 결과 종류(Storybook Vitest / live Playwright) 구분과 runtime별 재실행 명령을 포함한다.
+function findingsForStaleTestResults(testResultsIndexPath) {
+    const index = safeReadJson(testResultsIndexPath, null);
+    const issues = (index?.issues ?? []).filter((issue) => issue.kind === 'FE_TEST_RESULT_STALE');
+    return issues.map((issue) => {
+        const config = FRONT_END_RESULT_FILES[issue.runtime];
+        const label = config?.label ?? issue.runtime ?? 'FE';
+        const rerun = config?.rerunCommand ?? 'npm run app:validate';
+        const reasonText = FE_TEST_RESULT_STALE_REASONS[issue.reason] ?? issue.reason ?? '알 수 없음';
+        const target = issue.identity ? ` (${issue.identity})` : '';
+        return {
+            ruleId: 'FE-TEST-RESULT-STALE',
+            severity: FE_TEST_RESULT_STALE_SEVERITY,
+            strictSeverity: FE_TEST_RESULT_STALE_SEVERITY,
+            kind: 'static',
+            message: `${label} 실행 결과${target}가 오래됨: ${reasonText}. 재실행: ${rerun}`,
+            requirements: [],
+            location: issue.location ?? { file: issue.resultFile ?? '', line: 0, identity: issue.identity ?? '(test-result)' },
+            evidence: { runtime: issue.runtime, reason: issue.reason, resultFile: issue.resultFile, rerunCommand: rerun },
+            remediation: REMEDIATION_TESTING
+        };
+    });
+}
+
 function writePayload(findings, outPath) {
     const payload = {
         generatedAt: new Date().toISOString(),
@@ -919,6 +957,7 @@ function main(argv) {
         ...findingsForStorybookVitestSuccessConditions(tests),
         ...findingsForTopLevelE2eLiveLocation(tests, cfg.requirementsIndex),
         ...findingsForLiveMockImports(cfg.frontEndRoot),
+        ...findingsForStaleTestResults(cfg.testResultsIndex),
         ...feApiFindings(index, cfg)
     ];
     const payload = writePayload(findings, cfg.out);
