@@ -15,7 +15,8 @@ import path from 'node:path';
 import { currentScope, outputRootFor } from './workspace-config.mjs';
 
 const harnessDir = outputRootFor();
-const stateFile = path.join(harnessDir, 'state', 'trace.state.json');
+// 슬라이스 실행은 HARNESS_TRACE_STATE_FILE 가 가리키는 격리 state를 읽는다(없으면 canonical).
+const stateFile = process.env.HARNESS_TRACE_STATE_FILE || path.join(harnessDir, 'state', 'trace.state.json');
 const findingsDir = path.join(harnessDir, 'findings');
 const reportsDir = path.join(harnessDir, 'reports');
 const gateReportFile = path.join(reportsDir, 'gate-report.json');

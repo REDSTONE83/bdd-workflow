@@ -49,9 +49,9 @@ function parseCliArgs(argv) {
     return { requirementArgs, checkMode, requireBlue, quiet };
 }
 
-function runTool(name, args) {
+function runTool(name, args, env) {
     const toolPath = path.join(__dirname, name);
-    const result = spawnSync('node', [toolPath, ...args], { stdio: ['ignore', 'inherit', 'inherit'] });
+    const result = spawnSync('node', [toolPath, ...args], { stdio: ['ignore', 'inherit', 'inherit'], env: env ?? process.env });
     if (result.error) {
         console.error(`failed to spawn ${name}: ${result.error.message}`);
         process.exit(2);
@@ -59,9 +59,9 @@ function runTool(name, args) {
     return result.status ?? 1;
 }
 
-function runToolQuiet(name, args) {
+function runToolQuiet(name, args, env) {
     const toolPath = path.join(__dirname, name);
-    const result = spawnSync('node', [toolPath, ...args, '--quiet'], { stdio: ['ignore', 'ignore', 'inherit'] });
+    const result = spawnSync('node', [toolPath, ...args, '--quiet'], { stdio: ['ignore', 'ignore', 'inherit'], env: env ?? process.env });
     if (result.error) {
         console.error(`failed to spawn ${name}: ${result.error.message}`);
         process.exit(2);
@@ -69,9 +69,9 @@ function runToolQuiet(name, args) {
     return result.status ?? 1;
 }
 
-function currentReportMdPath() {
-    if (!fs.existsSync(statePath)) return path.join(reportsDir, 'trace-report.md');
-    const model = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+function currentReportMdPath(stateFileToRead) {
+    if (!fs.existsSync(stateFileToRead)) return path.join(reportsDir, 'trace-report.md');
+    const model = JSON.parse(fs.readFileSync(stateFileToRead, 'utf8'));
     const suffix = Array.isArray(model.filter) && model.filter.length > 0
         ? `-${model.filter.join('-')}`
         : '';
@@ -79,6 +79,14 @@ function currentReportMdPath() {
 }
 
 const cli = parseCliArgs(process.argv.slice(2));
+
+// 슬라이스(--requirement) 실행은 canonical trace.state.json 을 덮지 않도록 격리 state 파일에 쓰고,
+// evaluate/render/gate 가 HARNESS_TRACE_STATE_FILE 로 그 파일을 공유한다. 전체 trace 는 canonical 을 쓴다.
+const isSlice = cli.requirementArgs.length > 0;
+const sliceStateFile = path.join(harnessDir, 'state', 'trace.state.slice.json');
+const childEnv = isSlice ? { ...process.env, HARNESS_TRACE_STATE_FILE: sliceStateFile } : process.env;
+const reportStateFile = isSlice ? sliceStateFile : statePath;
+
 const evalArgs = [
     ...cli.requirementArgs,
     ...(cli.checkMode ? ['--check'] : []),
@@ -86,16 +94,16 @@ const evalArgs = [
 ];
 
 // Step 1: 상태 계산
-let status = runToolQuiet('evaluate-trace-state.mjs', evalArgs);
+let status = runToolQuiet('evaluate-trace-state.mjs', evalArgs, childEnv);
 if (status !== 0) process.exit(status);
 
 // Step 2: 보조 리포트 렌더링. trace summary가 최신 Change Set warnings를 노출할 수 있게
 // Change Set report를 trace report보다 먼저 갱신한다.
-status = runToolQuiet('render-requirement-schema-report.mjs', []);
+status = runToolQuiet('render-requirement-schema-report.mjs', [], childEnv);
 if (status !== 0) process.exit(status);
-status = runToolQuiet('render-change-set-report.mjs', []);
+status = runToolQuiet('render-change-set-report.mjs', [], childEnv);
 if (status !== 0) process.exit(status);
-status = runToolQuiet('render-trace-report.mjs', []);
+status = runToolQuiet('render-trace-report.mjs', [], childEnv);
 if (status !== 0) process.exit(status);
 
 // 옛 monolith의 stdout 동작 보존:
@@ -104,7 +112,7 @@ if (status !== 0) process.exit(status);
 if (cli.quiet) {
     // gate.mjs --quiet 한 줄만 출력한다.
 } else {
-    const reportMdPath = currentReportMdPath();
+    const reportMdPath = currentReportMdPath(reportStateFile);
     if (!fs.existsSync(reportMdPath)) {
         console.error(`missing rendered trace report: ${reportMdPath}`);
         process.exit(2);
@@ -120,5 +128,5 @@ const gateArgs = [
     ...(cli.requireBlue ? ['--require-blue'] : []),
     ...(cli.quiet ? ['--quiet'] : [])
 ];
-status = runTool('gate.mjs', gateArgs);
+status = runTool('gate.mjs', gateArgs, childEnv);
 process.exit(status);

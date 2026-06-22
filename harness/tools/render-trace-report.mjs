@@ -10,7 +10,8 @@ import path from 'node:path';
 import { outputRootFor, workspaceRoot } from './workspace-config.mjs';
 
 const outputDir = outputRootFor();
-const stateOutFile = path.join(outputDir, 'state', 'trace.state.json');
+// 슬라이스 실행은 HARNESS_TRACE_STATE_FILE 가 가리키는 격리 state를 읽어 슬라이스 리포트를 낸다.
+const stateOutFile = process.env.HARNESS_TRACE_STATE_FILE || path.join(outputDir, 'state', 'trace.state.json');
 const reportsDir = path.join(outputDir, 'reports');
 const changeSetReportJsonPath = path.join(reportsDir, 'change-set-report.json');
 
