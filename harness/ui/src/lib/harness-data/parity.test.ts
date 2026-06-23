@@ -1,23 +1,23 @@
-import fs from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildRequirementDetailModel, defaultWorkspaceRoot } from "./artifact-api";
+import { buildRequirementDetailModel } from "./artifact-api";
+import { hasArtifactScope, workspaceRootForArtifactScope } from "./artifact-test-workspace";
 import { appRequirementDetail, appRequirementListDetail, requirementDetail } from "./fixtures";
 
 // fixture(Storybook/단위 테스트 입력)가 라이브 build*Model 출력과 어긋나면 (UI) 수용 기준이
 // 라이브에서 재현되지 않는데도 GREEN/BLUE 를 통과하는 검증 채널 허점이 생긴다. 이 self-test는
 // 백엔드 표면 채움 규칙을 라이브 출력과 직접 대조해 그 허점을 닫는다.
 //
-// 각 scope의 trace.state.json 이 없으면(clean 체크아웃 후 harness:validate 단독 실행 등) 해당 scope
+// 현재 runner의 HARNESS_OUTPUT_ROOT 또는 canonical build에 trace.state.json 이 없으면 해당 scope
 // 대조를 skip한다. repo:validate 또는 app:trace/harness:trace 선행 시 산출물이 갖춰져 완전 검증된다.
-const hasTraceState = (scope: "app" | "harness") =>
-  fs.existsSync(path.join(defaultWorkspaceRoot, "build", scope, "state", "trace.state.json"));
-const itApp = hasTraceState("app") ? it : it.skip;
-const itHarness = hasTraceState("harness") ? it : it.skip;
+
+const appWorkspaceRoot = workspaceRootForArtifactScope("app");
+const harnessWorkspaceRoot = workspaceRootForArtifactScope("harness");
+const itApp = hasArtifactScope("app") ? it : it.skip;
+const itHarness = hasArtifactScope("harness") ? it : it.skip;
 
 describe("fixture ↔ live build*Model parity", () => {
   itApp("appRequirementDetail 백엔드 표면은 라이브 REQ-022 출력과 동일하다", () => {
-    const live = buildRequirementDetailModel("application", "REQ-022");
+    const live = buildRequirementDetailModel("application", "REQ-022", appWorkspaceRoot);
     expect(live).toBeTruthy();
     expect(appRequirementDetail.apiSurfaces).toEqual(live!.apiSurfaces);
     expect(appRequirementDetail.dataShapes).toEqual(live!.dataShapes);
@@ -25,7 +25,7 @@ describe("fixture ↔ live build*Model parity", () => {
   });
 
   itApp("appRequirementListDetail 백엔드 표면은 라이브 REQ-023(PageResponse 목록) 출력과 동일하다", () => {
-    const live = buildRequirementDetailModel("application", "REQ-023");
+    const live = buildRequirementDetailModel("application", "REQ-023", appWorkspaceRoot);
     expect(live).toBeTruthy();
     expect(appRequirementListDetail.apiSurfaces).toEqual(live!.apiSurfaces);
     expect(appRequirementListDetail.dataShapes).toEqual(live!.dataShapes);
@@ -33,7 +33,7 @@ describe("fixture ↔ live build*Model parity", () => {
   });
 
   itHarness("하네스 요건 fixture와 라이브 REQ-031 은 백엔드 표면이 비어 있다", () => {
-    const live = buildRequirementDetailModel("harness", "REQ-031");
+    const live = buildRequirementDetailModel("harness", "REQ-031", harnessWorkspaceRoot);
     expect(live).toBeTruthy();
     expect(live!.apiSurfaces).toEqual([]);
     expect(live!.dataShapes).toEqual([]);
@@ -44,7 +44,7 @@ describe("fixture ↔ live build*Model parity", () => {
   });
 
   itApp("라이브 앱 요건 dataShapes 는 DTO 필드를 채운다(빈 fields 회귀 방지)", () => {
-    const live = buildRequirementDetailModel("application", "REQ-022");
+    const live = buildRequirementDetailModel("application", "REQ-022", appWorkspaceRoot);
     const request = live!.dataShapes.find((shape) => shape.kind === "Request");
     expect(request).toBeTruthy();
     expect(request!.fields.length).toBeGreaterThan(0);
@@ -54,8 +54,8 @@ describe("fixture ↔ live build*Model parity", () => {
   });
 
   itApp("라이브 목록 응답 dataShapes 는 제네릭 PageResponse 필드와 content DTO를 채운다", () => {
-    const categoryList = buildRequirementDetailModel("application", "REQ-016");
-    const todoList = buildRequirementDetailModel("application", "REQ-023");
+    const categoryList = buildRequirementDetailModel("application", "REQ-016", appWorkspaceRoot);
+    const todoList = buildRequirementDetailModel("application", "REQ-023", appWorkspaceRoot);
 
     const categoryPage = categoryList!.dataShapes.find((shape) => shape.name === "PageResponse<CategoryResponse>");
     expect(categoryPage).toBeTruthy();
@@ -72,7 +72,7 @@ describe("fixture ↔ live build*Model parity", () => {
 
   itApp("빈 본문 응답은 Void dataShape 를 만들지 않는다", () => {
     for (const requirementId of ["REQ-011", "REQ-019", "REQ-025"]) {
-      const live = buildRequirementDetailModel("application", requirementId);
+      const live = buildRequirementDetailModel("application", requirementId, appWorkspaceRoot);
       expect(live!.apiSurfaces.flatMap((api) => api.responses)).not.toContain("Void");
       expect(live!.dataShapes.map((shape) => shape.name)).not.toContain("Void");
     }
