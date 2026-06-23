@@ -317,12 +317,54 @@ function findingRow(value: unknown, fallbackRequirement = ""): FindingRow {
   };
 }
 
-function cleanJavaType(value: string): string {
-  const responseEntity = value.match(/^ResponseEntity<(.+)>$/);
-  if (responseEntity) return cleanJavaType(responseEntity[1]);
-  const jsonNullable = value.match(/^JsonNullable<(.+)>$/);
-  if (jsonNullable) return cleanJavaType(jsonNullable[1]);
-  return value;
+function splitGenericArguments(value: string): string[] {
+  const args: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    if (char === "<") depth += 1;
+    if (char === ">") depth -= 1;
+    if (char === "," && depth === 0) {
+      args.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  const last = value.slice(start).trim();
+  return last ? [...args, last] : args;
+}
+
+function simpleJavaName(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.split(".").pop() ?? trimmed;
+}
+
+function parseJavaType(value: string): { name: string; args: string[] } {
+  const trimmed = value.trim();
+  const genericStart = trimmed.indexOf("<");
+  if (genericStart < 0 || !trimmed.endsWith(">")) return { name: simpleJavaName(trimmed), args: [] };
+  return {
+    name: simpleJavaName(trimmed.slice(0, genericStart)),
+    args: splitGenericArguments(trimmed.slice(genericStart + 1, -1)),
+  };
+}
+
+function cleanJavaType(value: string, bindings = new Map<string, string>()): string {
+  const parsed = parseJavaType(value);
+  if (!parsed.name) return "";
+  if ((parsed.name === "ResponseEntity" || parsed.name === "JsonNullable") && parsed.args[0]) {
+    return cleanJavaType(parsed.args[0], bindings);
+  }
+  if (parsed.args.length > 0) {
+    return `${parsed.name}<${parsed.args.map((arg) => cleanJavaType(arg, bindings)).join(", ")}>`;
+  }
+  const bound = bindings.get(parsed.name);
+  return bound && bound !== parsed.name ? cleanJavaType(bound, bindings) : parsed.name;
+}
+
+function isVoidJavaType(value: string): boolean {
+  const cleaned = cleanJavaType(value);
+  return cleaned === "Void" || cleaned === "void";
 }
 
 function methodAndPath(api: Record<string, unknown>) {
@@ -341,11 +383,12 @@ function buildApiSurfaces(traceRequirement: Record<string, unknown>): Requiremen
     const http = methodAndPath(api);
     const requestTypes = recordArray(api.parameters)
       .filter((parameter) => parameter.springRequestBody === true)
-      .map((parameter) => stringValue(parameter.javaType))
+      .map((parameter) => cleanJavaType(stringValue(parameter.javaType)))
       .filter(Boolean);
     // 응답 데이터 shape는 반환 DTO만 담는다. 상태 코드(201/400 등)는 DTO shape가 아니므로
     // dataShapes 대상에서 제외한다(data-contracts.md: dataShapes[]는 Request/Response와 참조 객체 DTO shape).
-    const responseTypes = [cleanJavaType(stringValue(api.returnType))].filter(Boolean);
+    const responseType = cleanJavaType(stringValue(api.returnType));
+    const responseTypes = responseType && !isVoidJavaType(responseType) ? [responseType] : [];
 
     return {
       method: http.method,
@@ -376,12 +419,37 @@ function isRequiredField(field: Record<string, unknown>): boolean {
   return annotations.includes("NotBlank") || annotations.includes("NotNull");
 }
 
-function dtoFields(dto: Record<string, unknown>): RequirementDataField[] {
+function typeVariablesForDto(dto: Record<string, unknown>): string[] {
+  const variables = new Set<string>();
+  for (const field of recordArray(dto.fields)) {
+    const type = cleanJavaType(stringValue(field.javaType));
+    for (const match of type.matchAll(/\b[A-Z]\b/g)) variables.add(match[0]);
+  }
+  return [...variables];
+}
+
+function typeBindingsForDto(dto: Record<string, unknown>, name: string): Map<string, string> {
+  const args = parseJavaType(name).args;
+  if (args.length === 0) return new Map();
+  const variables = typeVariablesForDto(dto);
+  return new Map(variables.slice(0, args.length).map((variable, index) => [variable, cleanJavaType(args[index])]));
+}
+
+function dtoNamesInType(type: string, dtoMap: Map<string, Record<string, unknown>>): string[] {
+  const names = new Set<string>();
+  for (const match of cleanJavaType(type).matchAll(/[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*/g)) {
+    const name = simpleJavaName(match[0]);
+    if (dtoMap.has(name)) names.add(name);
+  }
+  return [...names];
+}
+
+function dtoFields(dto: Record<string, unknown>, bindings = new Map<string, string>()): RequirementDataField[] {
   return recordArray(dto.fields).map((field) => {
     const description = stringValue(field.schemaDescription);
     return {
       name: stringValue(field.name),
-      type: cleanJavaType(stringValue(field.javaType)),
+      type: cleanJavaType(stringValue(field.javaType), bindings),
       required: isRequiredField(field),
       ...(description ? { description } : {}),
     };
@@ -398,20 +466,23 @@ function buildDataShapes(
   function addShape(kind: RequirementDataShape["kind"], name: string, fallbackFile: string, fallbackLine: number) {
     const key = `${kind}:${name}`;
     if (!name || shapes.has(key)) return;
-    const dto = dtoMap.get(name);
+    const parsed = parseJavaType(name);
+    const dto = dtoMap.get(parsed.name);
+    const bindings = dto ? typeBindingsForDto(dto, name) : new Map<string, string>();
     shapes.set(key, {
       kind,
       name,
       status: "연결됨",
       file: dto ? stringValue(dto.file, fallbackFile) : fallbackFile,
       line: dto ? normalizeLine(dto.schemaLine) : fallbackLine,
-      fields: dto ? dtoFields(dto) : [],
+      fields: dto ? dtoFields(dto, bindings) : [],
     });
     if (!dto) return;
     // 필드가 다른 DTO를 참조하면 그 객체도 shape로 펼쳐 중첩 표시를 가능하게 한다.
     for (const field of recordArray(dto.fields)) {
-      const referenced = cleanJavaType(stringValue(field.javaType));
-      if (dtoMap.has(referenced) && !hasName(referenced)) {
+      const fieldType = cleanJavaType(stringValue(field.javaType), bindings);
+      for (const referenced of dtoNamesInType(fieldType, dtoMap)) {
+        if (referenced === parsed.name || hasName(referenced)) continue;
         const refDto = dtoMap.get(referenced);
         if (refDto) addShape("Object", referenced, stringValue(refDto.file), normalizeLine(refDto.schemaLine));
       }

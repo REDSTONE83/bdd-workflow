@@ -35,4 +35,29 @@ describe("fixture ↔ live build*Model parity", () => {
     // 응답 DTO가 다른 객체를 참조하면 중첩 shape 가 dataShapes 에 함께 들어온다.
     expect(live!.dataShapes.some((shape) => shape.kind === "Object")).toBe(true);
   });
+
+  it("라이브 목록 응답 dataShapes 는 제네릭 PageResponse 필드와 content DTO를 채운다", () => {
+    const categoryList = buildRequirementDetailModel("application", "REQ-016");
+    const todoList = buildRequirementDetailModel("application", "REQ-023");
+
+    const categoryPage = categoryList!.dataShapes.find((shape) => shape.name === "PageResponse<CategoryResponse>");
+    expect(categoryPage).toBeTruthy();
+    expect(categoryPage!.fields.map((field) => `${field.name}:${field.type}`)).toContain("content:List<CategoryResponse>");
+    expect(categoryPage!.fields.map((field) => field.name)).toEqual(["content", "page", "size", "totalElements", "totalPages"]);
+    expect(categoryList!.dataShapes.find((shape) => shape.kind === "Object" && shape.name === "CategoryResponse")?.fields.length).toBeGreaterThan(0);
+
+    const todoPage = todoList!.dataShapes.find((shape) => shape.name === "PageResponse<TodoResponse>");
+    expect(todoPage).toBeTruthy();
+    expect(todoPage!.fields.map((field) => `${field.name}:${field.type}`)).toContain("content:List<TodoResponse>");
+    expect(todoList!.dataShapes.find((shape) => shape.kind === "Object" && shape.name === "TodoResponse")?.fields.length).toBeGreaterThan(0);
+    expect(todoList!.dataShapes.find((shape) => shape.kind === "Object" && shape.name === "TodoCategoryInfo")?.fields.length).toBeGreaterThan(0);
+  });
+
+  it("빈 본문 응답은 Void dataShape 를 만들지 않는다", () => {
+    for (const requirementId of ["REQ-011", "REQ-019", "REQ-025"]) {
+      const live = buildRequirementDetailModel("application", requirementId);
+      expect(live!.apiSurfaces.flatMap((api) => api.responses)).not.toContain("Void");
+      expect(live!.dataShapes.map((shape) => shape.name)).not.toContain("Void");
+    }
+  });
 });
