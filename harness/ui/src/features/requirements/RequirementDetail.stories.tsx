@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { RequirementDetailView } from "./RequirementDetailView";
-import { appRequirementDetail, requirementDetail } from "../../lib/harness-data/fixtures";
+import { appRequirementDetail, appRequirementListDetail, requirementDetail } from "../../lib/harness-data/fixtures";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { ErrorState } from "../../components/ui/ErrorState";
 
@@ -292,6 +292,33 @@ export const DesignSurfaces: Story = {
     await expect(canvas.getByText("할 일 생성 입력 대화상자 화면 표면이다.")).toBeVisible();
     await expect(canvas.getAllByRole("button", { name: "Storybook 검토" })[0]).toBeVisible();
     await expect(visibleText(canvas, "app/front-end/src/features/todos/TodoCreateDialog.tsx:1")).toBeVisible();
+  },
+};
+
+export const ListResponseSurfaces: Story = {
+  args: { detail: appRequirementListDetail },
+  parameters: {
+    router: { initialEntries: ["/requirements/REQ-023"] },
+    harness: {
+      covers: [
+        "연결된 API 작업은 세로 목록형 카드로 표시되고 Request, Response 구성과 그 안의 중첩 객체 필드는 펼침으로 확인된다",
+      ],
+    },
+    docs: {
+      description: {
+        story: "목록 응답이 제네릭 envelope PageResponse<TodoResponse>인 앱 요건 상세다. API 설계 탭에서 Response 펼침이 PageResponse 필드(content/page/size/totalElements/totalPages)를 보이고, content가 참조하는 TodoResponse와 그 안의 TodoCategoryInfo를 중첩 펼침으로 확인한다. dataShapes는 라이브 buildRequirementDetailModel 출력과 동일하다.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = await openDetailTab(canvasElement, "API 설계");
+    await expect(canvas.getByText("/todos")).toBeVisible();
+    await expect(canvas.getByText("operationId: TodoController.listTodos")).toBeVisible();
+    await userEvent.click(canvas.getAllByRole("button", { name: /Response/ })[0]);
+    await expect(canvas.getAllByText("PageResponse<TodoResponse>")[0]).toBeVisible();
+    // content: List<TodoResponse> 가 TodoResponse 를 참조 → 펼치면 중첩 DTO 가 보인다.
+    await userEvent.click(canvas.getAllByRole("button", { name: /참조 객체/ })[0]);
+    await expect(canvas.getAllByText("TodoResponse")[0]).toBeVisible();
   },
 };
 

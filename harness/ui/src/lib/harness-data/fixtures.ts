@@ -800,6 +800,106 @@ export const appRequirementDetail: RequirementDetail = {
   ],
 };
 
+// 목록 응답 앱 요건 대표 fixture. GET /todos 는 제네릭 envelope PageResponse<TodoResponse>를 반환하므로
+// content:List<TodoResponse> 필드와 중첩 DTO 펼침을 Storybook에서 검토할 수 있다. 백엔드 표면은 라이브
+// buildRequirementDetailModel("application","REQ-023") 출력과 같으며 parity self-test가 deep equal을 강제한다.
+// TodoResponse·TodoCategoryInfo·엔티티 컬럼은 REQ-022 fixture에서 파생한다(REQ-023 은 description 컬럼 제외).
+export const appRequirementListDetail: RequirementDetail = {
+  ...appRequirementDetail,
+  id: "REQ-023",
+  title: "할 일 목록 조회",
+  purpose: "인증 사용자는 자신의 할 일을 페이지 단위로 조회할 수 있어야 한다.",
+  sourceFile: {
+    kind: "card",
+    file: "app/docs/requirements/REQ-023-todo-list.md",
+    line: 1,
+  },
+  scopeItems: [
+    "할 일 목록은 본인 소유 항목만 페이지 단위로 반환한다.",
+    "목록 응답은 페이지 메타(page, size, totalElements, totalPages)를 포함한다.",
+  ],
+  scenarios: [
+    {
+      title: "인증 사용자가 자신의 할 일 목록을 조회한다",
+      status: "정의됨",
+      file: "app/docs/scenarios/REQ-023-todo-list.feature",
+      line: 4,
+      covers: [],
+      steps: [
+        "Given 인증 사용자의 할 일이 있다",
+        "When 할 일 목록을 요청한다",
+        "Then 본인 할 일이 페이지 단위로 반환된다",
+      ],
+    },
+  ],
+  linkedArtifacts: [
+    {
+      kind: "scenario",
+      file: "app/docs/scenarios/REQ-023-todo-list.feature",
+      line: 1,
+    },
+  ],
+  apiSurfaces: [
+    {
+      method: "GET",
+      path: "/todos",
+      operationId: "TodoController.listTodos",
+      status: "연결됨",
+      file: "app/back-end/src/main/java/com/example/bddworkflow/todo/controller/TodoController.java",
+      line: 76,
+      requests: [],
+      responses: ["PageResponse<TodoResponse>"],
+      entities: ["Todo"],
+    },
+  ],
+  dataShapes: [
+    {
+      kind: "Response",
+      name: "PageResponse<TodoResponse>",
+      status: "연결됨",
+      file: "app/back-end/src/main/java/com/example/bddworkflow/common/PageResponse.java",
+      line: 8,
+      fields: [
+        { name: "content", type: "List<TodoResponse>", required: false, description: "현재 페이지의 항목" },
+        { name: "page", type: "int", required: false, description: "0-based page index" },
+        { name: "size", type: "int", required: false, description: "페이지 크기" },
+        { name: "totalElements", type: "long", required: false, description: "전체 항목 수" },
+        { name: "totalPages", type: "int", required: false, description: "전체 페이지 수" },
+      ],
+    },
+    // 목록 응답에서 TodoResponse 는 top-level 응답이 아니라 PageResponse content 가 참조하는 중첩 객체다.
+    ...appRequirementDetail.dataShapes
+      .filter((shape) => shape.name === "TodoResponse" || shape.name === "TodoCategoryInfo")
+      .map((shape) => ({ ...shape, kind: "Object" as const })),
+  ],
+  entitySurfaces: appRequirementDetail.entitySurfaces.map((entity) => ({
+    ...entity,
+    columns: entity.columns.filter((column) => column.fieldName !== "description"),
+  })),
+  uiSurfaces: [
+    {
+      kind: "Page",
+      name: "TodoListView",
+      route: "/todos",
+      status: "연결됨",
+      description: "할 일 목록 화면 표면이다.",
+      file: "app/front-end/src/features/todos/TodoListView.tsx",
+      line: 1,
+    },
+    {
+      kind: "Story",
+      name: "TodoListView",
+      status: "검토 가능",
+      description: "할 일 목록 UI 설계를 Storybook에서 검토하는 상태다.",
+      file: "app/front-end/src/features/todos/TodoListView.stories.tsx",
+      line: 1,
+      storybookTitle: "App/Todos/TodoListView",
+      storybookStory: "Default",
+      storybookUrl: "http://127.0.0.1:6006/?path=/story/app-todos-todolistview--default",
+    },
+  ],
+};
+
 export const gateCategories: GateCategory[] = [
   { category: "TRACE", blocked: true, errors: 7, byRuleId: { "TRACE-AC-MISSING": 7 } },
   { category: "CARD", blocked: false, errors: 0, byRuleId: {} },

@@ -33,10 +33,11 @@
 
 확정 범위: A(라이브 빌더 보강) + 신선도 함정 함께. P1·P2·P3·P4를 모두 구현한다.
 
-- **P1 — 라이브 빌더 보강.** `buildDataShapes`가 `backend.source-index.json`의 DTO `fields[]`를 읽어 `RequirementDataField[]`(name/type/required/description)를 채운다. `required`는 `NotBlank`/`NotNull` 어노테이션에서, 중첩 참조는 `javaType`이 가리키는 DTO를 `Object` shape로 펼쳐 해소한다. 부수로 `cleanJavaType`이 `JsonNullable<T>`를 풀고, `buildApiSurfaces` 응답에서 상태 코드(201/400 등)를 제외해 `dataShapes`를 DTO shape로만 한정한다(`data-contracts.md:343` 정합).
+- **P1 — 라이브 빌더 보강.** `buildDataShapes`가 `backend.source-index.json`의 DTO `fields[]`를 읽어 `RequirementDataField[]`(name/type/required/description)를 채운다. `required`는 `NotBlank`/`NotNull` 어노테이션에서, 중첩 참조는 `javaType`이 가리키는 DTO를 `Object` shape로 펼쳐 해소한다. `cleanJavaType`이 `ResponseEntity<T>`·`JsonNullable<T>` wrapper를 벗기고, 제네릭 envelope(`PageResponse<T>`)은 type variable을 실제 타입 인자로 치환해(`content: List<TodoResponse>`) content DTO를 중첩 펼친다. 응답에서 상태 코드(201/400 등)와 본문 없는 `Void`를 제외해 `dataShapes`를 DTO shape로만 한정한다(`data-contracts.md` 정합).
 - **P2 — fixture 정직화.** 하네스 요건 `requirementDetail`에서 가짜 백엔드 표면을 제거하고, 백엔드 표면이 실재하는 앱 요건 fixture `appRequirementDetail`(REQ-022 기반)을 추가한다. 백엔드 3필드는 라이브 출력을 그대로 옮긴다. `DesignSurfaces`·`LinkedArtifacts` 스토리와 API·DB·소스 탭 단위 테스트를 이 fixture로 옮긴다.
 - **P3 — 동치 회귀 self-test.** `parity.test.ts`가 `appRequirementDetail`의 백엔드 표면을 라이브 `buildRequirementDetailModel("application","REQ-022")`와 deep equal로, 하네스 요건의 백엔드 표면이 비어 있음을 라이브 REQ-031과 대조한다.
 - **P4 — app trace 신선도 함정.** canonical `trace.state.json`은 항상 전체 trace로 쓰고, 슬라이스(`--requirement`)는 `HARNESS_TRACE_STATE_FILE` 격리 파일에 추가로 쓴다. `render-trace-report`·`gate`가 그 파일을 읽어 슬라이스 리포트·게이트를 유지한다. 단일 슬라이스가 canonical을 1건으로 덮던 함정을 제거한다.
+- **보완(2026-06-23 검토 반영) — 검증 연결·범위 정직화.** `run.mjs`가 `harness:validate`/`harness:test`에 harness/ui unit test를 연결해 parity를 게이트에 포함한다. parity는 `build/{app,harness}` 산출물이 없으면 해당 scope를 skip해 clean 단독 실행을 견딘다. 목록 응답 검토를 위해 앱 요건 fixture `appRequirementListDetail`(REQ-023, `PageResponse<TodoResponse>`)을 더해 Storybook에서 content 중첩 펼침을 검증하고, `data-contracts.md`에 제네릭/wrapper/`Void` 규칙을 명시한다.
 
 ## 제외 범위
 
@@ -67,6 +68,8 @@
 - 2026-06-22: P4 검증. `npm run app:trace`(전체) → canonical 21건. 이어 `npm run app:trace -- --requirement REQ-005` → canonical 21건 보존, slice 파일 1건 생성, `gate: pass filter=REQ-005`, `trace-report-REQ-005.{md,json}` 생성.
 - 2026-06-22: `cd harness/ui && npm run typecheck`(통과), `npm run test`(38 passed, parity 3건 포함), `npm run test:storybook`(69 passed, RequirementDetail 10건 포함).
 - 2026-06-22: `npm run harness:validate` `gate: pass`, `npm run app:validate` `gate: pass`. 두 scope 게이트 모두 통과.
+- 2026-06-23: 제네릭/Void 보강 후 라이브 REQ-023이 `PageResponse<TodoResponse>`(content `List<TodoResponse>`)·중첩 `TodoResponse`·`TodoCategoryInfo`를 채우고, REQ-011/019/025 빈 본문 응답이 `Void` shape를 만들지 않음을 확인했다. `appRequirementListDetail`이 라이브 REQ-023과 deep equal.
+- 2026-06-23: `cd harness/ui && npm run typecheck`(통과), `npm run test`(41 passed, parity 6건), `npm run test:storybook`(70 passed, RequirementDetail 11건). `run.mjs` 연결로 `harness:validate`가 harness/ui unit test를 포함해 parity가 게이트에서 실행된다.
 
 ## 결정 로그
 
@@ -76,6 +79,9 @@
 - 2026-06-22: 정합 범위는 A(라이브 빌더 보강) + 신선도 함정 함께로 확정한다(사용자 선택). `fields`를 라이브에서 채워 REQ-032 AC를 실제로 충족하고, 함정도 같은 Change Set에서 해소한다.
 - 2026-06-22: 응답 `dataShapes`에서 상태 코드(201/400 등)를 제외한다. `data-contracts.md:343`은 `dataShapes[]`를 Request/Response·참조 객체 DTO shape로 규정하므로 상태 코드는 DTO shape가 아니다. REQ-032 표시 필드에도 상태 코드는 없다.
 - 2026-06-22: P4는 canonical/슬라이스 출력 분리로 푼다. canonical `trace.state.json`은 전체 trace 전용으로 두고, 슬라이스는 `HARNESS_TRACE_STATE_FILE` 격리 파일에 쓴다. `gate`는 격리 state든 canonical+자체 필터든 같은 결과라 안전하고, run-output mirror가 canonical을 지우지 않도록 evaluate가 canonical을 항상 전체로 함께 쓴다.
+- 2026-06-23: 제네릭 응답을 envelope+content 펼침으로 처리한다. `PageResponse<T>`는 envelope 필드(content/page/…)를 담고 type variable을 실제 DTO로 치환해 content가 참조하는 DTO를 중첩 `Object` shape로 펼친다. 빈 본문 `ResponseEntity<Void>`는 DTO shape가 아니므로 제외한다.
+- 2026-06-23: parity를 `harness:validate`/`harness:test`에 연결하되 `build/{app,harness}` 산출물이 없으면 해당 scope를 skip한다. parity는 두 scope 산출물을 읽으므로 `repo:validate`나 `*:trace` 선행 시 완전 검증되고, clean 단독 실행에선 skip으로 게이트를 깨지 않는다.
+- 2026-06-23: PageResponse content 중첩 펼침은 단일 DTO fixture(`appRequirementDetail`, REQ-022)로 재현되지 않으므로, 목록 요건 fixture(`appRequirementListDetail`, REQ-023)를 더해 Storybook 검토를 라이브와 일치시킨다.
 
 ## 열린 논의
 
