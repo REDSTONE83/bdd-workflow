@@ -7,8 +7,9 @@ import { appRequirementDetail, appRequirementListDetail, requirementDetail } fro
 // 라이브에서 재현되지 않는데도 GREEN/BLUE 를 통과하는 검증 채널 허점이 생긴다. 이 self-test는
 // 백엔드 표면 채움 규칙을 라이브 출력과 직접 대조해 그 허점을 닫는다.
 //
-// 현재 runner의 HARNESS_OUTPUT_ROOT 또는 canonical build에 trace.state.json 이 없으면 해당 scope
-// 대조를 skip한다. repo:validate 또는 app:trace/harness:trace 선행 시 산출물이 갖춰져 완전 검증된다.
+// runner run root에 trace.state.json 이 생성돼 있으면 그 산출물을, 없으면 canonical build를 읽는다.
+// 게이트는 UI 단위 테스트 뒤에 trace state를 생성하므로 in-gate parity는 canonical(직전 publish)을
+// 읽고, 둘 다 없으면(최초 clean 실행) 해당 scope 대조를 skip한다. repo:validate/*:trace 선행 시 완전 검증된다.
 
 const appWorkspaceRoot = workspaceRootForArtifactScope("app");
 const harnessWorkspaceRoot = workspaceRootForArtifactScope("harness");

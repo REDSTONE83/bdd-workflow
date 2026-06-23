@@ -71,6 +71,7 @@
 - 2026-06-23: 제네릭/Void 보강 후 라이브 REQ-023이 `PageResponse<TodoResponse>`(content `List<TodoResponse>`)·중첩 `TodoResponse`·`TodoCategoryInfo`를 채우고, REQ-011/019/025 빈 본문 응답이 `Void` shape를 만들지 않음을 확인했다. `appRequirementListDetail`이 라이브 REQ-023과 deep equal.
 - 2026-06-23: `cd harness/ui && npm run typecheck`(통과), `npm run test`(41 passed, parity 6건), `npm run test:storybook`(70 passed, RequirementDetail 11건). `run.mjs` 연결로 `harness:validate`가 harness/ui unit test를 포함해 parity가 게이트에서 실행된다.
 - 2026-06-23: clean 단독 실행 보완. harness/ui unit test가 `HARNESS_OUTPUT_ROOT` run root를 임시 workspace로 연결해 `harness:validate` publish 전에도 방금 생성한 `build/harness/runs/<runId>` 산출물을 읽는다.
+- 2026-06-23: 위 run root 연결의 in-gate 누수를 발견·수정. 게이트 파이프라인은 harness UI 단위 테스트(`run.mjs` line 587)를 trace state 생성(line 593)보다 먼저 실행하므로 그 시점 run root에는 `state/trace.state.json`이 없고, run root를 무조건 읽던 기존 코드에서는 harness scope parity가 in-gate에서 조용히 skip됐다(빈 state run root 재현: `5 passed · 1 skipped`). run root는 `state/trace.state.json`이 실재할 때만 신뢰하고 없으면 canonical로 폴백하도록 고쳐, 같은 조건에서 parity 6건이 모두 실행됨(`6 passed`)을 확인했다. `npm run harness:validate` → unit `41 passed, skipped 0`(harness parity 포함) · storybook `70 passed` · `gate: pass`(exit 0).
 
 ## 결정 로그
 
@@ -81,7 +82,8 @@
 - 2026-06-22: 응답 `dataShapes`에서 상태 코드(201/400 등)를 제외한다. `data-contracts.md:343`은 `dataShapes[]`를 Request/Response·참조 객체 DTO shape로 규정하므로 상태 코드는 DTO shape가 아니다. REQ-032 표시 필드에도 상태 코드는 없다.
 - 2026-06-22: P4는 canonical/슬라이스 출력 분리로 푼다. canonical `trace.state.json`은 전체 trace 전용으로 두고, 슬라이스는 `HARNESS_TRACE_STATE_FILE` 격리 파일에 쓴다. `gate`는 격리 state든 canonical+자체 필터든 같은 결과라 안전하고, run-output mirror가 canonical을 지우지 않도록 evaluate가 canonical을 항상 전체로 함께 쓴다.
 - 2026-06-23: 제네릭 응답을 envelope+content 펼침으로 처리한다. `PageResponse<T>`는 envelope 필드(content/page/…)를 담고 type variable을 실제 DTO로 치환해 content가 참조하는 DTO를 중첩 `Object` shape로 펼친다. 빈 본문 `ResponseEntity<Void>`는 DTO shape가 아니므로 제외한다.
-- 2026-06-23: parity를 `harness:validate`/`harness:test`에 연결하되 현재 runner의 `HARNESS_OUTPUT_ROOT` 또는 canonical `build/{app,harness}`에 산출물이 없으면 해당 scope를 skip한다. harness scope는 `harness:validate` run root를 직접 읽어 clean 단독 실행에서도 실행되고, app scope는 `repo:validate`나 `app:trace` 선행 시 완전 검증된다.
+- 2026-06-23: parity를 `harness:validate`/`harness:test`에 연결하되 가장 신선한 trace state를 읽는다. runner run root에 `state/trace.state.json`이 생성돼 있으면 그것을, 없으면 canonical `build/{app,harness}`를 읽고, 둘 다 없으면 해당 scope를 skip한다. 게이트는 UI 단위 테스트를 trace state 생성보다 먼저 돌리므로 in-gate에서는 run root state가 아직 없어 canonical(직전 publish)로 평가되고, `repo:validate`/`*:trace` 선행 시 완전 검증된다.
+- 2026-06-23: run root state가 in-gate UI 테스트 시점에 없는 문제는 파이프라인 재배치 대신 canonical 폴백으로 푼다. trace state는 storybook 등 UI 테스트 결과(`test-results`)를 입력으로 평가되므로 UI 테스트보다 먼저 생성할 수 없다(순환). harness 요건 parity는 "백엔드 표면 0" 구조 불변식이라 canonical(직전 publish)로 읽어도 안전하고, app 요건 freshness는 app trace가 선행하는 `repo:validate`에서 보장된다.
 - 2026-06-23: PageResponse content 중첩 펼침은 단일 DTO fixture(`appRequirementDetail`, REQ-022)로 재현되지 않으므로, 목록 요건 fixture(`appRequirementListDetail`, REQ-023)를 더해 Storybook 검토를 라이브와 일치시킨다.
 
 ## 열린 논의
