@@ -131,6 +131,34 @@ export const TerminologyNavigation: Story = {
   },
 };
 
+export const SurfaceNavigation: Story = {
+  args: {
+    model: appShellDefault,
+    children: (
+      <div className="harness-panel p-6 text-sm text-slate-700">
+        <RouteProbe />
+      </div>
+    ),
+  },
+  parameters: {
+    harness: {
+      requirements: ["REQ-038"],
+      covers: ["AppShell 좌측 LNB에서 API/Entity/UI 표면 조회 화면으로 이동할 수 있다"],
+    },
+    docs: {
+      description: {
+        story: "좌측 LNB의 API/Entity/UI 메뉴가 /surfaces route로 이동하는 상태다.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByLabelText("현재 route")).toHaveTextContent("/requirements");
+    await userEvent.click(canvas.getByRole("link", { name: /API\/Entity\/UI/ }));
+    await expect(canvas.getByLabelText("현재 route")).toHaveTextContent("/surfaces");
+  },
+};
+
 export const MissingArtifacts: Story = {
   args: { model: appShellMissing, children: body },
   parameters: {

@@ -29,7 +29,7 @@ export function RequirementApiContractsTab({ detail }: { detail: RequirementDeta
             </Card>
           ))}
         </div>
-        {detail.apiSurfaces.length === 0 ? <EmptyState>연결된 API 작업이 없다.</EmptyState> : null}
+        {detail.apiSurfaces.length === 0 ? <EmptyState>연결된 API가 없다.</EmptyState> : null}
       </section>
     </div>
   );

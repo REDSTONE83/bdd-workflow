@@ -21,6 +21,11 @@ import type {
   RequirementScenario,
   RequirementSummary,
   RequirementUiSurface,
+  SurfaceApiItem,
+  SurfaceEntityItem,
+  SurfaceInventoryModel,
+  SurfaceRequirementRef,
+  SurfaceUiItem,
   TraceState,
 } from "./types";
 
@@ -132,6 +137,14 @@ function readRequirementsIndex(scope: HarnessScope, workspaceRoot: string) {
 
 function readTerminologyIndex(scope: HarnessScope, workspaceRoot: string) {
   return maybeReadJson(outputPath(workspaceRoot, scope, "indexes", "terminology.index.json"));
+}
+
+function readBackendSourceIndex(scope: HarnessScope, workspaceRoot: string) {
+  return maybeReadJson(outputPath(workspaceRoot, scope, "indexes", "backend.source-index.json"));
+}
+
+function readFrontEndSourceIndex(scope: HarnessScope, workspaceRoot: string) {
+  return maybeReadJson(outputPath(workspaceRoot, scope, "indexes", "front-end.source-index.json"));
 }
 
 function rowFromTraceRequirement(requirement: Record<string, unknown>): RequirementRow {
@@ -457,7 +470,7 @@ function dtoFields(dto: Record<string, unknown>, bindings = new Map<string, stri
 }
 
 function buildDataShapes(
-  apiSurfaces: RequirementApiSurface[],
+  apiSurfaces: Array<Pick<RequirementApiSurface, "requests" | "responses" | "file" | "line">>,
   dtoMap: Map<string, Record<string, unknown>>,
 ): RequirementDataShape[] {
   const shapes = new Map<string, RequirementDataShape>();
@@ -574,6 +587,174 @@ function buildUiSurfaces(scope: HarnessScope, traceRequirement: Record<string, u
   });
 
   return [...pages, ...routes, ...stories].filter((surface) => surface.file || surface.name);
+}
+
+function generatedAtFrom(...payloads: unknown[]): string | null {
+  for (const payload of payloads) {
+    const generatedAt = asRecord(payload).generatedAt;
+    if (typeof generatedAt === "string") return generatedAt;
+  }
+  return null;
+}
+
+function requirementRefMap(tracePayload: unknown): Map<string, SurfaceRequirementRef> {
+  return new Map(rowsFromTracePayload(tracePayload).map((row) => [
+    row.id,
+    { id: row.id, title: row.title, traceState: row.traceState },
+  ]));
+}
+
+function requirementRefs(ids: string[], byId: Map<string, SurfaceRequirementRef>): SurfaceRequirementRef[] {
+  return [...new Set(ids)]
+    .filter(Boolean)
+    .map((id) => byId.get(id) ?? { id, title: id, traceState: "INACTIVE" });
+}
+
+function compareByLabel(left: string, right: string): number {
+  return left.localeCompare(right, "ko");
+}
+
+function buildSurfaceApiItems(backendPayload: unknown, requirementsById: Map<string, SurfaceRequirementRef>): SurfaceApiItem[] {
+  return recordArray(asRecord(backendPayload).apis)
+    .map((api) => {
+      const http = methodAndPath(api);
+      const requestTypes = recordArray(api.parameters)
+        .filter((parameter) => parameter.springRequestBody === true)
+        .map((parameter) => cleanJavaType(stringValue(parameter.javaType)))
+        .filter(Boolean);
+      const responseType = cleanJavaType(stringValue(api.returnType));
+      const responseBodies = responseType && !isVoidJavaType(responseType) ? [responseType] : [];
+      const operationId = stringValue(api.controller, `${http.method} ${http.path}`);
+
+      return {
+        id: `API:${http.method}:${http.path}:${operationId}`,
+        method: http.method,
+        path: http.path,
+        operationId,
+        summary: stringValue(api.operationSummary),
+        description: stringValue(api.operationDescription),
+        file: stringValue(api.file),
+        line: normalizeLine(api.line),
+        requirements: requirementRefs(stringArray(api.requirements), requirementsById),
+        requests: [...new Set(requestTypes)],
+        responseBodies: [...new Set(responseBodies)],
+        responses: recordArray(api.responses).map((response) => ({
+          code: stringValue(response.responseCode),
+          description: stringValue(response.description),
+          line: normalizeLine(response.line),
+        })),
+      };
+    })
+    .sort((left, right) => compareByLabel(`${left.path} ${left.method}`, `${right.path} ${right.method}`));
+}
+
+function buildSurfaceEntityItems(backendPayload: unknown, requirementsById: Map<string, SurfaceRequirementRef>): SurfaceEntityItem[] {
+  return recordArray(asRecord(backendPayload).entities)
+    .map((entity) => {
+      const className = stringValue(entity.className);
+      const table = stringValue(entity.table);
+      return {
+        id: `Entity:${className}:${table}`,
+        className,
+        table,
+        file: stringValue(entity.file),
+        line: normalizeLine(entity.line),
+        listeners: stringArray(entity.listeners),
+        requirements: requirementRefs(stringArray(entity.requirements), requirementsById),
+        columns: buildEntityColumns(entity.columns),
+      };
+    })
+    .sort((left, right) => compareByLabel(`${left.table} ${left.className}`, `${right.table} ${right.className}`));
+}
+
+function sourceLine(record: Record<string, unknown>): number {
+  return normalizeLine(asRecord(record.location).line ?? record.line);
+}
+
+function buildSurfaceUiItems(
+  scope: HarnessScope,
+  frontEndPayload: unknown,
+  requirementsById: Map<string, SurfaceRequirementRef>,
+): SurfaceUiItem[] {
+  const frontEnd = asRecord(frontEndPayload);
+  const pages: SurfaceUiItem[] = recordArray(frontEnd.pages).map((page) => {
+    const name = stringValue(page.name);
+    const route = typeof page.route === "string" ? page.route : undefined;
+    return {
+      id: `UI:Page:${name}:${route ?? ""}:${stringValue(page.file)}`,
+      kind: "Page",
+      name,
+      file: stringValue(page.file),
+      line: sourceLine(page),
+      requirements: requirementRefs(stringArray(page.requirements), requirementsById),
+      ...(route ? { route } : {}),
+    };
+  });
+  const routes: SurfaceUiItem[] = recordArray(frontEnd.routes).map((route) => {
+    const pathValue = stringValue(route.path);
+    const name = stringValue(route.component, pathValue);
+    return {
+      id: `UI:Route:${name}:${pathValue}:${stringValue(route.file)}`,
+      kind: "Route",
+      name,
+      file: stringValue(route.file),
+      line: sourceLine(route),
+      requirements: requirementRefs(stringArray(route.requirements), requirementsById),
+      route: pathValue,
+    };
+  });
+  const stories: SurfaceUiItem[] = recordArray(frontEnd.stories).map((story) => {
+    const title = stringValue(story.title);
+    const storyName = stringValue(story.story);
+    const name = stringValue(story.component, storyName);
+    return {
+      id: `UI:Story:${title}:${storyName}:${stringValue(story.file)}`,
+      kind: "Story",
+      name,
+      file: stringValue(story.file),
+      line: sourceLine(story),
+      requirements: requirementRefs(stringArray(story.requirements), requirementsById),
+      storybookTitle: title,
+      storybookStory: storyName,
+      ...(title && storyName ? { storybookUrl: storybookUrl(scope, title, storyName) } : {}),
+      hasPlay: story.hasPlay === true,
+      hasAssertion: story.hasAssertion === true,
+    };
+  });
+
+  const kindOrder = { Page: 0, Route: 1, Story: 2 } satisfies Record<SurfaceUiItem["kind"], number>;
+  return [...pages, ...routes, ...stories]
+    .filter((surface) => surface.file || surface.name)
+    .sort((left, right) => kindOrder[left.kind] - kindOrder[right.kind] || compareByLabel(left.name, right.name));
+}
+
+export function buildSurfaceInventoryModel(
+  scope: HarnessScope,
+  workspaceRoot = defaultWorkspaceRoot,
+): SurfaceInventoryModel {
+  const tracePayload = readTraceState(scope, workspaceRoot);
+  const backendPayload = readBackendSourceIndex(scope, workspaceRoot);
+  const frontEndPayload = readFrontEndSourceIndex(scope, workspaceRoot);
+  const requirementsById = requirementRefMap(tracePayload);
+  const apis = buildSurfaceApiItems(backendPayload, requirementsById);
+  const dataShapes = buildDataShapes(
+    apis.map((api) => ({
+      requests: api.requests,
+      responses: api.responseBodies,
+      file: api.file,
+      line: api.line,
+    })),
+    readBackendDtoMap(scope, workspaceRoot),
+  );
+
+  return {
+    scope,
+    generatedAt: generatedAtFrom(tracePayload, backendPayload, frontEndPayload),
+    apis,
+    dataShapes,
+    entities: buildSurfaceEntityItems(backendPayload, requirementsById),
+    uiSurfaces: buildSurfaceUiItems(scope, frontEndPayload, requirementsById),
+  };
 }
 
 function uniqueArtifacts(artifacts: LinkedArtifact[]) {

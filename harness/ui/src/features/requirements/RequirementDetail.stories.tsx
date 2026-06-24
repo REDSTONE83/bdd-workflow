@@ -255,14 +255,14 @@ export const DesignSurfaces: Story = {
     router: { initialEntries: ["/requirements/REQ-022"] },
     harness: {
       covers: [
-        "연결된 API 작업은 세로 목록형 카드로 표시되고 Request, Response 구성과 그 안의 중첩 객체 필드는 펼침으로 확인된다",
+        "연결된 API는 세로 목록형 카드로 표시되고 Request, Response 구성과 그 안의 중첩 객체 필드는 펼침으로 확인된다",
         "연결된 DB 설계는 DB 설계 탭에서 세로 목록형 카드로 표시되고 table과 컬럼 메타데이터는 펼침으로 확인된다",
         "연결된 UI 설계는 UI 설계 탭에서 세로 목록형 카드로 표시되고 카드별 설명과 Storybook 검토 링크와 구현 파일 위치가 제공된다",
       ],
     },
     docs: {
       description: {
-        story: "백엔드 표면이 실재하는 앱 요건 상세에서, API 설계 탭의 API 작업 목록형 카드와 Request/Response 펼침, Request/Response 필드의 참조 객체 펼침을 확인하고, DB 설계 탭에서 DB 테이블과 컬럼 메타데이터 목록을 확인하는 상태다. dataShapes의 필드 구성은 라이브 buildRequirementDetailModel이 source index에서 채운 값과 동일하다. UI 설계는 description이 있는 목록형 카드로 표시되고 Storybook 검토 버튼과 구현 위치 링크를 제공해야 한다.",
+        story: "백엔드 표면이 실재하는 앱 요건 상세에서, API 설계 탭의 API 목록형 카드와 Request/Response 펼침, Request/Response 필드의 참조 객체 펼침을 확인하고, DB 설계 탭에서 DB 테이블과 컬럼 메타데이터 목록을 확인하는 상태다. dataShapes의 필드 구성은 라이브 buildRequirementDetailModel이 source index에서 채운 값과 동일하다. UI 설계는 description이 있는 목록형 카드로 표시되고 Storybook 검토 버튼과 구현 위치 링크를 제공해야 한다.",
       },
     },
   },
@@ -301,7 +301,7 @@ export const ListResponseSurfaces: Story = {
     router: { initialEntries: ["/requirements/REQ-023"] },
     harness: {
       covers: [
-        "연결된 API 작업은 세로 목록형 카드로 표시되고 Request, Response 구성과 그 안의 중첩 객체 필드는 펼침으로 확인된다",
+        "연결된 API는 세로 목록형 카드로 표시되고 Request, Response 구성과 그 안의 중첩 객체 필드는 펼침으로 확인된다",
       ],
     },
     docs: {

@@ -174,6 +174,68 @@ export interface RequirementStandardTerm {
   en: string;
 }
 
+export interface SurfaceRequirementRef {
+  id: string;
+  title: string;
+  traceState: TraceState;
+}
+
+export interface SurfaceApiResponse {
+  code: string;
+  description: string;
+  line: number;
+}
+
+export interface SurfaceApiItem {
+  id: string;
+  method: string;
+  path: string;
+  operationId: string;
+  summary: string;
+  description: string;
+  file: string;
+  line: number;
+  requirements: SurfaceRequirementRef[];
+  requests: string[];
+  responseBodies: string[];
+  responses: SurfaceApiResponse[];
+}
+
+export interface SurfaceEntityItem {
+  id: string;
+  className: string;
+  table: string;
+  file: string;
+  line: number;
+  listeners: string[];
+  requirements: SurfaceRequirementRef[];
+  columns: RequirementEntityColumn[];
+}
+
+export interface SurfaceUiItem {
+  id: string;
+  kind: RequirementUiSurface["kind"];
+  name: string;
+  file: string;
+  line: number;
+  requirements: SurfaceRequirementRef[];
+  route?: string;
+  storybookTitle?: string;
+  storybookStory?: string;
+  storybookUrl?: string;
+  hasPlay?: boolean;
+  hasAssertion?: boolean;
+}
+
+export interface SurfaceInventoryModel {
+  scope: HarnessScope;
+  generatedAt: string | null;
+  apis: SurfaceApiItem[];
+  dataShapes: RequirementDataShape[];
+  entities: SurfaceEntityItem[];
+  uiSurfaces: SurfaceUiItem[];
+}
+
 export interface RequirementDetail {
   id: string;
   title: string;

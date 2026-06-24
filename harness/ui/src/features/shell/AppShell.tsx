@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
-import { Activity, BookOpenText, FileWarning, GitPullRequest, ListChecks, Play, ShieldCheck } from "lucide-react";
+import { Activity, BookOpenText, FileWarning, GitPullRequest, Layers3, ListChecks, Play, ShieldCheck } from "lucide-react";
 import type { ArtifactSummary } from "../../lib/harness-data/types";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { buttonVariants } from "../../components/ui/button";
@@ -15,6 +15,7 @@ import { cn } from "../../lib/utils";
 const navItems = [
   { to: "/requirements", label: "요건", icon: ListChecks },
   { to: "/terminology", label: "표준 용어", icon: BookOpenText },
+  { to: "/surfaces", label: "API/Entity/UI", icon: Layers3 },
   { to: "/gate", label: "게이트", icon: ShieldCheck },
   { to: "/change-sets", label: "Change Set", icon: GitPullRequest },
   { to: "/runs", label: "실행 화면", icon: Play },

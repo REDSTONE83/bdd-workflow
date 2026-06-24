@@ -7,6 +7,7 @@ import type {
   RequirementDetail,
   RequirementRow,
   RequirementSummary,
+  SurfaceInventoryModel,
   TerminologyBrowserModel,
 } from "./types";
 
@@ -896,6 +897,107 @@ export const appRequirementListDetail: RequirementDetail = {
       storybookTitle: "App/Todos/TodoListView",
       storybookStory: "Default",
       storybookUrl: "http://127.0.0.1:6006/?path=/story/app-todos-todolistview--default",
+    },
+  ],
+};
+
+const todoRequirementRef = {
+  id: appRequirementDetail.id,
+  title: appRequirementDetail.title,
+  traceState: appRequirementDetail.traceState,
+};
+
+const todoListRequirementRef = {
+  id: appRequirementListDetail.id,
+  title: appRequirementListDetail.title,
+  traceState: appRequirementListDetail.traceState,
+};
+
+export const surfaceInventory: SurfaceInventoryModel = {
+  scope: "application",
+  generatedAt: "2026-06-24T00:00:00.000Z",
+  apis: [
+    {
+      id: "API:POST:/todos:TodoController.createTodo",
+      method: "POST",
+      path: "/todos",
+      operationId: "TodoController.createTodo",
+      summary: "할 일 생성",
+      description: "인증 사용자의 할 일을 생성한다.",
+      file: appRequirementDetail.apiSurfaces[0].file,
+      line: appRequirementDetail.apiSurfaces[0].line,
+      requirements: [todoRequirementRef],
+      requests: appRequirementDetail.apiSurfaces[0].requests,
+      responseBodies: appRequirementDetail.apiSurfaces[0].responses,
+      responses: [
+        { code: "201", description: "생성 완료", line: appRequirementDetail.apiSurfaces[0].line },
+        { code: "400", description: "요청 본문 형식 검증 실패", line: appRequirementDetail.apiSurfaces[0].line },
+      ],
+    },
+    {
+      id: "API:GET:/todos:TodoController.listTodos",
+      method: "GET",
+      path: "/todos",
+      operationId: "TodoController.listTodos",
+      summary: "할 일 목록 조회",
+      description: "인증 사용자의 할 일 목록을 페이지 단위로 조회한다.",
+      file: appRequirementListDetail.apiSurfaces[0].file,
+      line: appRequirementListDetail.apiSurfaces[0].line,
+      requirements: [todoListRequirementRef],
+      requests: [],
+      responseBodies: appRequirementListDetail.apiSurfaces[0].responses,
+      responses: [
+        { code: "200", description: "목록 조회 성공", line: appRequirementListDetail.apiSurfaces[0].line },
+      ],
+    },
+  ],
+  dataShapes: [
+    ...appRequirementDetail.dataShapes,
+    ...appRequirementListDetail.dataShapes.filter((shape) => !appRequirementDetail.dataShapes.some((existing) => existing.name === shape.name)),
+  ],
+  entities: [
+    {
+      id: "Entity:Todo:todo",
+      className: appRequirementDetail.entitySurfaces[0].className,
+      table: appRequirementDetail.entitySurfaces[0].table,
+      file: appRequirementDetail.entitySurfaces[0].file,
+      line: appRequirementDetail.entitySurfaces[0].line ?? 1,
+      listeners: appRequirementDetail.entitySurfaces[0].listeners,
+      requirements: [todoRequirementRef, todoListRequirementRef],
+      columns: appRequirementDetail.entitySurfaces[0].columns.slice(0, 5),
+    },
+  ],
+  uiSurfaces: [
+    {
+      id: "UI:Page:TodoListView:/todos",
+      kind: "Page",
+      name: "TodoListView",
+      route: "/todos",
+      file: appRequirementListDetail.uiSurfaces[0].file,
+      line: appRequirementListDetail.uiSurfaces[0].line,
+      requirements: [todoListRequirementRef],
+    },
+    {
+      id: "UI:Route:TodosPageContainer:/todos",
+      kind: "Route",
+      name: "TodosPageContainer",
+      route: "/todos",
+      file: "app/front-end/src/features/todos/routes.tsx",
+      line: 1,
+      requirements: [todoListRequirementRef],
+    },
+    {
+      id: "UI:Story:App/Todos/TodoListView:Default",
+      kind: "Story",
+      name: "TodoListView",
+      file: appRequirementListDetail.uiSurfaces[1].file,
+      line: appRequirementListDetail.uiSurfaces[1].line,
+      requirements: [todoListRequirementRef],
+      storybookTitle: appRequirementListDetail.uiSurfaces[1].storybookTitle,
+      storybookStory: appRequirementListDetail.uiSurfaces[1].storybookStory,
+      storybookUrl: appRequirementListDetail.uiSurfaces[1].storybookUrl,
+      hasPlay: true,
+      hasAssertion: true,
     },
   ],
 };
