@@ -4,11 +4,14 @@ import {
   buildGateViewModel,
   buildRequirementBoardModel,
   buildRequirementDetailModel,
+  buildSurfaceInventoryModel,
 } from "./artifact-api";
 import { hasArtifactScope, workspaceRootForArtifactScope } from "./artifact-test-workspace";
 
 const harnessWorkspaceRoot = workspaceRootForArtifactScope("harness");
+const appWorkspaceRoot = workspaceRootForArtifactScope("app");
 const testHarnessArtifacts = hasArtifactScope("harness") ? test : test.skip;
+const testAppArtifacts = hasArtifactScope("app") ? test : test.skip;
 
 describe("artifact API DTO builders", () => {
   testHarnessArtifacts("builds requirement board rows from trace.state.json", () => {
@@ -54,5 +57,25 @@ describe("artifact API DTO builders", () => {
       "repo:validate",
     ]);
     expect(runner.requirements.length).toBeGreaterThan(0);
+  });
+
+  testAppArtifacts("builds surface inventory from app source indexes", () => {
+    const model = buildSurfaceInventoryModel("application", appWorkspaceRoot);
+
+    expect(model.apis.some((api) => api.method === "POST" && api.path === "/todos")).toBe(true);
+    expect(model.apis.find((api) => api.operationId === "TodoController.createTodo")?.requests).toContain("CreateTodoRequest");
+    expect(model.dataShapes.find((shape) => shape.name === "CreateTodoRequest")?.fields.map((field) => field.name)).toContain("title");
+    expect(model.dataShapes.find((shape) => shape.name === "TodoResponse")?.fields.map((field) => field.name)).toContain("todoId");
+    expect(model.entities.some((entity) => entity.className === "Todo" && entity.table === "todo")).toBe(true);
+    expect(model.uiSurfaces.some((surface) => surface.kind === "Route" && surface.route === "/todos")).toBe(true);
+  });
+
+  testHarnessArtifacts("builds harness UI surface inventory without backend-only surfaces", () => {
+    const model = buildSurfaceInventoryModel("harness", harnessWorkspaceRoot);
+
+    expect(model.apis).toEqual([]);
+    expect(model.dataShapes).toEqual([]);
+    expect(model.entities).toEqual([]);
+    expect(model.uiSurfaces.some((surface) => surface.kind === "Route" && surface.route === "/requirements")).toBe(true);
   });
 });

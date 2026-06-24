@@ -9,10 +9,21 @@ function escapeRegExp(value: string) {
 }
 
 function referencedShapesForField(field: RequirementDataField, shapes: RequirementDataShape[]) {
-  return shapes.filter((shape) => {
+  const references = new Map<string, RequirementDataShape>();
+  for (const shape of shapes) {
     const boundary = `(^|[^A-Za-z0-9_$])${escapeRegExp(shape.name)}($|[^A-Za-z0-9_$])`;
-    return new RegExp(boundary).test(field.type);
-  });
+    if (!new RegExp(boundary).test(field.type)) continue;
+    const existing = references.get(shape.name);
+    if (!existing || (shape.kind === "Object" && existing.kind !== "Object")) {
+      references.set(shape.name, shape);
+    }
+  }
+  return [...references.values()];
+}
+
+function shapeForName(name: string, label: string, shapes: RequirementDataShape[]) {
+  const preferredKind = label === "Request" || label === "Response" ? label : null;
+  return shapes.find((shape) => shape.name === name && shape.kind === preferredKind) ?? shapes.find((shape) => shape.name === name);
 }
 
 export function ContractShapeFields({
@@ -72,7 +83,7 @@ export function ContractShapeFields({
 }
 
 export function ContractShapeDetails({ label, names, shapes }: { label: string; names: string[]; shapes: RequirementDataShape[] }) {
-  const linkedShapes = names.map((name) => ({ name, shape: shapes.find((shape) => shape.name === name) }));
+  const linkedShapes = names.map((name) => ({ name, shape: shapeForName(name, label, shapes) }));
 
   return (
     <Collapsible className="text-sm">

@@ -92,10 +92,10 @@ Feature: 하네스 UI 요건 상세 추적
 
   Scenario: API와 DB 설계 연결을 확인한다
     Covers:
-      - 연결된 API 작업은 세로 목록형 카드로 표시되고 Request, Response 구성과 그 안의 중첩 객체 필드는 펼침으로 확인된다
+      - 연결된 API는 세로 목록형 카드로 표시되고 Request, Response 구성과 그 안의 중첩 객체 필드는 펼침으로 확인된다
       - 연결된 DB 설계는 DB 설계 탭에서 세로 목록형 카드로 표시되고 table과 컬럼 메타데이터는 펼침으로 확인된다
 
-    Given 선택한 요건에 연결된 API 작업과 Request, Response, DB 설계가 있다
+    Given 선택한 요건에 연결된 API와 Request, Response, DB 설계가 있다
     And Response 필드 중 하나가 다른 객체 타입을 참조한다
     When 하네스 작업자가 API 설계 탭과 DB 설계 탭을 확인한다
     Then API 설계 탭에서 API method, path, operationId와 구현 위치가 세로 목록형 카드로 보인다

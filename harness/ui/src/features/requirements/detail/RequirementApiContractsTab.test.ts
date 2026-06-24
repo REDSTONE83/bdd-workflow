@@ -16,4 +16,18 @@ describe("RequirementApiContractsTab", () => {
     expect(html).not.toContain("Response 펼치기");
     expect(html).not.toContain("참조 객체 펼치기");
   });
+
+  test("renders a referenced DTO only once when the same name has multiple shape kinds", () => {
+    const duplicateCategoryShape = appRequirementDetail.dataShapes.find((shape) => shape.name === "TodoCategoryInfo");
+    const detail = {
+      ...appRequirementDetail,
+      dataShapes: duplicateCategoryShape
+        ? [...appRequirementDetail.dataShapes, { ...duplicateCategoryShape, kind: "Response" as const }]
+        : appRequirementDetail.dataShapes,
+    };
+
+    const html = renderToStaticMarkup(createElement(RequirementApiContractsTab, { detail }));
+
+    expect(html.match(/참조 객체/g)?.length).toBe(1);
+  });
 });

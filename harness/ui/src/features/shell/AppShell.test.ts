@@ -23,6 +23,7 @@ describe("AppShell", () => {
     expect(html).toContain('aria-label="주요 작업 영역"');
     expect(html).toContain('href="/requirements"');
     expect(html).toContain('href="/terminology"');
+    expect(html).toContain('href="/surfaces"');
     expect(html).toContain('href="/gate"');
     expect(html).toContain('href="/change-sets"');
     expect(html).toContain('href="/runs"');
