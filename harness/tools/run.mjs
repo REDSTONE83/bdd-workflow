@@ -507,6 +507,10 @@ function harnessUiBuildStorybook() {
     harnessUiNpm('harness:ui:build-storybook', 'build-storybook');
 }
 
+function harnessUiUnitTest() {
+    harnessUiNpm('harness:ui:test', 'test');
+}
+
 function harnessUiStorybookTest() {
     const junitFile = path.join(harnessOutputRoot(), 'test-results', 'storybook-junit.xml');
     fs.mkdirSync(path.dirname(junitFile), { recursive: true });
@@ -580,6 +584,7 @@ function harnessTrace(args) {
 function harnessValidate(args) {
     toolTest();
     collectHarnessStaticInputs();
+    harnessUiUnitTest();
     harnessUiStorybookTest();
     harnessUiBuildStorybook();
     selfTest();
@@ -591,6 +596,7 @@ function harnessValidate(args) {
 function harnessTest() {
     toolTest();
     collectHarnessStaticInputs();
+    harnessUiUnitTest();
     harnessUiStorybookTest();
     selfTest();
 }

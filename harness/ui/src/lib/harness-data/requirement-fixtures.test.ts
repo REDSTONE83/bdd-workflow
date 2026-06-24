@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { requirementDetail, requirementRows, requirementSummary } from "./fixtures";
+import { appRequirementDetail, requirementDetail, requirementRows, requirementSummary } from "./fixtures";
 
 describe("requirement fixtures", () => {
   it("keeps requirement summary aligned with requirement rows", () => {
@@ -41,10 +41,10 @@ describe("requirement fixtures", () => {
   });
 
   it("exposes entity surfaces with source-index column metadata", () => {
-    expect(requirementDetail.entitySurfaces.length).toBeGreaterThan(0);
-    expect(requirementDetail.entitySurfaces.every((entity) => entity.className && entity.table && entity.file && Array.isArray(entity.columns))).toBe(true);
+    expect(appRequirementDetail.entitySurfaces.length).toBeGreaterThan(0);
+    expect(appRequirementDetail.entitySurfaces.every((entity) => entity.className && entity.table && entity.file && Array.isArray(entity.columns))).toBe(true);
     expect(
-      requirementDetail.entitySurfaces.every((entity) =>
+      appRequirementDetail.entitySurfaces.every((entity) =>
         entity.columns.every(
           (column) =>
             column.fieldName &&
@@ -56,5 +56,25 @@ describe("requirement fixtures", () => {
         ),
       ),
     ).toBe(true);
+  });
+
+  it("keeps harness requirement detail free of backend surfaces", () => {
+    // 하네스 요건은 JPA 엔티티·Spring API가 없으므로 라이브 출력과 같이 백엔드 표면이 비어야 한다.
+    expect(requirementDetail.apiSurfaces).toEqual([]);
+    expect(requirementDetail.dataShapes).toEqual([]);
+    expect(requirementDetail.entitySurfaces).toEqual([]);
+  });
+
+  it("populates app requirement Request/Response data shape fields", () => {
+    // Request/Response DTO shape는 라이브 buildDataShapes와 같은 규칙으로 필드 구성을 채운다.
+    const request = appRequirementDetail.dataShapes.find((shape) => shape.kind === "Request");
+    const response = appRequirementDetail.dataShapes.find((shape) => shape.kind === "Response");
+    expect(request?.fields.length).toBeGreaterThan(0);
+    expect(response?.fields.length).toBeGreaterThan(0);
+    expect(appRequirementDetail.dataShapes.every((shape) => shape.fields.every((field) => field.name && field.type))).toBe(true);
+    // 응답 DTO가 다른 객체를 참조하면 그 객체도 dataShapes에 중첩 shape로 들어 있다.
+    const referenced = response?.fields.find((field) => field.type === "TodoCategoryInfo");
+    expect(referenced).toBeTruthy();
+    expect(appRequirementDetail.dataShapes.some((shape) => shape.name === "TodoCategoryInfo")).toBe(true);
   });
 });

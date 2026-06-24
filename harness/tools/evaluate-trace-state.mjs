@@ -40,7 +40,10 @@ const frontEndStandardsFindingsPath = path.join(findingsDir, 'front-end-standard
 const scenariosFindingsPath = path.join(findingsDir, 'scenarios.findings.json');
 const terminologyReportPath = path.join(findingsDir, 'terminology.findings.json');
 const terminologyIndexPath = path.join(indexesDir, 'terminology.index.json');
-const stateOutFile = path.join(stateDir, 'trace.state.json');
+// canonical trace.state.json 은 항상 전체 trace 로 쓴다. 슬라이스(--requirement)는 추가로
+// HARNESS_TRACE_STATE_FILE 격리 파일에 슬라이스 결과를 써서 canonical 을 덮지 않는다.
+const canonicalStateFile = path.join(stateDir, 'trace.state.json');
+const sliceStateFile = process.env.HARNESS_TRACE_STATE_FILE || null;
 
 const REQUIREMENT_ID_PATTERN = /^REQ-\d{3,}$/;
 
@@ -791,19 +794,28 @@ function main() {
     readTerminologyIndex();
     const scenarioIndex = readScenarioIndex();
     const selectedIds = resolveSelectedIds(cli, allCardsRaw);
-    const model = buildModel(allCardsRaw, cards, apis, tests, entities, results, terminologyReport, scenarioIndex, frontEndIndex, selectedIds, { checkMode: cli.checkMode, requireBlue: cli.requireBlue });
-
-    const payload = {
-        generatedAt: new Date().toISOString(),
-        schemaVersion: '1',
-        source: 'trace.state',
-        flags: { checkMode: cli.checkMode, requireBlue: cli.requireBlue },
-        ...model
+    const flags = { checkMode: cli.checkMode, requireBlue: cli.requireBlue };
+    const evaluate = (selection) => buildModel(allCardsRaw, cards, apis, tests, entities, results, terminologyReport, scenarioIndex, frontEndIndex, selection, flags);
+    const writePayload = (file, model) => {
+        const payload = { generatedAt: new Date().toISOString(), schemaVersion: '1', source: 'trace.state', flags, ...model };
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, JSON.stringify(payload, null, 2) + '\n');
     };
-    fs.mkdirSync(stateDir, { recursive: true });
-    fs.writeFileSync(stateOutFile, JSON.stringify(payload, null, 2) + '\n');
-    const s = model.summary;
-    const filterStr = model.filter ? ` filter=${model.filter.join(',')}` : '';
+
+    // canonical 은 항상 전체 trace. 슬라이스가 UI 보드/게이트 같은 전체 소비자를 좁히지 않게 한다.
+    const fullModel = evaluate(null);
+    writePayload(canonicalStateFile, fullModel);
+
+    // 슬라이스면 격리 파일에 슬라이스 결과를 추가로 쓴다. render/gate 가 이 파일을 읽는다.
+    let consoleModel = fullModel;
+    if (selectedIds && sliceStateFile && path.resolve(sliceStateFile) !== path.resolve(canonicalStateFile)) {
+        const sliceModel = evaluate(selectedIds);
+        writePayload(sliceStateFile, sliceModel);
+        consoleModel = sliceModel;
+    }
+
+    const s = consoleModel.summary;
+    const filterStr = consoleModel.filter ? ` filter=${consoleModel.filter.join(',')}` : '';
     if (!cli.quiet) {
         console.log(`trace.state.json: total=${s.total} red=${s.red} green=${s.green} blue=${s.blue} structureIssues=${s.structureIssues}${filterStr}`);
     }

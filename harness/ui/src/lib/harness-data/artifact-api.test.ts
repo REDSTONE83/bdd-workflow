@@ -4,12 +4,15 @@ import {
   buildGateViewModel,
   buildRequirementBoardModel,
   buildRequirementDetailModel,
-  defaultWorkspaceRoot,
 } from "./artifact-api";
+import { hasArtifactScope, workspaceRootForArtifactScope } from "./artifact-test-workspace";
+
+const harnessWorkspaceRoot = workspaceRootForArtifactScope("harness");
+const testHarnessArtifacts = hasArtifactScope("harness") ? test : test.skip;
 
 describe("artifact API DTO builders", () => {
-  test("builds requirement board rows from trace.state.json", () => {
-    const model = buildRequirementBoardModel("harness", defaultWorkspaceRoot);
+  testHarnessArtifacts("builds requirement board rows from trace.state.json", () => {
+    const model = buildRequirementBoardModel("harness", harnessWorkspaceRoot);
     const requirement = model.rows.find((row) => row.id === "REQ-031");
 
     expect(model.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
@@ -18,8 +21,8 @@ describe("artifact API DTO builders", () => {
     expect(requirement?.traceState).toBe("BLUE");
   });
 
-  test("combines card metadata and trace links for requirement detail", () => {
-    const detail = buildRequirementDetailModel("harness", "REQ-032", defaultWorkspaceRoot);
+  testHarnessArtifacts("combines card metadata and trace links for requirement detail", () => {
+    const detail = buildRequirementDetailModel("harness", "REQ-032", harnessWorkspaceRoot);
 
     expect(detail?.purpose).toContain("수용 기준별 커버리지");
     expect(detail?.acceptanceCriteria.length).toBeGreaterThan(0);
@@ -28,9 +31,9 @@ describe("artifact API DTO builders", () => {
     expect(detail?.linkedArtifacts.some((artifact) => artifact.file.endsWith(".feature"))).toBe(true);
   });
 
-  test("builds gate and command runner models from server artifacts", () => {
-    const gate = buildGateViewModel("harness", defaultWorkspaceRoot);
-    const runner = buildCommandRunnerModel("harness", defaultWorkspaceRoot);
+  testHarnessArtifacts("builds gate and command runner models from server artifacts", () => {
+    const gate = buildGateViewModel("harness", harnessWorkspaceRoot);
+    const runner = buildCommandRunnerModel("harness", harnessWorkspaceRoot);
 
     expect(gate.categories.map((category) => category.category)).toEqual([
       "TRACE",
