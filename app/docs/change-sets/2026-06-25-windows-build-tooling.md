@@ -15,7 +15,7 @@
 
 - `package.json`의 storybook 스크립트(`test:storybook`/`storybook`/`build-storybook`)를 cross-env로 전환해 인라인 환경 변수 접두를 OS와 무관하게 처리한다(cross-env devDependency 추가).
 - JUnit 출력 경로를 `vitest.config.ts`에서 `process.env.STORYBOOK_JUNIT_FILE ?? 기본값`으로 읽어, cmd가 해석하지 못하는 `${STORYBOOK_JUNIT_FILE:-...}` 셸 확장을 제거한다.
-- `playwright.live.config.ts`를 크로스 플랫폼화한다. Windows에서는 `gradlew.bat`을 쓰고, 셸별 따옴표를 분기하며, 프런트엔드 dev 서버의 `VITE_BACKEND_ORIGIN`을 인라인 접두 대신 `webServer.env`로 전달한다.
+- `playwright.live.config.ts`를 크로스 플랫폼화한다. Windows에서는 `gradlew.bat` 대신 `java -jar gradle-wrapper.jar`로 gradle을 실행하고(러너와 동일 방식), 셸별 따옴표를 분기하며, 프런트엔드 dev 서버의 `VITE_BACKEND_ORIGIN`을 인라인 접두 대신 `webServer.env`로 전달한다.
 - `tools/generate-api-client.mjs`가 `.bin/openapi-typescript`(Windows에서 `.cmd` shim) 대신 패키지의 JS 엔트리(`bin/cli.js`)를 `node`로 직접 실행하도록 바꾼다.
 
 ## 제외 범위
@@ -53,7 +53,7 @@
 
 - 2026-06-25: 인라인 `VAR=값` 접두는 cross-env로, `${VAR:-기본}` 셸 확장은 vitest 설정의 `process.env ?? 기본값`으로 대체한다. cross-env는 환경 변수 주입만 하므로 기본값 처리는 설정으로 옮기는 것이 크로스 플랫폼에 안전하다.
 - 2026-06-25: openapi-typescript는 `.bin` shim 대신 `node bin/cli.js`로 실행한다. node 실행 파일은 OS 무관하게 spawnSync로 직접 실행되고 Node가 인자 인용을 처리해 셸/배치 우회가 필요 없다.
-- 2026-06-25: live e2e의 gradle 기동은 Playwright가 셸로 실행하므로 `java.exe -jar`가 아니라 `gradlew.bat`을 그대로 쓴다. cmd가 배치 파일을 네이티브로 실행하므로 가장 단순하다.
+- 2026-06-25: live e2e의 gradle 기동도 Windows에서는 `gradlew.bat` 대신 `java -jar gradle-wrapper.jar`로 실행해 러너와 방식을 통일한다(JAVA_HOME이 있으면 그 java.exe, 없으면 PATH의 java). 배치 파일 의존을 없애 러너와 일관성을 유지한다.
 
 ## 열린 논의
 
