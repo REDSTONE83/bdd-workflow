@@ -1,8 +1,20 @@
 import type { AnchorHTMLAttributes } from "react";
 import { cn } from "../../lib/utils";
 
+const workspaceRoot = import.meta.env.VITE_WORKSPACE_ROOT?.replace(/\/+$/, "") ?? "";
+
+function isAbsolutePath(file: string) {
+  return file.startsWith("/") || /^[A-Za-z]:[\\/]/.test(file) || file.startsWith("\\\\");
+}
+
+export function absoluteEditorFile(file: string) {
+  const normalized = file.replace(/\\/g, "/");
+  if (isAbsolutePath(normalized)) return normalized;
+  return workspaceRoot ? `${workspaceRoot}/${normalized.replace(/^\/+/, "")}` : normalized;
+}
+
 export function editorHref(file: string, line: number) {
-  return `vscode://file/${file}:${line}`;
+  return `vscode://file/${encodeURI(absoluteEditorFile(file))}:${line}`;
 }
 
 export function LocationLink({

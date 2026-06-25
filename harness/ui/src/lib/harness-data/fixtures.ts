@@ -9,6 +9,7 @@ import type {
   RequirementSummary,
   SurfaceInventoryModel,
   TerminologyBrowserModel,
+  TestResultsModel,
 } from "./types";
 
 export const appShellDefault: ArtifactSummary = {
@@ -998,6 +999,159 @@ export const surfaceInventory: SurfaceInventoryModel = {
       storybookUrl: appRequirementListDetail.uiSurfaces[1].storybookUrl,
       hasPlay: true,
       hasAssertion: true,
+    },
+  ],
+};
+
+const testResultsRequirementRef = {
+  id: "REQ-039",
+  title: "하네스 UI 테스트 결과 조회",
+  traceState: "BLUE" as const,
+};
+
+const gateRequirementRef = {
+  id: "REQ-033",
+  title: "하네스 UI 게이트 현황 조회",
+  traceState: "BLUE" as const,
+};
+
+const surfaceRequirementRef = {
+  id: "REQ-038",
+  title: "하네스 UI 표면 조회",
+  traceState: "BLUE" as const,
+};
+
+export const testResults: TestResultsModel = {
+  scope: "harness",
+  generatedAt: "2026-06-25T12:10:00.000Z",
+  sourceGeneratedAt: "2026-06-25T12:09:30.000Z",
+  resultGeneratedAt: "2026-06-25T12:10:00.000Z",
+  summary: [
+    { status: "PASS", count: 2 },
+    { status: "FAIL", count: 1 },
+    { status: "SKIP", count: 1 },
+    { status: "NOT_RUN", count: 1 },
+  ],
+  typeSummary: [
+    { type: "API", count: 0 },
+    { type: "UI", count: 3 },
+    { type: "UNIT", count: 1 },
+    { type: "E2E", count: 1 },
+    { type: "STATIC", count: 0 },
+    { type: "OTHER", count: 0 },
+  ],
+  tests: [
+    {
+      id: "source:storybook-vitest:Harness/Tests/TestResults / SummaryAndList",
+      scope: "harness",
+      source: "front-end",
+      runtime: "storybook-vitest",
+      testType: "UI",
+      status: "PASS",
+      displayName: "Harness/Tests/TestResults / SummaryAndList",
+      identity: "harness/ui/src/features/tests/TestResults.stories.tsx:42 > Harness/Tests/TestResults / SummaryAndList",
+      requirements: [testResultsRequirementRef],
+      covers: [
+        {
+          text: "테스트 결과 화면은 선택한 scope의 테스트 총수와 PASS, FAIL, SKIP, NOT_RUN 수를 요약하고 테스트 목록을 표시한다",
+          requirements: [testResultsRequirementRef],
+        },
+        {
+          text: "각 테스트 행은 테스트 구분, 런타임, 수행 상태, 연결 요건 ID와 제목, 구현 위치, Cover 문구와 연결된 요건 ID와 제목을 표시한다",
+          requirements: [testResultsRequirementRef],
+        },
+      ],
+      file: "harness/ui/src/features/tests/TestResults.stories.tsx",
+      line: 42,
+      resultIdentity: "Harness/Tests/TestResults > SummaryAndList",
+      resultFile: "harness/ui/src/features/tests/TestResults.stories.tsx",
+      resultLine: 42,
+    },
+    {
+      id: "source:node:harness-ui-test-results-dto",
+      scope: "harness",
+      source: "harness",
+      runtime: "node",
+      testType: "UNIT",
+      status: "PASS",
+      displayName: "하네스 UI 서버는 테스트 정의와 수행 결과를 DTO로 보존한다",
+      identity: "harness/self-test/tests/harness-ui-test-results.test.ts > 하네스 UI 서버는 테스트 정의와 수행 결과를 DTO로 보존한다",
+      requirements: [testResultsRequirementRef],
+      covers: [
+        {
+          text: "하네스 UI 서버가 제공하는 테스트 결과 DTO는 test source index와 test-results index의 식별자, 테스트 구분, 런타임, 상태, 요건 ID와 제목, 구현 위치 값을 보존한다",
+          requirements: [testResultsRequirementRef],
+        },
+      ],
+      file: "harness/self-test/tests/harness-ui-test-results.test.ts",
+      line: 24,
+      resultIdentity: "harness/self-test/tests/harness-ui-test-results.test.ts > 하네스 UI 서버는 테스트 정의와 수행 결과를 DTO로 보존한다",
+      resultFile: "harness/self-test/tests/harness-ui-test-results.test.ts",
+      resultLine: 24,
+    },
+    {
+      id: "source:storybook-vitest:Harness/Gates/GateView / Filtered",
+      scope: "harness",
+      source: "front-end",
+      runtime: "storybook-vitest",
+      testType: "UI",
+      status: "FAIL",
+      displayName: "Harness/Gates/GateView / Filtered",
+      identity: "harness/ui/src/features/gates/GateView.stories.tsx:89 > Harness/Gates/GateView / Filtered",
+      requirements: [gateRequirementRef],
+      covers: [
+        {
+          text: "검사 결과 목록은 규칙, 심각도, 요건, 파일 경로로 좁힐 수 있다",
+          requirements: [gateRequirementRef],
+        },
+      ],
+      file: "harness/ui/src/features/gates/GateView.stories.tsx",
+      line: 89,
+      resultIdentity: "Harness/Gates/GateView > Filtered",
+      resultFile: "harness/ui/test-results/storybook-junit.xml",
+      resultLine: 1,
+    },
+    {
+      id: "result:playwright:app/front-end/tests/e2e/live/top-level-smoke.live.spec.ts > smoke",
+      scope: "harness",
+      source: "test-results",
+      runtime: "playwright",
+      testType: "E2E",
+      status: "SKIP",
+      displayName: "app/front-end/tests/e2e/live/top-level-smoke.live.spec.ts > smoke",
+      identity: "app/front-end/tests/e2e/live/top-level-smoke.live.spec.ts > smoke",
+      requirements: [],
+      covers: [],
+      file: "build/app/test-results/e2e-live-results.json",
+      line: 1,
+      resultIdentity: "app/front-end/tests/e2e/live/top-level-smoke.live.spec.ts > smoke",
+      resultFile: "build/app/test-results/e2e-live-results.json",
+      resultLine: 1,
+    },
+    {
+      id: "source:storybook-vitest:Harness/Surfaces/SurfaceInventory / EmptyScope",
+      scope: "harness",
+      source: "front-end",
+      runtime: "storybook-vitest",
+      testType: "UI",
+      status: "NOT_RUN",
+      displayName: "Harness/Surfaces/SurfaceInventory / EmptyScope",
+      identity: "harness/ui/src/features/surfaces/SurfaceInventory.stories.tsx:140 > Harness/Surfaces/SurfaceInventory / EmptyScope",
+      requirements: [surfaceRequirementRef],
+      covers: [],
+      file: "harness/ui/src/features/surfaces/SurfaceInventory.stories.tsx",
+      line: 140,
+    },
+  ],
+  issues: [
+    {
+      kind: "FE_TEST_RESULT_STALE",
+      runtime: "storybook-vitest",
+      reason: "fingerprint-mismatch",
+      resultFile: "build/harness/test-results/storybook-junit.xml",
+      identity: "Harness/Gates/GateView > Filtered",
+      file: "harness/ui/src/features/gates/GateView.stories.tsx",
+      line: 89,
     },
   ],
 };

@@ -10,6 +10,7 @@ import {
   buildRequirementBoardModel,
   buildRequirementDetailModel,
   buildSurfaceInventoryModel,
+  buildTestResultsModel,
   commandDefinitions,
   defaultWorkspaceRoot,
 } from "../src/lib/harness-data/artifact-api.ts";
@@ -343,6 +344,20 @@ export function createHarnessExpressApp(options: HarnessUiServerOptions = {}) {
       sendJson(response, 200, buildSurfaceInventoryModel(scope, workspaceRoot));
     } catch {
       sendJson(response, 404, { error: "표면 조회 산출물을 읽을 수 없다." });
+    }
+  });
+
+  app.get("/api/tests", (request, response) => {
+    const scope = scopeFromRequest(request);
+    if (!scope) {
+      sendUnsupportedScope(response);
+      return;
+    }
+
+    try {
+      sendJson(response, 200, buildTestResultsModel(scope, workspaceRoot));
+    } catch {
+      sendJson(response, 404, { error: "테스트 결과 산출물을 읽을 수 없다." });
     }
   });
 

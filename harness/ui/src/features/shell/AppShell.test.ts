@@ -24,6 +24,7 @@ describe("AppShell", () => {
     expect(html).toContain('href="/requirements"');
     expect(html).toContain('href="/terminology"');
     expect(html).toContain('href="/surfaces"');
+    expect(html).toContain('href="/tests"');
     expect(html).toContain('href="/gate"');
     expect(html).toContain('href="/change-sets"');
     expect(html).toContain('href="/runs"');

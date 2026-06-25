@@ -74,7 +74,8 @@ public class SourceIndexGenerator {
             String displayName,
             List<String> covers,
             String scope,
-            String file
+            String file,
+            int line
     ) {
     }
 
@@ -830,7 +831,8 @@ public class SourceIndexGenerator {
                             displayName,
                             covers,
                             scope,
-                            relativeFile
+                            relativeFile,
+                            lineOf(method)
                     ));
 
                     if (coversAnnotation.isPresent()) {
@@ -1284,7 +1286,8 @@ public class SourceIndexGenerator {
             builder.append("      \"displayName\": ").append(json(test.displayName())).append(",\n");
             builder.append("      \"covers\": ").append(jsonArray(test.covers())).append(",\n");
             builder.append("      \"scope\": ").append(json(test.scope())).append(",\n");
-            builder.append("      \"file\": ").append(json(test.file())).append("\n");
+            builder.append("      \"file\": ").append(json(test.file())).append(",\n");
+            builder.append("      \"line\": ").append(test.line()).append("\n");
             builder.append("    }");
             builder.append(i + 1 < tests.size() ? "," : "").append("\n");
         }

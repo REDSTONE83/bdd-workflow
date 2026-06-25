@@ -1,8 +1,11 @@
 import { createElement } from "react";
+import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 import { requirementDetail } from "../../../lib/harness-data/fixtures";
 import { RequirementAcceptanceTab } from "./RequirementAcceptanceTab";
+
+const workspaceRoot = path.resolve(process.cwd(), "../..").replace(/\\/g, "/");
 
 describe("RequirementAcceptanceTab", () => {
   test("renders AC id, channel badge, and linked test/scenario locations in aligned rows", () => {
@@ -26,7 +29,7 @@ describe("RequirementAcceptanceTab", () => {
     expect(html).not.toContain("<ul");
     expect(html).not.toContain("<li");
     expect(html).not.toContain("pt-0.5 text-muted-foreground");
-    expect(html).toContain("href=\"vscode://file/harness/ui/src/features/requirements/RequirementBoard.stories.tsx:1\"");
-    expect(html).toContain("href=\"vscode://file/harness/docs/scenarios/REQ-031-harness-ui-requirement-board.feature:4\"");
+    expect(html).toContain(`href="vscode://file/${workspaceRoot}/harness/ui/src/features/requirements/RequirementBoard.stories.tsx:1"`);
+    expect(html).toContain(`href="vscode://file/${workspaceRoot}/harness/docs/scenarios/REQ-031-harness-ui-requirement-board.feature:4"`);
   });
 });
