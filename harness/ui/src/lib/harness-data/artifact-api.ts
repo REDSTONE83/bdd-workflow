@@ -26,6 +26,13 @@ import type {
   SurfaceInventoryModel,
   SurfaceRequirementRef,
   SurfaceUiItem,
+  TestResultIssue,
+  TestResultRow,
+  TestResultSummary,
+  TestType,
+  TestTypeSummary,
+  TestResultsModel,
+  TestRunStatus,
   TraceState,
 } from "./types";
 
@@ -145,6 +152,15 @@ function readBackendSourceIndex(scope: HarnessScope, workspaceRoot: string) {
 
 function readFrontEndSourceIndex(scope: HarnessScope, workspaceRoot: string) {
   return maybeReadJson(outputPath(workspaceRoot, scope, "indexes", "front-end.source-index.json"));
+}
+
+function readHarnessSelfTestIndex(scope: HarnessScope, workspaceRoot: string) {
+  if (scope !== "harness") return null;
+  return maybeReadJson(outputPath(workspaceRoot, scope, "indexes", "harness.self-test.index.json"));
+}
+
+function readTestResultsIndex(scope: HarnessScope, workspaceRoot: string) {
+  return readJson(outputPath(workspaceRoot, scope, "indexes", "test-results.index.json"));
 }
 
 function rowFromTraceRequirement(requirement: Record<string, unknown>): RequirementRow {
@@ -595,6 +611,250 @@ function generatedAtFrom(...payloads: unknown[]): string | null {
     if (typeof generatedAt === "string") return generatedAt;
   }
   return null;
+}
+
+const testStatuses: TestRunStatus[] = ["PASS", "FAIL", "SKIP", "NOT_RUN"];
+const testTypes: TestType[] = ["API", "UI", "UNIT", "E2E", "STATIC", "OTHER"];
+
+function testRunStatus(value: unknown): TestRunStatus {
+  return testStatuses.includes(value as TestRunStatus) ? value as TestRunStatus : "NOT_RUN";
+}
+
+function testTypeFor(value: Record<string, unknown>): TestType {
+  const runtime = stringValue(value.runtime).toLowerCase();
+  const source = stringValue(value.source).toLowerCase();
+  const identity = stringValue(value.identity, stringValue(value.displayName)).toLowerCase();
+  const file = stringValue(value.file, stringValue(asRecord(value.location).file)).toLowerCase();
+
+  if (runtime.includes("playwright") || file.includes("/e2e/") || identity.includes("e2e")) return "E2E";
+  if (runtime.includes("storybook")) return "UI";
+  if (runtime.includes("junit")) return "API";
+  if (runtime.includes("vitest") || runtime.includes("node")) return "UNIT";
+  if (source === "harness") return "STATIC";
+  return "OTHER";
+}
+
+function backendDisplayIdentity(value: Record<string, unknown>): string {
+  const className = stringValue(value.className);
+  const displayName = stringValue(value.displayName);
+  return className && displayName ? `${className}.${displayName}` : "";
+}
+
+function testKeys(value: Record<string, unknown>): string[] {
+  return [
+    stringValue(value.identity),
+    stringValue(value.displayName),
+    backendDisplayIdentity(value),
+    stringValue(asRecord(value.location).identity),
+    ...stringArray(value.resultKeys),
+    ...stringArray(value.alternateIdentities),
+  ].filter((key, index, list) => key && list.indexOf(key) === index);
+}
+
+function inferredJavaMethodLine(workspaceRoot: string, test: Record<string, unknown>): number {
+  const file = stringValue(test.file, stringValue(asRecord(test.location).file));
+  const method = stringValue(test.method);
+  if (!file || !method) return 1;
+
+  try {
+    const content = fs.readFileSync(path.join(workspaceRoot, file), "utf8");
+    const lines = content.split(/\r?\n/);
+    const methodPattern = new RegExp(`\\b${method.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\(`);
+    const index = lines.findIndex((line) => methodPattern.test(line));
+    return index >= 0 ? index + 1 : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function withTestSourceDefaults(
+  test: Record<string, unknown>,
+  defaults: { scope: HarnessScope; source: string; runtime: string },
+  workspaceRoot: string,
+): Record<string, unknown> {
+  const line = normalizeLine(test.line ?? asRecord(test.location).line ?? inferredJavaMethodLine(workspaceRoot, test));
+  return {
+    ...test,
+    scope: stringValue(test.scope, defaults.scope),
+    source: stringValue(test.source, defaults.source),
+    runtime: stringValue(test.runtime, defaults.runtime),
+    line,
+  };
+}
+
+function testSourceRows(
+  scope: HarnessScope,
+  backendPayload: unknown,
+  frontEndPayload: unknown,
+  selfTestPayload: unknown,
+  workspaceRoot: string,
+): Record<string, unknown>[] {
+  return [
+    ...recordArray(asRecord(backendPayload).tests).map((test) => withTestSourceDefaults(test, { scope, source: "back-end", runtime: "junit" }, workspaceRoot)),
+    ...recordArray(asRecord(frontEndPayload).tests).map((test) => withTestSourceDefaults(test, { scope, source: "front-end", runtime: stringValue(test.runtime, "front-end") }, workspaceRoot)),
+    ...recordArray(asRecord(selfTestPayload).tests).map((test) => withTestSourceDefaults(test, { scope, source: "harness", runtime: stringValue(test.runtime, "node") }, workspaceRoot)),
+  ];
+}
+
+function testResultRows(payload: unknown): Record<string, unknown>[] {
+  return recordArray(asRecord(payload).entries);
+}
+
+function sourceTestRow(
+  scope: HarnessScope,
+  sourceTest: Record<string, unknown>,
+  result: Record<string, unknown> | null,
+  requirementsById: Map<string, SurfaceRequirementRef>,
+): TestResultRow {
+  const sourceLocation = asRecord(sourceTest.location);
+  const resultLocation = asRecord(result?.location);
+  const identity = stringValue(sourceTest.identity, stringValue(sourceLocation.identity, stringValue(sourceTest.displayName)));
+  const runtime = stringValue(sourceTest.runtime, stringValue(result?.runtime, "unknown"));
+  const file = stringValue(sourceTest.file, stringValue(sourceLocation.file));
+  const line = normalizeLine(sourceTest.line ?? sourceLocation.line);
+  const resultFile = stringValue(resultLocation.file);
+  const resultLine = normalizeLine(resultLocation.line);
+  const requirements = requirementRefs(stringArray(sourceTest.requirements), requirementsById);
+
+  return {
+    id: `source:${runtime}:${identity}`,
+    scope,
+    source: stringValue(sourceTest.source, "front-end"),
+    runtime,
+    testType: testTypeFor({ ...sourceTest, runtime }),
+    status: result ? testRunStatus(result.status) : "NOT_RUN",
+    displayName: stringValue(sourceTest.displayName, identity),
+    identity,
+    requirements,
+    covers: stringArray(sourceTest.covers).map((text) => ({ text, requirements })),
+    file,
+    line,
+    ...(result ? { resultIdentity: stringValue(result.identity, stringValue(resultLocation.identity)) } : {}),
+    ...(result && resultFile ? { resultFile } : {}),
+    ...(result && resultFile ? { resultLine } : {}),
+  };
+}
+
+function resultOnlyTestRow(
+  scope: HarnessScope,
+  result: Record<string, unknown>,
+  requirementsById: Map<string, SurfaceRequirementRef>,
+): TestResultRow {
+  const location = asRecord(result.location);
+  const identity = stringValue(result.identity, stringValue(location.identity));
+  const runtime = stringValue(result.runtime, "unknown");
+  const file = stringValue(location.file);
+  const line = normalizeLine(location.line);
+
+  return {
+    id: `result:${runtime}:${identity}`,
+    scope,
+    source: "test-results",
+    runtime,
+    testType: testTypeFor(result),
+    status: testRunStatus(result.status),
+    displayName: identity,
+    identity,
+    requirements: requirementRefs(stringArray(result.requirements), requirementsById),
+    covers: [],
+    file,
+    line,
+    resultIdentity: identity,
+    resultFile: file,
+    resultLine: line,
+  };
+}
+
+function buildTestRows(
+  scope: HarnessScope,
+  sourceTests: Record<string, unknown>[],
+  results: Record<string, unknown>[],
+  requirementsById: Map<string, SurfaceRequirementRef>,
+): TestResultRow[] {
+  const resultsByKey = new Map<string, { result: Record<string, unknown>; index: number }>();
+  results.forEach((result, index) => {
+    for (const key of testKeys(result)) {
+      if (!resultsByKey.has(key)) {
+        resultsByKey.set(key, { result, index });
+      }
+    }
+  });
+
+  const usedResultIndexes = new Set<number>();
+  const sourceRows = sourceTests.map((sourceTest) => {
+    let matched: { result: Record<string, unknown>; index: number } | null = null;
+    for (const key of testKeys(sourceTest)) {
+      const candidate = resultsByKey.get(key);
+      if (candidate && !usedResultIndexes.has(candidate.index)) {
+        matched = candidate;
+        usedResultIndexes.add(candidate.index);
+        break;
+      }
+    }
+    return sourceTestRow(scope, sourceTest, matched?.result ?? null, requirementsById);
+  });
+
+  const resultRows = results
+    .filter((_result, index) => !usedResultIndexes.has(index))
+    .map((result) => resultOnlyTestRow(scope, result, requirementsById));
+
+  return [...sourceRows, ...resultRows].sort((left, right) =>
+    compareByLabel(`${left.runtime} ${left.displayName}`, `${right.runtime} ${right.displayName}`),
+  );
+}
+
+function testSummary(rows: TestResultRow[]): TestResultSummary[] {
+  return testStatuses.map((status) => ({
+    status,
+    count: rows.filter((row) => row.status === status).length,
+  }));
+}
+
+function testTypeSummary(rows: TestResultRow[]): TestTypeSummary[] {
+  return testTypes.map((type) => ({
+    type,
+    count: rows.filter((row) => row.testType === type).length,
+  }));
+}
+
+function buildTestIssues(payload: unknown): TestResultIssue[] {
+  return recordArray(asRecord(payload).issues).map((issue) => {
+    const location = asRecord(issue.location);
+    return {
+      kind: stringValue(issue.kind, "TEST_RESULT_ISSUE"),
+      runtime: stringValue(issue.runtime, "unknown"),
+      reason: stringValue(issue.reason),
+      resultFile: stringValue(issue.resultFile),
+      identity: stringValue(issue.identity) || undefined,
+      file: stringValue(location.file),
+      line: normalizeLine(location.line),
+    };
+  });
+}
+
+export function buildTestResultsModel(scope: HarnessScope, workspaceRoot = defaultWorkspaceRoot): TestResultsModel {
+  const frontEndPayload = readFrontEndSourceIndex(scope, workspaceRoot);
+  const selfTestPayload = readHarnessSelfTestIndex(scope, workspaceRoot);
+  const backendPayload = readBackendSourceIndex(scope, workspaceRoot);
+  const resultPayload = readTestResultsIndex(scope, workspaceRoot);
+  const tracePayload = maybeReadJson(outputPath(workspaceRoot, scope, "state", "trace.state.json"));
+  const tests = buildTestRows(
+    scope,
+    testSourceRows(scope, backendPayload, frontEndPayload, selfTestPayload, workspaceRoot),
+    testResultRows(resultPayload),
+    requirementRefMap(tracePayload),
+  );
+
+  return {
+    scope,
+    generatedAt: generatedAtFrom(resultPayload, frontEndPayload, selfTestPayload),
+    sourceGeneratedAt: generatedAtFrom(frontEndPayload, selfTestPayload),
+    resultGeneratedAt: generatedAtFrom(resultPayload),
+    summary: testSummary(tests),
+    typeSummary: testTypeSummary(tests),
+    tests,
+    issues: buildTestIssues(resultPayload),
+  };
 }
 
 function requirementRefMap(tracePayload: unknown): Map<string, SurfaceRequirementRef> {

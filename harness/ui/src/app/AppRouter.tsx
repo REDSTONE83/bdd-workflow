@@ -8,6 +8,7 @@ import { SurfaceInventoryPage } from "../features/surfaces/SurfaceInventoryPage"
 import { GateViewPage } from "../features/gates/GateViewPage";
 import { ChangeSetViewPage } from "../features/change-sets/ChangeSetViewPage";
 import { CommandRunnerPage } from "../features/runs/CommandRunnerPage";
+import { TestResultsPage } from "../features/tests/TestResultsPage";
 import { useArtifactSummary } from "../lib/harness-data/useArtifactSummary";
 import type { ArtifactSummary, HarnessScope } from "../lib/harness-data/types";
 
@@ -27,6 +28,7 @@ export function AppRouter() {
         <Route path="/requirements/:requirementId" element={<RequirementDetailPage scope={scope} />} />
         <Route path="/terminology" element={<TerminologyBrowserPage scope={scope} />} />
         <Route path="/surfaces" element={<SurfaceInventoryPage scope={scope} />} />
+        <Route path="/tests" element={<TestResultsPage scope={scope} />} />
         <Route path="/gate" element={<GateViewPage scope={scope} />} />
         <Route path="/change-sets" element={<ChangeSetViewPage scope={scope} />} />
         <Route path="/runs" element={<CommandRunnerPage scope={scope} />} />

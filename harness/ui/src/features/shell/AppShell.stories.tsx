@@ -96,7 +96,7 @@ export const DefaultArtifacts: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("요건 검증 하네스")).toBeVisible();
-    for (const linkName of ["요건", "표준 용어", "게이트", "Change Set", "실행 화면"]) {
+    for (const linkName of ["요건", "표준 용어", "API/Entity/UI", "테스트 결과", "게이트", "Change Set", "실행 화면"]) {
       await expect(canvas.getByRole("link", { name: new RegExp(linkName) })).toBeVisible();
     }
     await expect(canvas.getByText("generatedAt: 2026-06-10T14:25:52.986Z")).toBeVisible();
@@ -156,6 +156,34 @@ export const SurfaceNavigation: Story = {
     await expect(canvas.getByLabelText("현재 route")).toHaveTextContent("/requirements");
     await userEvent.click(canvas.getByRole("link", { name: /API\/Entity\/UI/ }));
     await expect(canvas.getByLabelText("현재 route")).toHaveTextContent("/surfaces");
+  },
+};
+
+export const TestResultsNavigation: Story = {
+  args: {
+    model: appShellDefault,
+    children: (
+      <div className="harness-panel p-6 text-sm text-slate-700">
+        <RouteProbe />
+      </div>
+    ),
+  },
+  parameters: {
+    harness: {
+      requirements: ["REQ-039"],
+      covers: ["AppShell 좌측 LNB에서 테스트 결과 화면으로 이동할 수 있다"],
+    },
+    docs: {
+      description: {
+        story: "좌측 LNB의 테스트 결과 메뉴가 /tests route로 이동하는 상태다.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByLabelText("현재 route")).toHaveTextContent("/requirements");
+    await userEvent.click(canvas.getByRole("link", { name: /테스트 결과/ }));
+    await expect(canvas.getByLabelText("현재 route")).toHaveTextContent("/tests");
   },
 };
 

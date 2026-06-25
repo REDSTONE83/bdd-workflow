@@ -1,8 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createHarnessExpressApp } from "./server/index";
 
 const port = Number(process.env.HARNESS_UI_PORT ?? 5180);
+const dirname = path.dirname(fileURLToPath(import.meta.url));
+const workspaceRoot = path.resolve(dirname, "..", "..").replace(/\\/g, "/");
+process.env.VITE_WORKSPACE_ROOT ??= workspaceRoot;
 
 export default defineConfig({
   plugins: [

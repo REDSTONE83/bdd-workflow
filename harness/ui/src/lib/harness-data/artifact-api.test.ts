@@ -5,6 +5,7 @@ import {
   buildRequirementBoardModel,
   buildRequirementDetailModel,
   buildSurfaceInventoryModel,
+  buildTestResultsModel,
 } from "./artifact-api";
 import { hasArtifactScope, workspaceRootForArtifactScope } from "./artifact-test-workspace";
 
@@ -77,5 +78,31 @@ describe("artifact API DTO builders", () => {
     expect(model.dataShapes).toEqual([]);
     expect(model.entities).toEqual([]);
     expect(model.uiSurfaces.some((surface) => surface.kind === "Route" && surface.route === "/requirements")).toBe(true);
+  });
+
+  testHarnessArtifacts("builds test result rows from source indexes and result indexes", () => {
+    const model = buildTestResultsModel("harness", harnessWorkspaceRoot);
+
+    expect(model.summary.map((entry) => entry.status)).toEqual(["PASS", "FAIL", "SKIP", "NOT_RUN"]);
+    expect(model.tests.length).toBeGreaterThan(0);
+    expect(model.tests.some((row) => row.runtime === "storybook-vitest" && row.file.includes("harness/ui/src"))).toBe(true);
+    expect(model.tests.some((row) => row.runtime === "node" && row.file.includes("harness/self-test"))).toBe(true);
+    expect(model.tests.every((row) => row.status === "PASS" || row.status === "FAIL" || row.status === "SKIP" || row.status === "NOT_RUN")).toBe(true);
+  });
+
+  testAppArtifacts("matches API JUnit results to backend test source rows", () => {
+    const model = buildTestResultsModel("application", appWorkspaceRoot);
+    const apiRow = model.tests.find((row) =>
+      row.runtime === "junit"
+      && row.source === "back-end"
+      && row.file.startsWith("app/back-end/src/test/java/")
+      && row.requirements.length > 0
+    );
+
+    expect(apiRow).toBeDefined();
+    expect(apiRow?.testType).toBe("API");
+    expect(apiRow?.line).toBeGreaterThan(1);
+    expect(apiRow?.requirements[0]?.id).toMatch(/^REQ-\d{3}$/);
+    expect(apiRow?.requirements[0]?.title).toBeTruthy();
   });
 });

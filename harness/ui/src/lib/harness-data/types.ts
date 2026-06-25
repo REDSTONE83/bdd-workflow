@@ -298,3 +298,60 @@ export interface CommandRunState {
   rejectionReason?: string;
   logs: string[];
 }
+
+export type TestRunStatus = "PASS" | "FAIL" | "SKIP" | "NOT_RUN";
+export type TestType = "API" | "UI" | "UNIT" | "E2E" | "STATIC" | "OTHER";
+
+export interface TestResultSummary {
+  status: TestRunStatus;
+  count: number;
+}
+
+export interface TestTypeSummary {
+  type: TestType;
+  count: number;
+}
+
+export interface TestResultIssue {
+  kind: string;
+  runtime: string;
+  reason: string;
+  resultFile: string;
+  identity?: string;
+  file: string;
+  line: number;
+}
+
+export interface TestCoverRow {
+  text: string;
+  requirements: SurfaceRequirementRef[];
+}
+
+export interface TestResultRow {
+  id: string;
+  scope: HarnessScope;
+  source: string;
+  runtime: string;
+  testType: TestType;
+  status: TestRunStatus;
+  displayName: string;
+  identity: string;
+  requirements: SurfaceRequirementRef[];
+  covers: TestCoverRow[];
+  file: string;
+  line: number;
+  resultIdentity?: string;
+  resultFile?: string;
+  resultLine?: number;
+}
+
+export interface TestResultsModel {
+  scope: HarnessScope;
+  generatedAt: string | null;
+  sourceGeneratedAt: string | null;
+  resultGeneratedAt: string | null;
+  summary: TestResultSummary[];
+  typeSummary: TestTypeSummary[];
+  tests: TestResultRow[];
+  issues: TestResultIssue[];
+}

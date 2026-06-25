@@ -1,4 +1,4 @@
-import type { CommandRunState, HarnessScope, SurfaceInventoryModel, TerminologyBrowserModel } from "./types";
+import type { CommandRunState, HarnessScope, SurfaceInventoryModel, TerminologyBrowserModel, TestResultsModel } from "./types";
 import type { CommandRunnerModel, GateViewModel, RequirementBoardModel } from "./artifact-api";
 import type { ChangeSetRow, RequirementDetail } from "./types";
 
@@ -35,6 +35,10 @@ export async function loadTerminology(scope: HarnessScope): Promise<TerminologyB
 
 export async function loadSurfaceInventory(scope: HarnessScope): Promise<SurfaceInventoryModel> {
   return fetchJson(`/api/surfaces?scope=${scope}`);
+}
+
+export async function loadTestResults(scope: HarnessScope): Promise<TestResultsModel> {
+  return fetchJson(`/api/tests?scope=${scope}`);
 }
 
 export async function loadGateView(scope: HarnessScope): Promise<GateViewModel> {
