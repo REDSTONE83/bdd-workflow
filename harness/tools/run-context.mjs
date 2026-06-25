@@ -68,14 +68,32 @@ export async function findFreePort(excluded = new Set()) {
     throw new Error('Could not allocate a unique TCP port for this run');
 }
 
-export function portOwner(port) {
-    const result = spawnSync('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN'], {
-        encoding: 'utf8'
-    });
-    if (result.status !== 0 || !result.stdout.trim()) {
-        return 'owner process unavailable from lsof';
+// 포트 점유 프로세스를 진단하는 명령. Windows에는 lsof가 없어 netstat로 대체한다.
+export function portOwnerCommand(port, platform = process.platform) {
+    if (platform === 'win32') {
+        return { command: 'netstat', args: ['-a', '-n', '-o', '-p', 'tcp'] };
     }
-    return result.stdout.trim().split('\n').slice(0, 4).join('\n');
+    return { command: 'lsof', args: ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN'] };
+}
+
+// 진단 명령의 stdout에서 해당 포트와 관련된 줄만 추려 최대 4줄까지 보여 준다.
+// netstat는 전체 연결을 출력하므로 Windows에서는 포트 번호로 필터링한다.
+export function formatPortOwner(stdout, port, platform = process.platform) {
+    if (typeof stdout !== 'string' || !stdout.trim()) return null;
+    const lines = stdout.trim().split(/\r?\n/);
+    const matched = platform === 'win32'
+        ? lines.filter((line) => new RegExp(`:${port}\\b`).test(line))
+        : lines;
+    const chosen = matched.length > 0 ? matched : lines;
+    return chosen.slice(0, 4).join('\n');
+}
+
+export function portOwner(port, platform = process.platform) {
+    const { command, args } = portOwnerCommand(port, platform);
+    const result = spawnSync(command, args, { encoding: 'utf8' });
+    if (result.error) return `owner process unavailable (${command} not found)`;
+    const formatted = result.status === 0 ? formatPortOwner(result.stdout, port, platform) : null;
+    return formatted ?? `owner process unavailable from ${command}`;
 }
 
 export async function assertExplicitPortAvailable(name, port) {

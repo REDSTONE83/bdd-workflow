@@ -7,10 +7,11 @@ import { appRoot, backendRoot, frontEndRoot, workspaceRoot } from './workspace-c
 import { createPortContext, generateRunId } from './run-context.mjs';
 import { atomicCopyFile, mirrorDirectory } from './fs-mirror.mjs';
 import { FRONT_END_RESULT_FILES, manifestEntryForTest, sha256 } from './test-result-fingerprint.mjs';
+import { npmCommand, resolveGradleInvocation, resolveSpawn } from './spawn-command.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const gradleWrapper = path.join(backendRoot, 'gradlew');
+const npmBinary = npmCommand();
 const harnessRoot = path.join(workspaceRoot, 'harness');
 const harnessUiRoot = path.join(harnessRoot, 'ui');
 const canonicalOutputRoots = {
@@ -23,6 +24,14 @@ const portIsolatedCommands = new Set(['app:validate', 'app:e2e:live', 'repo:vali
 
 function rel(file) {
     return path.relative(workspaceRoot, file).replace(/\\/g, '/');
+}
+
+// 로그용 커맨드 표기. 워크스페이스 안의 절대경로만 상대경로로 줄이고,
+// java.exe처럼 워크스페이스 밖이거나 PATH에 의존하는 커맨드는 원문 그대로 보여 준다.
+function displayCommand(command) {
+    if (!path.isAbsolute(command)) return command;
+    const relative = path.relative(workspaceRoot, command);
+    return relative && !relative.startsWith('..') ? relative.replace(/\\/g, '/') : command;
 }
 
 async function createRunContext(options = {}) {
@@ -117,11 +126,15 @@ function spawnStep(label, command, args, options = {}) {
     const cwd = options.cwd ?? workspaceRoot;
     const scope = options.scope ?? 'application';
     const useRunRoot = options.useRunRoot ?? true;
-    console.log(`\n[${label}] ${[rel(command), ...args].join(' ')}`);
-    const result = spawnSync(command, args, {
+    console.log(`\n[${label}] ${[displayCommand(command), ...args].join(' ')}`);
+    // Windows에서 배치 파일은 shell 없이 spawnSync로 직접 실행되지 않으므로, 배치 파일일 때만
+    // shell을 켜고 인자를 인용한다. gradle은 Windows에서 java.exe -jar로 실행돼 여기 해당하지 않는다.
+    const spawn = resolveSpawn(command, args);
+    const result = spawnSync(spawn.command, spawn.args, {
         cwd,
         stdio: 'inherit',
-        env: envFor(scope, { useRunRoot })
+        env: envFor(scope, { useRunRoot }),
+        shell: spawn.shell
     });
     if (result.error) {
         console.error(`[${label}] spawn failed: ${result.error.message}`);
@@ -246,23 +259,25 @@ function hydrateTraceTestResults(scope) {
 }
 
 function runBackEndGradle(label, ...tasks) {
-    run(label, gradleWrapper, [
+    const invocation = resolveGradleInvocation(backendRoot, [
         '-p',
         backendRoot,
         '--project-cache-dir',
         gradleProjectCacheDirFor('application'),
         ...tasks
-    ], { scope: 'application' });
+    ]);
+    run(label, invocation.command, invocation.args, { scope: 'application' });
 }
 
 function runHarnessGradle(label, ...tasks) {
-    run(label, gradleWrapper, [
+    const invocation = resolveGradleInvocation(backendRoot, [
         '-p',
         harnessRoot,
         '--project-cache-dir',
         gradleProjectCacheDirFor('harness'),
         ...tasks
-    ], { scope: 'harness' });
+    ]);
+    run(label, invocation.command, invocation.args, { scope: 'harness' });
 }
 
 function nodeTestFiles() {
@@ -417,9 +432,9 @@ function backEndTest() {
 
 function frontEndNpm(label, script, options = {}) {
     if (options.allowFailure) {
-        return spawnStep(label, 'npm', ['run', script], { cwd: frontEndRoot, scope: 'application' });
+        return spawnStep(label, npmBinary, ['run', script], { cwd: frontEndRoot, scope: 'application' });
     }
-    return run(label, 'npm', ['run', script], { cwd: frontEndRoot, scope: 'application' });
+    return run(label, npmBinary, ['run', script], { cwd: frontEndRoot, scope: 'application' });
 }
 
 function frontEndE2e() {
@@ -492,7 +507,7 @@ function frontEndBuildStorybook() {
 }
 
 function harnessUiNpm(label, script, args = []) {
-    run(label, 'npm', ['run', script, ...args], { cwd: harnessUiRoot, scope: 'harness' });
+    run(label, npmBinary, ['run', script, ...args], { cwd: harnessUiRoot, scope: 'harness' });
 }
 
 function harnessUi() {

@@ -11,6 +11,11 @@ export default mergeConfig(
   viteConfig,
   defineConfig({
     test: {
+      // JUnit 출력 경로. 예전에는 셸의 ${VAR:-default}로 넘겼으나 Windows cmd가 해석하지 못해
+      // 설정에서 직접 읽는다. 러너(run.mjs)가 STORYBOOK_JUNIT_FILE을 절대경로로 주입한다.
+      outputFile: {
+        junit: process.env.STORYBOOK_JUNIT_FILE ?? "test-results/storybook-junit.xml",
+      },
       projects: [
         {
           test: {

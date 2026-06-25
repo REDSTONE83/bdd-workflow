@@ -73,8 +73,10 @@ async function generateSchema(rawOpenApi, schemaOutputPath) {
     const inputPath = join(tempDir, "openapi.json")
     await writeFile(inputPath, JSON.stringify(rawOpenApi, null, 2) + "\n")
 
-    const cli = resolve(defaultFrontEndRoot, "node_modules/.bin/openapi-typescript")
-    const result = spawnSync(cli, [inputPath, "--output", schemaOutputPath], {
+    // node_modules/.bin 셸 shim은 Windows에서 .cmd라 spawnSync로 직접 실행되지 않는다.
+    // 패키지의 JS 엔트리를 node로 직접 실행해 OS와 무관하게 동작시킨다(Node가 인자 인용을 처리).
+    const cli = resolve(defaultFrontEndRoot, "node_modules/openapi-typescript/bin/cli.js")
+    const result = spawnSync(process.execPath, [cli, inputPath, "--output", schemaOutputPath], {
       cwd: defaultFrontEndRoot,
       encoding: "utf8",
     })

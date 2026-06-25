@@ -12,7 +12,22 @@ const liveArtifactsDir =
   process.env.E2E_LIVE_ARTIFACTS_DIR ?? "test-results/live-artifacts"
 const liveHtmlReportDir =
   process.env.E2E_LIVE_HTML_REPORT_DIR ?? "playwright-report/live"
-const shellQuote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`
+// Playwright는 webServer.command를 OS 셸로 실행한다(POSIX=sh, Windows=cmd). 셸별로 인용 방식이 다르다.
+// Windows에서는 gradlew.bat(배치 파일) 대신 gradle wrapper jar를 java로 직접 실행한다(러너와 동일 방식).
+// JAVA_HOME이 있으면 그 java.exe를, 없으면 PATH의 java를 쓴다.
+const isWindows = process.platform === "win32"
+const shellQuote = (value: string) =>
+  isWindows
+    ? `"${value.replace(/"/g, '""')}"`
+    : `'${value.replace(/'/g, "'\\''")}'`
+const gradleLauncher = (() => {
+  if (!isWindows) return "../back-end/gradlew"
+  const java = process.env.JAVA_HOME
+    ? shellQuote(`${process.env.JAVA_HOME.replace(/"/g, "")}\\bin\\java.exe`)
+    : "java"
+  return `${java} -jar ${shellQuote("..\\back-end\\gradle\\wrapper\\gradle-wrapper.jar")}`
+})()
+const gradleProjectDir = isWindows ? "..\\back-end" : "../back-end"
 const gradleProjectCacheArg = process.env.HARNESS_GRADLE_PROJECT_CACHE_DIR
   ? ` --project-cache-dir ${shellQuote(process.env.HARNESS_GRADLE_PROJECT_CACHE_DIR)}`
   : ""
@@ -35,14 +50,15 @@ export default defineConfig({
   webServer: [
     {
       command:
-        `../back-end/gradlew -p ../back-end${gradleProjectCacheArg} bootRun --args=${shellQuote(springArgs)}`,
+        `${gradleLauncher} -p ${gradleProjectDir}${gradleProjectCacheArg} bootRun --args=${shellQuote(springArgs)}`,
       url: new URL("/v3/api-docs", backendOrigin).toString(),
       reuseExistingServer: false,
       timeout: 120_000,
     },
     {
-      command:
-        `VITE_BACKEND_ORIGIN=${shellQuote(backendOrigin)} npm run dev -- --port ${frontendPort}`,
+      // 인라인 VAR=값 접두는 cmd가 해석하지 못하므로 webServer.env로 환경 변수를 전달한다.
+      command: `npm run dev -- --port ${frontendPort}`,
+      env: { VITE_BACKEND_ORIGIN: backendOrigin },
       url: frontendOrigin,
       reuseExistingServer: false,
       timeout: 120_000,
