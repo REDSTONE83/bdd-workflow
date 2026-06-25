@@ -55,6 +55,10 @@ jobs:
       - name: Back-end tests (gradle via java.exe -jar)
         run: npm run app:test
 
+      # api:generate가 소비하는 build/app/indexes/openapi.index.json을 먼저 생성한다(gradle).
+      - name: Back-end OpenAPI index (gradle via java.exe -jar)
+        run: npm run app:openapi-index
+
       # node로 직접 실행하는 openapi-typescript 스폰 경로(.bin .cmd shim 우회).
       - name: API client generation (node-spawned CLI)
         working-directory: app/front-end
@@ -64,9 +68,9 @@ jobs:
       - name: Front-end Storybook tests
         run: npm run app:e2e
 
-      # Playwright webServer가 gradlew.bat과 webServer.env로 백엔드/프런트엔드를 띄우고,
-      # 러너가 포트를 할당한다(충돌 시 netstat 진단).
-      - name: Live E2E (Playwright + gradlew.bat + port allocation)
+      # Playwright webServer가 java -jar(gradle wrapper)와 webServer.env로 백엔드/프런트엔드를
+      # 띄우고, 러너가 포트를 할당한다(충돌 시 netstat 진단).
+      - name: Live E2E (Playwright + java -jar + port allocation)
         run: npm run app:e2e:live
 
       # harness UI npm.cmd 스크립트(cross-env) + Node/TypeScript self-test + 하네스 게이트.
