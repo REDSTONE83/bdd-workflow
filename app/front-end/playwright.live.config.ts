@@ -12,7 +12,15 @@ const liveArtifactsDir =
   process.env.E2E_LIVE_ARTIFACTS_DIR ?? "test-results/live-artifacts"
 const liveHtmlReportDir =
   process.env.E2E_LIVE_HTML_REPORT_DIR ?? "playwright-report/live"
-const shellQuote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`
+// Playwright는 webServer.command를 OS 셸로 실행한다(POSIX=sh, Windows=cmd). 셸별로 인용 방식이
+// 다르므로 플랫폼에 맞춰 따옴표를 고르고, Windows에서는 배치 래퍼(gradlew.bat)를 사용한다.
+const isWindows = process.platform === "win32"
+const shellQuote = (value: string) =>
+  isWindows
+    ? `"${value.replace(/"/g, '""')}"`
+    : `'${value.replace(/'/g, "'\\''")}'`
+const gradleWrapper = isWindows ? "..\\back-end\\gradlew.bat" : "../back-end/gradlew"
+const gradleProjectDir = isWindows ? "..\\back-end" : "../back-end"
 const gradleProjectCacheArg = process.env.HARNESS_GRADLE_PROJECT_CACHE_DIR
   ? ` --project-cache-dir ${shellQuote(process.env.HARNESS_GRADLE_PROJECT_CACHE_DIR)}`
   : ""
@@ -35,14 +43,15 @@ export default defineConfig({
   webServer: [
     {
       command:
-        `../back-end/gradlew -p ../back-end${gradleProjectCacheArg} bootRun --args=${shellQuote(springArgs)}`,
+        `${gradleWrapper} -p ${gradleProjectDir}${gradleProjectCacheArg} bootRun --args=${shellQuote(springArgs)}`,
       url: new URL("/v3/api-docs", backendOrigin).toString(),
       reuseExistingServer: false,
       timeout: 120_000,
     },
     {
-      command:
-        `VITE_BACKEND_ORIGIN=${shellQuote(backendOrigin)} npm run dev -- --port ${frontendPort}`,
+      // 인라인 VAR=값 접두는 cmd가 해석하지 못하므로 webServer.env로 환경 변수를 전달한다.
+      command: `npm run dev -- --port ${frontendPort}`,
+      env: { VITE_BACKEND_ORIGIN: backendOrigin },
       url: frontendOrigin,
       reuseExistingServer: false,
       timeout: 120_000,

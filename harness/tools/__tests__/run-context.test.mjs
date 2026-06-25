@@ -7,7 +7,9 @@ import {
     portFromUrlEnv,
     findFreePort,
     isPortAvailable,
-    createPortContext
+    createPortContext,
+    portOwnerCommand,
+    formatPortOwner
 } from '../run-context.mjs';
 
 function listen(port) {
@@ -74,6 +76,46 @@ describe('run-context — findFreePort', () => {
         const second = await findFreePort(new Set([first]));
         assert.notEqual(second, first);
         assert.equal(await isPortAvailable(second), true);
+    });
+});
+
+describe('run-context — portOwnerCommand', () => {
+    it('uses lsof on POSIX scoped to the listening port', () => {
+        assert.deepEqual(portOwnerCommand(5173, 'linux'), {
+            command: 'lsof',
+            args: ['-nP', '-iTCP:5173', '-sTCP:LISTEN']
+        });
+    });
+
+    it('falls back to netstat on Windows where lsof is absent', () => {
+        assert.deepEqual(portOwnerCommand(5173, 'win32'), {
+            command: 'netstat',
+            args: ['-a', '-n', '-o', '-p', 'tcp']
+        });
+    });
+});
+
+describe('run-context — formatPortOwner', () => {
+    it('returns null for empty output', () => {
+        assert.equal(formatPortOwner('', 5173), null);
+        assert.equal(formatPortOwner('   \n  ', 5173), null);
+        assert.equal(formatPortOwner(undefined, 5173), null);
+    });
+
+    it('keeps lsof output as-is on POSIX (capped at 4 lines)', () => {
+        const out = 'COMMAND PID\nnode 1\nnode 2\nnode 3\nnode 4\nnode 5';
+        assert.equal(formatPortOwner(out, 5173, 'linux'), 'COMMAND PID\nnode 1\nnode 2\nnode 3');
+    });
+
+    it('filters netstat output to the matching port on Windows', () => {
+        const netstat = [
+            '  Proto  Local Address      Foreign Address    State        PID',
+            '  TCP    0.0.0.0:5173       0.0.0.0:0          LISTENING    1234',
+            '  TCP    0.0.0.0:51730      0.0.0.0:0          LISTENING    9999',
+            '  TCP    127.0.0.1:8080     0.0.0.0:0          LISTENING    4321'
+        ].join('\r\n');
+        const result = formatPortOwner(netstat, 5173, 'win32');
+        assert.equal(result, '  TCP    0.0.0.0:5173       0.0.0.0:0          LISTENING    1234');
     });
 });
 

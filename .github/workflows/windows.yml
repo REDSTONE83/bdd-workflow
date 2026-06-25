@@ -1,0 +1,74 @@
+# Windows 실행 경로 검증 CI.
+# 단위 테스트는 platform 인자로 어떤 OS에서도 Windows 분기를 검증하지만, 실제 cmd.exe/npm.cmd/
+# java.exe/gradle/Storybook 실행은 Windows 러너에서만 확인할 수 있다. 이 워크플로가 그 역할을 한다.
+name: windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows-gate:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install front-end dependencies
+        working-directory: app/front-end
+        run: npm ci
+
+      - name: Install harness UI dependencies
+        working-directory: harness/ui
+        run: npm ci
+
+      - name: Install Playwright browser (front-end)
+        working-directory: app/front-end
+        run: npx playwright install chromium
+
+      - name: Install Playwright browser (harness UI)
+        working-directory: harness/ui
+        run: npx playwright install chromium
+
+      # 순수 플랫폼 로직(java.exe 조립, JAVA_OPTS 분리, npm.cmd, netstat, 배치 인용)이
+      # 실제 Windows Node에서도 동작하는지 빠르게 확인한다.
+      - name: Harness tool tests (platform logic)
+        run: npm run harness:tool-test
+
+      # gradle을 java.exe -jar로 직접 실행하는 경로. runHarnessGradle(-p harness, 공백 포함 --args)도 탄다.
+      - name: Back-end source index (gradle via java.exe -jar)
+        run: npm run app:source-index
+
+      - name: Back-end tests (gradle via java.exe -jar)
+        run: npm run app:test
+
+      # node로 직접 실행하는 openapi-typescript 스폰 경로(.bin .cmd shim 우회).
+      - name: API client generation (node-spawned CLI)
+        working-directory: app/front-end
+        run: npm run api:generate
+
+      # npm.cmd + cross-env storybook 스크립트 + vitest junit 출력 경로.
+      - name: Front-end Storybook tests
+        run: npm run app:e2e
+
+      # Playwright webServer가 gradlew.bat과 webServer.env로 백엔드/프런트엔드를 띄우고,
+      # 러너가 포트를 할당한다(충돌 시 netstat 진단).
+      - name: Live E2E (Playwright + gradlew.bat + port allocation)
+        run: npm run app:e2e:live
+
+      # harness UI npm.cmd 스크립트(cross-env) + Node/TypeScript self-test + 하네스 게이트.
+      - name: Harness validate
+        run: npm run harness:validate
