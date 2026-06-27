@@ -20,7 +20,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "todo")
 @EntityListeners(AuditingEntityListener.class)
-@Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026"})
+@Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026", "REQ-040"})
 public class Todo {
 
     @Id
@@ -28,32 +28,32 @@ public class Todo {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026"})
+    @Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026", "REQ-040"})
     @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
     private UUID userId;
 
-    @Requirement({"REQ-022", "REQ-023", "REQ-024"})
+    @Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-040"})
     @Column(nullable = false, length = 100)
     private String title;
 
-    @Requirement({"REQ-022", "REQ-024"})
+    @Requirement({"REQ-022", "REQ-024", "REQ-040"})
     @Column(length = 1000)
     private String description;
 
-    @Requirement({"REQ-022", "REQ-023", "REQ-024"})
+    @Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-040"})
     @Column(name = "due_date")
     private LocalDate dueDate;
 
-    @Requirement({"REQ-022", "REQ-023", "REQ-024"})
+    @Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-040"})
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private Priority priority;
 
-    @Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-027"})
+    @Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-040"})
     @Column(nullable = false)
     private boolean completed;
 
-    @Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-026"})
+    @Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-026", "REQ-040"})
     @Column(name = "category_id", columnDefinition = "uuid")
     private UUID categoryId;
 

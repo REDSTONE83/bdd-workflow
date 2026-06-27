@@ -36,9 +36,10 @@ export interface paths {
         };
         /**
          * 할 일 목록 조회
-         * @description Requirement: REQ-023
+         * @description Requirement: REQ-023, REQ-040
          *
-         *     사용자는 자신의 할 일 목록을 조회한다. 미완료 먼저, 우선순위 HIGH→MEDIUM→LOW, 식별자 오름차순으로 정렬된다.
+         *     사용자는 자신의 할 일 목록을 조회한다. 검색어와 필터 조건을 지정하면 조건에 맞는 본인 할 일만 반환한다.
+         *     정렬을 따로 정하지 않으면 미완료 먼저, 우선순위 HIGH→MEDIUM→LOW, 식별자 오름차순으로 정렬된다.
          */
         get: operations["listTodos"];
         put?: never;
@@ -232,6 +233,25 @@ export interface components {
              */
             password: string;
         };
+        /** @description 회원 가입 응답 */
+        SignupResponse: {
+            /**
+             * Format: uuid
+             * @description 생성된 사용자 ID
+             * @example 01900000-0000-7000-8000-000000000000
+             */
+            userId?: string;
+            /**
+             * @description 이메일
+             * @example hong@example.com
+             */
+            email?: string;
+            /**
+             * @description 사용자 이름
+             * @example 홍길동
+             */
+            name?: string;
+        };
         /** @description API 오류 응답 */
         ApiError: {
             /**
@@ -281,25 +301,6 @@ export interface components {
              * @example 이미 등록된 이메일입니다.
              */
             message?: string;
-        };
-        /** @description 회원 가입 응답 */
-        SignupResponse: {
-            /**
-             * Format: uuid
-             * @description 생성된 사용자 ID
-             * @example 01900000-0000-7000-8000-000000000000
-             */
-            userId?: string;
-            /**
-             * @description 이메일
-             * @example hong@example.com
-             */
-            email?: string;
-            /**
-             * @description 사용자 이름
-             * @example 홍길동
-             */
-            name?: string;
         };
         /** @description 할 일 생성 요청. 제목은 trim된 뒤 검증되고 저장된다. completed 필드는 받지 않으며 항상 false로 시작한다. */
         CreateTodoRequest: {
@@ -622,6 +623,13 @@ export interface operations {
     listTodos: {
         parameters: {
             query?: {
+                search?: string;
+                completed?: boolean;
+                priority?: "HIGH" | "MEDIUM" | "LOW";
+                categoryId?: string;
+                uncategorized?: boolean;
+                dueDateFrom?: string;
+                dueDateTo?: string;
                 page?: number;
                 size?: number;
                 sort?: string[];
@@ -639,6 +647,15 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PageResponse"];
+                };
+            };
+            /** @description 요청 값 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiError"];
                 };
             };
             /** @description 인증 누락 또는 실패 */

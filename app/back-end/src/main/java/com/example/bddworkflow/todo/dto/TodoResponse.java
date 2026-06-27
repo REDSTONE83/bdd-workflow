@@ -9,7 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.UUID;
 
-@Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-027"})
+@Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-040"})
 @Schema(description = "할 일 응답. 카테고리 연결이 없으면 category 필드는 null이다.")
 public record TodoResponse(
         @Schema(description = "할 일 식별자", example = "01900000-0000-7000-8000-000000000000")

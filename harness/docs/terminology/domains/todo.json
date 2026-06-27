@@ -81,6 +81,41 @@
                 "method": ["listTodos"]
             }
         },
+        "todo.filter": {
+            "ko": "할 일 필터",
+            "en": "todo filter",
+            "meaning": "할 일 목록을 검색어, 완료 상태, 우선순위, 카테고리, 마감일 범위 조건으로 좁히는 조회 조건 묶음.",
+            "names": {
+                "java": ["TodoListFilter"]
+            }
+        },
+        "todo.search": {
+            "ko": "검색어",
+            "en": "search",
+            "meaning": "할 일 제목 또는 설명에 포함되는지 비교해 목록을 좁히는 문자열 조건.",
+            "names": {
+                "field": ["search"],
+                "json": ["search"]
+            }
+        },
+        "todo.uncategorized": {
+            "ko": "미분류",
+            "en": "uncategorized",
+            "meaning": "카테고리와 연결되지 않은 할 일을 조회하거나 표시하는 상태.",
+            "names": {
+                "field": ["uncategorized"],
+                "json": ["uncategorized"]
+            }
+        },
+        "todo.dueDateRange": {
+            "ko": "마감일 범위",
+            "en": "due date range",
+            "meaning": "할 일의 마감일이 시작일과 종료일 사이에 있는지 비교하는 조회 조건.",
+            "names": {
+                "field": ["dueDateFrom", "dueDateTo"],
+                "json": ["dueDateFrom", "dueDateTo"]
+            }
+        },
         "todo.update": {
             "ko": "할 일 수정",
             "en": "update todo",

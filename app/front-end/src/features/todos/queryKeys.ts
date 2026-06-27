@@ -1,5 +1,8 @@
+import type { TodoFilters } from "./filters"
+
 export type TodoListParams = {
   size: number
+  filters: TodoFilters
 }
 
 export const todoQueryKeys = {

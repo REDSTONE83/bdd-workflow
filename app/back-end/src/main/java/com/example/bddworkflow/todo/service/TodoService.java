@@ -8,6 +8,7 @@ import com.example.bddworkflow.harness.Requirement;
 import com.example.bddworkflow.todo.domain.Priority;
 import com.example.bddworkflow.todo.domain.Todo;
 import com.example.bddworkflow.todo.dto.CreateTodoRequest;
+import com.example.bddworkflow.todo.dto.TodoListFilter;
 import com.example.bddworkflow.todo.dto.TodoCategoryInfo;
 import com.example.bddworkflow.todo.dto.TodoResponse;
 import com.example.bddworkflow.todo.dto.UpdateTodoRequest;
@@ -28,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026"})
+@Requirement({"REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026", "REQ-040"})
 @Service
 public class TodoService {
 
@@ -55,13 +56,37 @@ public class TodoService {
 
     @Transactional(readOnly = true)
     public PageResponse<TodoResponse> listTodos(UUID userId, Pageable pageable) {
+        return listTodos(userId, TodoListFilter.empty(), pageable);
+    }
+
+    @Transactional(readOnly = true)
+    @Requirement({"REQ-023", "REQ-040"})
+    public PageResponse<TodoResponse> listTodos(UUID userId, TodoListFilter filter, Pageable pageable) {
         Page<Todo> page;
         if (pageable.getSort().isUnsorted()) {
-            page = todoRepository.findAllByUserIdOrderedForListing(userId, pageable);
+            page = todoRepository.findAllByUserIdMatchingFilterOrderedForListing(
+                    userId,
+                    filter.search(),
+                    filter.completed(),
+                    filter.priority(),
+                    filter.categoryId(),
+                    Boolean.TRUE.equals(filter.uncategorized()),
+                    filter.dueDateFrom(),
+                    filter.dueDateTo(),
+                    pageable);
         } else {
             Sort effectiveSort = pageable.getSort().and(ID_TIEBREAKER);
             Pageable effective = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), effectiveSort);
-            page = todoRepository.findAllByUserId(userId, effective);
+            page = todoRepository.findAllByUserIdMatchingFilter(
+                    userId,
+                    filter.search(),
+                    filter.completed(),
+                    filter.priority(),
+                    filter.categoryId(),
+                    Boolean.TRUE.equals(filter.uncategorized()),
+                    filter.dueDateFrom(),
+                    filter.dueDateTo(),
+                    effective);
         }
         Map<UUID, Category> categoriesById = loadCategoriesFor(userId, page.getContent());
         Page<TodoResponse> mapped = page.map(t ->

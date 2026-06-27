@@ -586,7 +586,7 @@ export const appRequirementDetail: RequirementDetail = {
       operationId: "TodoController.createTodo",
       status: "연결됨",
       file: "app/back-end/src/main/java/com/example/bddworkflow/todo/controller/TodoController.java",
-      line: 52,
+      line: 57,
       requests: ["CreateTodoRequest"],
       responses: ["TodoResponse"],
       entities: ["Todo"],
@@ -643,7 +643,7 @@ export const appRequirementDetail: RequirementDetail = {
       file: "app/back-end/src/main/java/com/example/bddworkflow/todo/domain/Todo.java",
       line: 1,
       listeners: ["AuditingEntityListener"],
-      requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026"],
+      requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026", "REQ-040"],
       columns: [
         {
           fieldName: "id",
@@ -656,7 +656,7 @@ export const appRequirementDetail: RequirementDetail = {
           updatable: null,
           length: null,
           annotations: ["Id", "UuidGenerator", "Column"],
-          requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026"],
+          requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026", "REQ-040"],
         },
         {
           fieldName: "userId",
@@ -669,7 +669,7 @@ export const appRequirementDetail: RequirementDetail = {
           updatable: null,
           length: null,
           annotations: ["Requirement", "Column"],
-          requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026"],
+          requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-025", "REQ-026", "REQ-040"],
         },
         {
           fieldName: "title",
@@ -682,7 +682,7 @@ export const appRequirementDetail: RequirementDetail = {
           updatable: null,
           length: 100,
           annotations: ["Requirement", "Column"],
-          requirements: ["REQ-022", "REQ-023", "REQ-024"],
+          requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-040"],
         },
         {
           fieldName: "description",
@@ -695,7 +695,7 @@ export const appRequirementDetail: RequirementDetail = {
           updatable: null,
           length: 1000,
           annotations: ["Requirement", "Column"],
-          requirements: ["REQ-022", "REQ-024"],
+          requirements: ["REQ-022", "REQ-024", "REQ-040"],
         },
         {
           fieldName: "dueDate",
@@ -708,7 +708,7 @@ export const appRequirementDetail: RequirementDetail = {
           updatable: null,
           length: null,
           annotations: ["Requirement", "Column"],
-          requirements: ["REQ-022", "REQ-023", "REQ-024"],
+          requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-040"],
         },
         {
           fieldName: "priority",
@@ -721,7 +721,7 @@ export const appRequirementDetail: RequirementDetail = {
           updatable: null,
           length: 10,
           annotations: ["Requirement", "Enumerated", "Column"],
-          requirements: ["REQ-022", "REQ-023", "REQ-024"],
+          requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-040"],
         },
         {
           fieldName: "completed",
@@ -734,7 +734,7 @@ export const appRequirementDetail: RequirementDetail = {
           updatable: null,
           length: null,
           annotations: ["Requirement", "Column"],
-          requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-027"],
+          requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-027", "REQ-040"],
         },
         {
           fieldName: "categoryId",
@@ -747,7 +747,7 @@ export const appRequirementDetail: RequirementDetail = {
           updatable: null,
           length: null,
           annotations: ["Requirement", "Column"],
-          requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-026"],
+          requirements: ["REQ-022", "REQ-023", "REQ-024", "REQ-026", "REQ-040"],
         },
         {
           fieldName: "createdAt",
@@ -848,7 +848,7 @@ export const appRequirementListDetail: RequirementDetail = {
       operationId: "TodoController.listTodos",
       status: "연결됨",
       file: "app/back-end/src/main/java/com/example/bddworkflow/todo/controller/TodoController.java",
-      line: 76,
+      line: 81,
       requests: [],
       responses: ["PageResponse<TodoResponse>"],
       entities: ["Todo"],
