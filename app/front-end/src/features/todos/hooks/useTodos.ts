@@ -14,6 +14,12 @@ import {
 import { listCategories } from "@/api/categories"
 import { categoryQueryKeys } from "@/features/categories/queryKeys"
 
+import {
+  EMPTY_TODO_FILTERS,
+  normalizeTodoFilters,
+  todoFiltersToApiParams,
+  type TodoFilters,
+} from "../filters"
 import { todoQueryKeys } from "../queryKeys"
 import {
   TODO_CATEGORY_OPTION_LIMIT,
@@ -32,11 +38,16 @@ export type TodosInfinite = {
   fetchNextPage: () => void
 }
 
-export function useTodosInfinite(): TodosInfinite {
+export function useTodosInfinite(filters: TodoFilters = EMPTY_TODO_FILTERS): TodosInfinite {
+  const normalizedFilters = normalizeTodoFilters(filters)
   const query = useInfiniteQuery({
-    queryKey: todoQueryKeys.list({ size: TODO_PAGE_SIZE }),
+    queryKey: todoQueryKeys.list({ size: TODO_PAGE_SIZE, filters: normalizedFilters }),
     queryFn: ({ pageParam, signal }) =>
-      listTodos({ page: pageParam, size: TODO_PAGE_SIZE }, signal),
+      listTodos({
+        page: pageParam,
+        size: TODO_PAGE_SIZE,
+        ...todoFiltersToApiParams(normalizedFilters),
+      }, signal),
     initialPageParam: 0,
     getNextPageParam: (lastPage) =>
       lastPage.page + 1 < lastPage.totalPages ? lastPage.page + 1 : undefined,

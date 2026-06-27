@@ -1,4 +1,5 @@
 import { apiClient, type components } from "./client"
+import type { TodoListApiFilters } from "@/features/todos/filters"
 import type {
   TodoCategoryView,
   TodoInput,
@@ -28,6 +29,12 @@ export type TodoPage = {
   totalPages: number
 }
 
+export type TodoListParams = {
+  page: number
+  size: number
+  sort?: string[]
+} & TodoListApiFilters
+
 function toCategoryView(category: TodoCategoryInfo | null | undefined): TodoCategoryView | null {
   if (!category) return null
   return {
@@ -50,7 +57,7 @@ function toView(todo: TodoResponse): TodoView {
 }
 
 export async function listTodos(
-  params: { page: number; size: number },
+  params: TodoListParams,
   signal?: AbortSignal,
 ): Promise<TodoPage> {
   const { data, response } = await apiClient.GET("/todos", {

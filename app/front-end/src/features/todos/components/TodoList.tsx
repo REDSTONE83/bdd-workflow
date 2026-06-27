@@ -1,9 +1,9 @@
 /**
- * @Requirement REQ-023, REQ-027
+ * @Requirement REQ-023, REQ-027, REQ-040
  */
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { CheckCircle2, Circle, Pencil, Trash2 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -18,6 +18,8 @@ type TodoListProps = {
   isLoading?: boolean
   hasMore?: boolean
   isLoadingMore?: boolean
+  emptyMessage?: string
+  emptyAction?: ReactNode
   onLoadMore?: () => void
   onEdit: (todo: TodoView) => void
   onDelete: (todo: TodoView) => void
@@ -31,6 +33,8 @@ export function TodoList({
   isLoading = false,
   hasMore = false,
   isLoadingMore = false,
+  emptyMessage = "아직 할 일이 없습니다. 새 할 일을 만들어 보세요.",
+  emptyAction,
   onLoadMore,
   onEdit,
   onDelete,
@@ -81,9 +85,10 @@ export function TodoList({
     return (
       <div
         data-testid="todo-empty"
-        className="rounded-lg border border-dashed px-6 py-16 text-center text-sm text-muted-foreground"
+        className="flex flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-16 text-center text-sm text-muted-foreground"
       >
-        아직 할 일이 없습니다. 새 할 일을 만들어 보세요.
+        <p>{emptyMessage}</p>
+        {emptyAction}
       </div>
     )
   }

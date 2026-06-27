@@ -1,5 +1,5 @@
 /**
- * @Requirement REQ-022, REQ-023, REQ-024, REQ-025, REQ-027
+ * @Requirement REQ-022, REQ-023, REQ-024, REQ-025, REQ-027, REQ-040
  * @Route /todos
  * @Page TodosPageContainer
  * @UsesApi GET /todos mount
@@ -8,7 +8,16 @@
  * @UsesApi DELETE /todos/{todoId} submit
  * @UsesApi GET /categories mount
  */
+import { useMemo } from "react"
+import { useSearchParams } from "react-router-dom"
+
 import { TodosPage } from "./TodosPage"
+import {
+  hasActiveTodoFilters,
+  todoFiltersFromSearchParams,
+  todoFiltersToSearchParams,
+  type TodoFilters,
+} from "../filters"
 import {
   useCreateTodo,
   useDeleteTodo,
@@ -18,11 +27,25 @@ import {
 } from "../hooks/useTodos"
 
 export function TodosPageContainer() {
-  const list = useTodosInfinite()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filters = useMemo(
+    () => todoFiltersFromSearchParams(searchParams),
+    [searchParams],
+  )
+  const list = useTodosInfinite(filters)
   const categories = useTodoCategoryOptions()
   const createTodo = useCreateTodo()
   const updateTodo = useUpdateTodo()
   const deleteTodo = useDeleteTodo()
+  const hasActiveFilters = hasActiveTodoFilters(filters)
+
+  const applyFilters = (next: TodoFilters) => {
+    setSearchParams(todoFiltersToSearchParams(next))
+  }
+
+  const resetFilters = () => {
+    setSearchParams(new URLSearchParams())
+  }
 
   return (
     <TodosPage
@@ -33,7 +56,11 @@ export function TodosPageContainer() {
       isError={list.isError}
       hasMore={list.hasNextPage}
       isLoadingMore={list.isFetchingNextPage}
+      filters={filters}
+      hasActiveFilters={hasActiveFilters}
       onLoadMore={list.fetchNextPage}
+      onApplyFilters={applyFilters}
+      onResetFilters={resetFilters}
       onCreate={(input) => createTodo.mutateAsync(input).then(() => undefined)}
       onUpdate={(id, input) =>
         updateTodo.mutateAsync({ id, input }).then(() => undefined)

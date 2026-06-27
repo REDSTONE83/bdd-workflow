@@ -1,8 +1,8 @@
 /**
- * @Requirement REQ-022, REQ-023, REQ-024, REQ-025, REQ-027
+ * @Requirement REQ-022, REQ-023, REQ-024, REQ-025, REQ-027, REQ-040
  * @Page TodosPage
  */
-import { AlertCircle, Plus } from "lucide-react"
+import { AlertCircle, Plus, RotateCcw } from "lucide-react"
 import { useState } from "react"
 
 import { ProtectedLayout } from "@/components/ProtectedLayout"
@@ -11,8 +11,10 @@ import { Button } from "@/components/ui/button"
 import type { CategoryView } from "@/features/categories/types"
 
 import { TodoDeleteDialog } from "../components/TodoDeleteDialog"
+import { TodoFilterPanel } from "../components/TodoFilterPanel"
 import { TodoFormDialog } from "../components/TodoFormDialog"
 import { TodoList } from "../components/TodoList"
+import type { TodoFilters } from "../filters"
 import type { TodoInput, TodoPatch, TodoView } from "../types"
 
 type TodosPageProps = {
@@ -23,7 +25,11 @@ type TodosPageProps = {
   isError?: boolean
   hasMore?: boolean
   isLoadingMore?: boolean
+  filters: TodoFilters
+  hasActiveFilters?: boolean
   onLoadMore?: () => void
+  onApplyFilters: (filters: TodoFilters) => void
+  onResetFilters: () => void
   onCreate: (input: TodoInput) => Promise<void>
   onUpdate: (id: string, input: TodoPatch) => Promise<void>
   onDelete: (id: string) => Promise<void>
@@ -52,7 +58,11 @@ export function TodosPage({
   isError,
   hasMore,
   isLoadingMore,
+  filters,
+  hasActiveFilters,
   onLoadMore,
+  onApplyFilters,
+  onResetFilters,
   onCreate,
   onUpdate,
   onDelete,
@@ -102,6 +112,15 @@ export function TodosPage({
           </Alert>
         )}
 
+        <TodoFilterPanel
+          key={filterPanelKey(filters)}
+          filters={filters}
+          categories={categories}
+          categoriesLoading={categoriesLoading}
+          onApply={onApplyFilters}
+          onReset={onResetFilters}
+        />
+
         {isError ? (
           <Alert variant="destructive">
             <AlertCircle aria-hidden="true" />
@@ -115,6 +134,19 @@ export function TodosPage({
             isLoading={isLoading}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
+            emptyMessage={
+              hasActiveFilters
+                ? "조건에 맞는 할 일이 없습니다. 필터를 초기화해 보세요."
+                : undefined
+            }
+            emptyAction={
+              hasActiveFilters ? (
+                <Button type="button" variant="outline" onClick={onResetFilters}>
+                  <RotateCcw className="size-4" aria-hidden="true" />
+                  필터 초기화
+                </Button>
+              ) : undefined
+            }
             onLoadMore={onLoadMore}
             onEdit={(todo) => setForm({ mode: "edit", todo })}
             onDelete={(todo) => setDeleting(todo)}
@@ -150,3 +182,15 @@ export function TodosPage({
 }
 
 export default TodosPage
+
+function filterPanelKey(filters: TodoFilters): string {
+  return [
+    filters.search,
+    filters.completed,
+    filters.priority,
+    filters.categoryId ?? "",
+    filters.uncategorized ? "uncategorized" : "",
+    filters.dueDateFrom,
+    filters.dueDateTo,
+  ].join("|")
+}

@@ -1,6 +1,7 @@
 package com.example.bddworkflow.todo.controller;
 
 import com.example.bddworkflow.todo.dto.CreateTodoRequest;
+import com.example.bddworkflow.todo.dto.TodoListFilter;
 import com.example.bddworkflow.todo.dto.TodoResponse;
 import com.example.bddworkflow.todo.service.TodoService;
 import com.example.bddworkflow.todo.dto.UpdateTodoRequest;
@@ -10,6 +11,7 @@ import com.example.bddworkflow.common.PageResponse;
 import com.example.bddworkflow.common.SortKeys;
 import com.example.bddworkflow.common.auth.AuthenticatedUser;
 import com.example.bddworkflow.harness.Requirement;
+import com.example.bddworkflow.todo.domain.Priority;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -18,6 +20,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,8 +33,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
 
@@ -73,25 +78,37 @@ public class TodoController {
                 .body(todoService.createTodo(principal.id(), request));
     }
 
-    @Requirement({"REQ-023", "REQ-004"})
+    @Requirement({"REQ-023", "REQ-040", "REQ-004"})
     @Operation(
             summary = "할 일 목록 조회",
             description = """
-                    Requirement: REQ-023
+                    Requirement: REQ-023, REQ-040
 
-                    사용자는 자신의 할 일 목록을 조회한다. 미완료 먼저, 우선순위 HIGH→MEDIUM→LOW, 식별자 오름차순으로 정렬된다.
+                    사용자는 자신의 할 일 목록을 조회한다. 검색어와 필터 조건을 지정하면 조건에 맞는 본인 할 일만 반환한다.
+                    정렬을 따로 정하지 않으면 미완료 먼저, 우선순위 HIGH→MEDIUM→LOW, 식별자 오름차순으로 정렬된다.
                     """
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "조회 성공",
-                    content = @Content(schema = @Schema(implementation = PageResponse.class)))
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "요청 값 검증 실패",
+                    content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @GetMapping
     public ResponseEntity<PageResponse<TodoResponse>> listTodos(
             @AuthenticationPrincipal AuthenticatedUser principal,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Boolean completed,
+            @RequestParam(required = false) Priority priority,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(defaultValue = "false") Boolean uncategorized,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateTo,
             @PageableDefault(size = 20) Pageable pageable) {
         SortKeys.requireAllowed(pageable.getSort(), ALLOWED_SORT_KEYS);
-        return ResponseEntity.ok(todoService.listTodos(principal.id(), pageable));
+        TodoListFilter filter = new TodoListFilter(search, completed, priority, categoryId, uncategorized,
+                dueDateFrom, dueDateTo);
+        return ResponseEntity.ok(todoService.listTodos(principal.id(), filter, pageable));
     }
 
     @Requirement({"REQ-024", "REQ-027", "REQ-004"})

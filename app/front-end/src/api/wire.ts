@@ -4,27 +4,32 @@ export type PageRequestQuery = {
   page: number
   size: number
   sort?: string[]
-}
+} & Record<string, string | number | boolean | string[] | null | undefined>
 
 export type GeneratedPageableQuery = components["schemas"]["Pageable"]
 
 // Spring MVC binds Pageable from flat page/size query params even when generated
 // OpenAPI types expose a nested pageable object.
 export function pageableQuery(params: PageRequestQuery): GeneratedPageableQuery {
-  const query = {
-    page: params.page,
-    size: params.size,
-    ...(params.sort ? { sort: params.sort } : {}),
+  const query: Record<string, string | number | boolean | string[]> = {}
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue
+    query[key] = value
   }
   return query as unknown as GeneratedPageableQuery
 }
 
 export function pageableQueryString(params: PageRequestQuery): string {
   const search = new URLSearchParams()
-  search.set("page", String(params.page))
-  search.set("size", String(params.size))
-  for (const sort of params.sort ?? []) {
-    search.append("sort", sort)
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        search.append(key, item)
+      }
+    } else {
+      search.set(key, String(value))
+    }
   }
   return search.toString()
 }
